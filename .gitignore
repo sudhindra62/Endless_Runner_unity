@@ -21,3 +21,7 @@ Thumbs.db
 
 # Gradle / Android
 .gradle/
+# Unity license files
+*.alf
+*.ulf
+Unity_lic.*
