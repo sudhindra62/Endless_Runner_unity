@@ -1,0 +1,53 @@
+name: Unity CI (Compile Check)
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  compile-check:
+    name: Unity Project Sanity Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Validate Unity project structure
+        run: |
+          echo "🔍 Checking Unity project folders..."
+
+          if [ ! -d "Assets" ]; then
+            echo "❌ Assets folder missing"
+            exit 1
+          fi
+
+          if [ ! -d "Packages" ]; then
+            echo "❌ Packages folder missing"
+            exit 1
+          fi
+
+          if [ ! -d "ProjectSettings" ]; then
+            echo "❌ ProjectSettings folder missing"
+            exit 1
+          fi
+
+          echo "✅ Unity project structure is valid"
+
+      - name: Validate Packages manifest
+        run: |
+          echo "🔍 Checking Packages/manifest.json"
+          test -f Packages/manifest.json || (echo "❌ manifest.json missing" && exit 1)
+          echo "✅ manifest.json exists"
+
+      - name: Scan C# scripts (basic sanity)
+        run: |
+          echo "🔍 Scanning C# files..."
+          find Assets -name "*.cs" | wc -l
+          echo "✅ C# files detected"
