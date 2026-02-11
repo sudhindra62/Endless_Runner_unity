@@ -1,0 +1,3 @@
+# Add custom ProGuard rules here.
+# For example:
+# -keep class com.your.class.name { *; }
