@@ -27,10 +27,11 @@ public class PlayerController : MonoBehaviour
     private Vector3 originalCenter;
     private bool isSliding;
 
-    private int jumpTriggerHash, slideTriggerHash, dieTriggerHash;
+    private int jumpTriggerHash;
+    private int slideTriggerHash;
+    private int dieTriggerHash;
     private WaitForSeconds slideWait;
 
-    // Cached Singleton references for performance
     private ScoreMultiplierManager scoreMultiplierManager;
     private MissionProgressTracker missionProgressTracker;
     private ScoreManager scoreManager;
@@ -39,6 +40,7 @@ public class PlayerController : MonoBehaviour
     {
         controller = GetComponent<CharacterController>();
         powerUpManager = GetComponent<PlayerPowerUp>();
+
         originalHeight = controller.height;
         originalCenter = controller.center;
 
@@ -51,7 +53,6 @@ public class PlayerController : MonoBehaviour
 
     private void Start()
     {
-        // Cache singleton instances for performance. Note: SwipeInput is now a Singleton.
         scoreMultiplierManager = ScoreMultiplierManager.Instance;
         missionProgressTracker = MissionProgressTracker.Instance;
         scoreManager = ScoreManager.Instance;
@@ -64,61 +65,84 @@ public class PlayerController : MonoBehaviour
 
     private void OnEnable()
     {
-        // Subscribe to the correct, modern input and revive events.
         ReviveManager.OnReviveSuccess += Revive;
-        SwipeInput.Instance.OnSwipeLeft += () => ChangeLane(-1);
-        SwipeInput.Instance.OnSwipeRight += () => ChangeLane(1);
-        SwipeInput.Instance.OnSwipeUp += Jump;
-        SwipeInput.Instance.OnSwipeDown += Slide;
+
+        if (SwipeInput.Instance != null)
+        {
+            SwipeInput.Instance.OnSwipeLeft += HandleSwipeLeft;
+            SwipeInput.Instance.OnSwipeRight += HandleSwipeRight;
+            SwipeInput.Instance.OnSwipeUp += Jump;
+            SwipeInput.Instance.OnSwipeDown += Slide;
+        }
     }
 
     private void OnDisable()
     {
-        // Unsubscribe to prevent memory leaks.
         ReviveManager.OnReviveSuccess -= Revive;
-        if (SwipeInput.Instance != null) // Add null check for clean shutdown
+
+        if (SwipeInput.Instance != null)
         {
-            SwipeInput.Instance.OnSwipeLeft -= () => ChangeLane(-1);
-            SwipeInput.Instance.OnSwipeRight -= () => ChangeLane(1);
+            SwipeInput.Instance.OnSwipeLeft -= HandleSwipeLeft;
+            SwipeInput.Instance.OnSwipeRight -= HandleSwipeRight;
             SwipeInput.Instance.OnSwipeUp -= Jump;
             SwipeInput.Instance.OnSwipeDown -= Slide;
         }
     }
 
-    private void Update()
-    {
-        if (IsDead) return;
-        Move();
-    }
+private void Update()
+{
+    if (IsDead) return;
+
+    // Keyboard input (Laptop testing)
+    if (Input.GetKeyDown(KeyCode.LeftArrow)) ChangeLane(-1);
+    if (Input.GetKeyDown(KeyCode.RightArrow)) ChangeLane(1);
+    if (Input.GetKeyDown(KeyCode.UpArrow)) Jump();
+    if (Input.GetKeyDown(KeyCode.DownArrow)) Slide();
+
+    Move();
+}
+
 
     private void Move()
     {
         Vector3 move = Vector3.forward * forwardSpeed;
+
         float targetX = (currentLane - 1) * laneDistance;
         move.x = Mathf.Lerp(transform.position.x, targetX, laneSwitchSpeed * Time.deltaTime) - transform.position.x;
 
         if (controller.isGrounded && velocity.y < 0)
             velocity.y = -2f;
-        
+
         velocity.y += gravity * Time.deltaTime;
-        
+
         Vector3 finalVelocity = (move + velocity) * Time.deltaTime;
         controller.Move(finalVelocity);
 
         float distanceMoved = finalVelocity.z;
+
         scoreManager?.AddScoreFromDistance(distanceMoved);
         missionProgressTracker?.UpdateDistance(distanceMoved);
     }
 
+    private void HandleSwipeLeft()
+    {
+        ChangeLane(-1);
+    }
+
+    private void HandleSwipeRight()
+    {
+        ChangeLane(1);
+    }
+
     public void ChangeLane(int direction)
     {
-        int targetLane = Mathf.Clamp(currentLane + direction, 0, 2);
-        currentLane = targetLane;
+        currentLane = Mathf.Clamp(currentLane + direction, 0, 2);
     }
 
     public void Jump()
     {
         if (!controller.isGrounded || isSliding) return;
+
         velocity.y = jumpForce;
         animator?.SetTrigger(jumpTriggerHash);
         missionProgressTracker?.OnJump();
@@ -133,19 +157,20 @@ public class PlayerController : MonoBehaviour
     private System.Collections.IEnumerator SlideRoutine()
     {
         isSliding = true;
+
         animator?.SetTrigger(slideTriggerHash);
+
         controller.height = originalHeight / 2;
         controller.center = originalCenter / 2;
+
         yield return slideWait;
+
         controller.height = originalHeight;
         controller.center = originalCenter;
+
         isSliding = false;
     }
 
-    /// <summary>
-    /// Simplified death method. The player's only job is to die.
-    /// The GameManager/ReviveManager will handle the consequences.
-    /// </summary>
     public void Die()
     {
         if (IsDead) return;
@@ -155,20 +180,20 @@ public class PlayerController : MonoBehaviour
     private void ConfirmDeath()
     {
         IsDead = true;
+
         animator?.SetTrigger(dieTriggerHash);
-        // A GameState manager should observe IsDead or an event from here.
+
+        scoreMultiplierManager?.ResetMultiplier();
+        ScoreManager.Instance?.GameOver();
     }
 
-    /// <summary>
-    /// Called by the ReviveManager when a revive is successful.
-    /// </summary>
     public void Revive()
     {
         IsDead = false;
         velocity = Vector3.zero;
-        animator?.ResetTrigger(dieTriggerHash); // Come back from death animation
-        animator?.Play("Run"); // Or whatever your default run animation is
-        Debug.Log("Player has been revived!");
+
+        animator?.ResetTrigger(dieTriggerHash);
+        animator?.Play("Run");
     }
 
     public void ResetPlayer()
@@ -185,6 +210,15 @@ public class PlayerController : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        // COIN COLLECTION (Restored from original)
+        if (hit.gameObject.CompareTag("Coin"))
+        {
+            Coin coin = hit.gameObject.GetComponent<Coin>();
+            if (coin != null)
+                coin.Collect();
+        }
+
+        // OBSTACLE HANDLING
         if (hit.gameObject.CompareTag("Obstacle"))
         {
             HandleObstacleCollision(hit.gameObject);
@@ -200,7 +234,6 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        scoreMultiplierManager?.ResetMultiplier();
         Die();
     }
 }

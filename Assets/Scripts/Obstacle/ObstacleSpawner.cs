@@ -1,10 +1,23 @@
 using UnityEngine;
-using System.Collections.Generic; // ✅ REQUIRED for List<T>
+using System.Collections.Generic;
 
+/// <summary>
+/// Unified ObstacleSpawner
+/// Preserves:
+/// - Difficulty ramp
+/// - Wave / Rest phases
+/// - Spawn gap scaling
+/// - External spawn control
+/// - Reset logic
+/// - Future-safe helper
+/// </summary>
 public class ObstacleSpawner : MonoBehaviour
 {
+    [Header("Obstacle Prefabs")]
     public GameObject lowObstacle;
     public GameObject highObstacle;
+
+    [Header("References")]
     public Transform player;
 
     [Header("Spawn Distances")]
@@ -16,7 +29,7 @@ public class ObstacleSpawner : MonoBehaviour
     public float minSpawnGap = 9f;
     public float difficultyRampTime = 90f;
 
-    [Header("Rest Phase")]
+    [Header("Wave / Rest Settings")]
     public float waveDuration = 22f;
     public float restDuration = 7f;
 
@@ -24,26 +37,34 @@ public class ObstacleSpawner : MonoBehaviour
     private float gameTimer;
     private float waveTimer;
     private bool isRestPhase;
-    bool canSpawn = true;
+    private bool canSpawn = true;
 
-    void Start()
+    private void Start()
     {
         ResetSpawner();
     }
 
-    public void SetSpawning(bool value)
+    private void Update()
     {
-        canSpawn = value;
-    }
-
-    void Update()
-    {
-        if (player == null || !canSpawn) return;
+        if (player == null || !canSpawn)
+            return;
 
         gameTimer += Time.deltaTime;
         waveTimer += Time.deltaTime;
 
-        // ---- Rest / Wave logic ----
+        HandleWaveLogic();
+
+        if (player.position.z + spawnDistance > nextSpawnZ)
+        {
+            if (!isRestPhase)
+                SpawnObstacle();
+
+            nextSpawnZ += GetCurrentSpawnGap();
+        }
+    }
+
+    private void HandleWaveLogic()
+    {
         if (!isRestPhase && waveTimer >= waveDuration)
         {
             isRestPhase = true;
@@ -54,18 +75,9 @@ public class ObstacleSpawner : MonoBehaviour
             isRestPhase = false;
             waveTimer = 0f;
         }
-
-        // ---- Spawn ----
-        if (player.position.z + spawnDistance > nextSpawnZ)
-        {
-            if (!isRestPhase)
-                SpawnObstacle();
-
-            nextSpawnZ += GetCurrentSpawnGap();
-        }
     }
 
-    void SpawnObstacle()
+    private void SpawnObstacle()
     {
         int lane = Random.Range(-1, 2);
         float x = lane * laneDistance;
@@ -79,22 +91,30 @@ public class ObstacleSpawner : MonoBehaviour
         );
     }
 
-    float GetCurrentSpawnGap()
+    private float GetCurrentSpawnGap()
     {
         float t = Mathf.Clamp01(gameTimer / difficultyRampTime);
         return Mathf.Lerp(startSpawnGap, minSpawnGap, t);
     }
 
+    public void SetSpawning(bool value)
+    {
+        canSpawn = value;
+    }
+
     public void ResetSpawner()
     {
-        nextSpawnZ = player.position.z + spawnDistance;
+        nextSpawnZ = player != null
+            ? player.position.z + spawnDistance
+            : spawnDistance;
+
         gameTimer = 0f;
         waveTimer = 0f;
         isRestPhase = false;
     }
 
-    // ✅ Safe helper (not yet used, but correct)
-    bool WouldBlockAllLanes(List<int> lanes)
+    // 🛡 Future-safe helper
+    private bool WouldBlockAllLanes(List<int> lanes)
     {
         return lanes.Contains(-1) && lanes.Contains(0) && lanes.Contains(1);
     }

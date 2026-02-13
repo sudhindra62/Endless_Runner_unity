@@ -1,6 +1,16 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+/// <summary>
+/// Unified CoinSpawner
+/// Preserves:
+/// - Lane logic
+/// - ZigZag pattern
+/// - Multi-lane mode
+/// - Obstacle safety
+/// - Reset logic
+/// - Pooling optimization
+/// </summary>
 public class CoinSpawner : MonoBehaviour
 {
     public GameObject coinPrefab;
@@ -42,15 +52,16 @@ public class CoinSpawner : MonoBehaviour
     private int zigZagCounter;
     private int zigZagDirection;
 
-    void Start()
+    private void Start()
     {
         CreateCoinPool();
         ResetSpawner();
     }
 
-    void CreateCoinPool()
+    private void CreateCoinPool()
     {
         coinPool = new List<GameObject>();
+
         for (int i = 0; i < poolSize; i++)
         {
             GameObject coin = Instantiate(coinPrefab);
@@ -59,19 +70,17 @@ public class CoinSpawner : MonoBehaviour
         }
     }
 
-    GameObject GetPooledCoin()
+    private GameObject GetPooledCoin()
     {
         for (int i = 0; i < coinPool.Count; i++)
         {
             if (!coinPool[i].activeInHierarchy)
-            {
                 return coinPool[i];
-            }
         }
-        return null; // Pool is empty
+        return null;
     }
 
-    void Update()
+    private void Update()
     {
         if (!player || !coinPrefab) return;
 
@@ -88,7 +97,7 @@ public class CoinSpawner : MonoBehaviour
         }
     }
 
-    void SpawnCoin()
+    private void SpawnCoin()
     {
         if (multiLaneMode)
         {
@@ -104,7 +113,7 @@ public class CoinSpawner : MonoBehaviour
         }
     }
 
-    void SpawnSingleLane()
+    private void SpawnSingleLane()
     {
         float xPos = activeLane * laneDistance;
 
@@ -112,6 +121,7 @@ public class CoinSpawner : MonoBehaviour
             return;
 
         GameObject coin = GetPooledCoin();
+
         if (coin != null)
         {
             coin.transform.position = new Vector3(xPos, 1f, nextCoinZ);
@@ -119,6 +129,7 @@ public class CoinSpawner : MonoBehaviour
         }
 
         zigZagCounter++;
+
         if (zigZagCounter >= zigZagEveryCoins)
         {
             activeLane += zigZagDirection;
@@ -133,7 +144,7 @@ public class CoinSpawner : MonoBehaviour
         }
     }
 
-    void SpawnAllLanes()
+    private void SpawnAllLanes()
     {
         for (int lane = -1; lane <= 1; lane++)
         {
@@ -143,6 +154,7 @@ public class CoinSpawner : MonoBehaviour
                 continue;
 
             GameObject coin = GetPooledCoin();
+
             if (coin != null)
             {
                 coin.transform.position = new Vector3(xPos, 1f, nextCoinZ);
@@ -151,7 +163,7 @@ public class CoinSpawner : MonoBehaviour
         }
     }
 
-    void DecideLaneMode()
+    private void DecideLaneMode()
     {
         multiLaneMode = Random.value < multiLaneChance;
 
@@ -163,7 +175,7 @@ public class CoinSpawner : MonoBehaviour
         }
     }
 
-    bool IsNearObstacle(float laneX, float coinZ)
+    private bool IsNearObstacle(float laneX, float coinZ)
     {
         GameObject[] obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
 
@@ -175,11 +187,14 @@ public class CoinSpawner : MonoBehaviour
                     return true;
             }
         }
+
         return false;
     }
 
     public void ResetSpawner()
     {
+        if (!player) return;
+
         nextCoinZ = player.position.z + spawnAheadDistance;
         nextLaneSwitchZ = player.position.z;
 

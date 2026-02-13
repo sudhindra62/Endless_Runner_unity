@@ -1,29 +1,38 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+/// <summary>
+/// Unified TileSpawner
+/// Preserves:
+/// - Tile spawning logic
+/// - Reset functionality
+/// - Event hook for extensions
+/// - Null safety
+/// </summary>
 public class TileSpawner : MonoBehaviour
 {
+    public event System.Action<GameObject> OnTileSpawned;
+
+    [Header("References")]
     public GameObject roadTilePrefab;
     public Transform player;
 
+    [Header("Tile Settings")]
     public int tilesOnScreen = 7;
     public float tileLength = 30f;
 
     private float spawnZ = 0f;
-    private List<GameObject> activeTiles = new List<GameObject>();
+    private readonly List<GameObject> activeTiles = new List<GameObject>();
 
-    void Start()
+    private void Start()
     {
-        // Spawn initial tiles
-        for (int i = 0; i < tilesOnScreen; i++)
-        {
-            SpawnTile();
-        }
+        SpawnInitialTiles();
     }
 
-    void Update()
+    private void Update()
     {
-        // When player is close to the end, spawn more tiles
+        if (player == null) return;
+
         if (player.position.z > spawnZ - (tilesOnScreen * tileLength))
         {
             SpawnTile();
@@ -31,7 +40,15 @@ public class TileSpawner : MonoBehaviour
         }
     }
 
-    void SpawnTile()
+    private void SpawnInitialTiles()
+    {
+        for (int i = 0; i < tilesOnScreen; i++)
+        {
+            SpawnTile();
+        }
+    }
+
+    private void SpawnTile()
     {
         GameObject tile = Instantiate(
             roadTilePrefab,
@@ -41,9 +58,11 @@ public class TileSpawner : MonoBehaviour
 
         activeTiles.Add(tile);
         spawnZ += tileLength;
+
+        OnTileSpawned?.Invoke(tile);
     }
 
-    void DeleteOldTile()
+    private void DeleteOldTile()
     {
         if (activeTiles.Count == 0) return;
 
@@ -51,7 +70,7 @@ public class TileSpawner : MonoBehaviour
         activeTiles.RemoveAt(0);
     }
 
-    // ✅ CALLED ON RESTART
+    // 🔁 Called on restart
     public void ResetTiles()
     {
         foreach (GameObject tile in activeTiles)
@@ -60,9 +79,6 @@ public class TileSpawner : MonoBehaviour
         activeTiles.Clear();
         spawnZ = 0f;
 
-        for (int i = 0; i < tilesOnScreen; i++)
-        {
-            SpawnTile();
-        }
+        SpawnInitialTiles();
     }
 }

@@ -1,29 +1,57 @@
 using UnityEngine;
 
 /// <summary>
-/// A marker component for obstacles in the game.
-/// This script has been optimized to have no active logic, reducing overhead.
-/// All collision handling is now managed by the PlayerController for better performance.
+/// Unified Obstacle
+/// Preserves:
+/// - Shield handling
+/// - Player death handling
+/// - ObstacleRegistry integration
+/// - Trigger enforcement
+/// - Rigidbody safety setup
 /// </summary>
 [RequireComponent(typeof(Collider))]
+[RequireComponent(typeof(Rigidbody))]
 public class Obstacle : MonoBehaviour
 {
     private void Awake()
     {
-        // Ensure the collider is set to be a trigger.
-        // This is a one-time setup cost and is more reliable than manual setup.
+        // Ensure trigger
         GetComponent<Collider>().isTrigger = true;
+
+        // Ensure physics safety
+        Rigidbody rb = GetComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
     }
 
     private void OnEnable()
     {
-        // Register this obstacle with the ObstacleRegistry when it becomes active
+        // Register for optimized lookup systems
         ObstacleRegistry.Register(gameObject);
     }
 
     private void OnDisable()
     {
-        // Unregister this obstacle when it is no longer active
         ObstacleRegistry.Unregister(gameObject);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!other.CompareTag("Player")) return;
+
+        PlayerPowerUp power = other.GetComponent<PlayerPowerUp>();
+        PlayerController player = other.GetComponent<PlayerController>();
+
+        if (power != null && power.HasShield())
+        {
+            power.BreakShield();
+            Destroy(gameObject);
+            return;
+        }
+
+        if (player != null)
+        {
+            player.Die();
+        }
     }
 }

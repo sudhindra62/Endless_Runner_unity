@@ -2,15 +2,24 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Manages the shield power-up timer UI, integrated with the GameHUDController.
+/// Unified ShieldTimerUI
+/// Preserves:
+/// - Singleton pattern
+/// - DontDestroyOnLoad
+/// - Inspector-based Image reference
+/// - GameHUDController integration
+/// - Shield container support
+/// - Unscaled time handling
 /// </summary>
 public class ShieldTimerUI : MonoBehaviour
 {
     public static ShieldTimerUI Instance { get; private set; }
 
-    // --- Cached References from GameHUDController ---
-    private Image shieldFillImage;
-    private GameObject shieldContainer;
+    [Header("Optional Direct Reference (Fallback Mode)")]
+    public Image fillImage; // Optional inspector assignment
+
+    private Image shieldFillImage;     // From GameHUDController
+    private GameObject shieldContainer; // From GameHUDController
 
     private float duration;
     private float timeLeft;
@@ -18,7 +27,6 @@ public class ShieldTimerUI : MonoBehaviour
 
     private void Awake()
     {
-        // Singleton pattern
         if (Instance == null)
         {
             Instance = this;
@@ -32,31 +40,32 @@ public class ShieldTimerUI : MonoBehaviour
 
     private void Start()
     {
-        // Get UI element references from the central GameHUDController
+        // Try to bind from GameHUDController
         if (GameHUDController.Instance != null)
         {
             shieldFillImage = GameHUDController.Instance.ShieldFillImage;
             shieldContainer = GameHUDController.Instance.ShieldContainer;
         }
-        else
+
+        // Fallback: use local fillImage if provided
+        if (shieldFillImage == null && fillImage != null)
         {
-            Debug.LogError("ShieldTimerUI requires an instance of GameHUDController.");
+            shieldFillImage = fillImage;
         }
     }
 
     private void Update()
     {
-        // Only run the timer logic when it's active
         if (!isTimerRunning) return;
 
-        timeLeft -= Time.unscaledDeltaTime; // Use unscaled time to run even when paused
+        timeLeft -= Time.unscaledDeltaTime;
 
-        if (shieldFillImage != null)
+        if (shieldFillImage != null && duration > 0f)
         {
-            shieldFillImage.fillAmount = timeLeft / duration;
+            shieldFillImage.fillAmount = Mathf.Clamp01(timeLeft / duration);
         }
 
-        if (timeLeft <= 0)
+        if (timeLeft <= 0f)
         {
             StopTimer();
         }
@@ -67,13 +76,14 @@ public class ShieldTimerUI : MonoBehaviour
     /// </summary>
     public void StartTimer(float seconds)
     {
-        if (shieldContainer == null) return;
-
         duration = seconds;
         timeLeft = seconds;
         isTimerRunning = true;
-        
-        shieldContainer.SetActive(true);
+
+        if (shieldContainer != null)
+            shieldContainer.SetActive(true);
+        else
+            gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -84,8 +94,8 @@ public class ShieldTimerUI : MonoBehaviour
         isTimerRunning = false;
 
         if (shieldContainer != null)
-        {
             shieldContainer.SetActive(false);
-        }
+        else
+            gameObject.SetActive(false);
     }
 }

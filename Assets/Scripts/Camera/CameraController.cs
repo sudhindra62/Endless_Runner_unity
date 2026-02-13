@@ -21,7 +21,7 @@ public class CameraController : MonoBehaviour
 
     System.Collections.IEnumerator ShakeRoutine(float intensity, float duration)
     {
-        float t = 0;
+        float t = 0f;
         while (t < duration)
         {
             shakeOffset = Random.insideUnitSphere * intensity;
