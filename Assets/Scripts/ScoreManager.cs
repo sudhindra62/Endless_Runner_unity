@@ -11,9 +11,10 @@ public class ScoreManager : MonoBehaviour
     [Header("UI References")]
     public TextMeshProUGUI scoreText;
 
-    private int score;
-    private float distanceTraveled;
-    private Vector3 lastPosition;
+    public int CurrentScore { get; private set; }
+    private int bestScore;
+
+    private const string BestScoreKey = "BestScore";
 
     private void Awake()
     {
@@ -21,6 +22,7 @@ public class ScoreManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            bestScore = PlayerPrefs.GetInt(BestScoreKey, 0);
         }
         else
         {
@@ -30,26 +32,21 @@ public class ScoreManager : MonoBehaviour
 
     private void Start()
     {
-        if (PlayerController.Instance != null)
-        {
-            lastPosition = PlayerController.Instance.transform.position;
-        }
         UpdateScoreUI();
     }
-
-    private void Update()
+    
+    public void RegisterPlayer(PlayerController player)
     {
-        if (PlayerController.Instance != null && !PlayerController.Instance.IsDead)
-        {
-            float distance = Vector3.Distance(PlayerController.Instance.transform.position, lastPosition);
-            distanceTraveled += distance;
-            lastPosition = PlayerController.Instance.transform.position;
-
-            AddScore(Mathf.FloorToInt(distance * distanceScoreMultiplier));
-        }
+        // This method can be used for future logic if the ScoreManager needs to know about the player directly.
     }
 
-    public void AddScore(int amount)
+    public void AddScoreFromDistance(float distance)
+    {
+        int points = Mathf.FloorToInt(distance * distanceScoreMultiplier);
+        AddPoints(points);
+    }
+
+    public void AddPoints(int amount)
     {
         if (amount <= 0) return;
 
@@ -59,31 +56,36 @@ public class ScoreManager : MonoBehaviour
             multiplier = StyleManager.Instance.ScoreMultiplier;
         }
 
-        score += amount * multiplier;
+        CurrentScore += amount * multiplier;
         UpdateScoreUI();
     }
-
-    public int GetScore()
+    
+    public int GetBestScore()
     {
-        return score;
+        return bestScore;
     }
 
     public void ResetScore()
     {
-        score = 0;
-        distanceTraveled = 0;
-        if (PlayerController.Instance != null)
-        {
-            lastPosition = PlayerController.Instance.transform.position;
-        }
+        CurrentScore = 0;
         UpdateScoreUI();
+    }
+
+    public void SaveBestScore()
+    {
+        if (CurrentScore > bestScore)
+        {
+            bestScore = CurrentScore;
+            PlayerPrefs.SetInt(BestScoreKey, bestScore);
+            PlayerPrefs.Save();
+        }
     }
 
     private void UpdateScoreUI()
     {
         if (scoreText != null)
         {
-            scoreText.text = "Score: " + score;
+            scoreText.text = "Score: " + CurrentScore;
         }
     }
 }

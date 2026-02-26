@@ -78,13 +78,13 @@ public class UIManager : MonoBehaviour
         if (gameplayUIPanel) gameplayUIPanel.SetActive(false); // Hide gameplay UI on game over
 
         // Populate the final scores on the game over screen
-        if (finalScoreText && GameManager.Instance)
+        if (finalScoreText && ScoreManager.Instance)
         {
-            finalScoreText.text = "Score: " + GameManager.Instance.GetCurrentScore().ToString();
+            finalScoreText.text = "Score: " + ScoreManager.Instance.CurrentScore.ToString();
         }
-        if (bestScoreText && GameManager.Instance)
+        if (bestScoreText && ScoreManager.Instance)
         { 
-            bestScoreText.text = "Best: " + GameManager.Instance.GetBestScore().ToString();
+            bestScoreText.text = "Best: " + ScoreManager.Instance.GetBestScore().ToString();
         }
     }
 
@@ -106,7 +106,7 @@ public class UIManager : MonoBehaviour
 
     public void OnRestartButtonPressed()
     {
-        if (GameManager.Instance) GameManager.Instance.RestartGame();
+        if (GameManager.Instance) GameManager.Instance.StartGame();
     }
 
     #endregion
@@ -116,9 +116,9 @@ public class UIManager : MonoBehaviour
     private void UpdateScoreDisplay()
     {
         // Update the score text, but only if the gameplay UI is active
-        if (scoreText && gameplayUIPanel.activeSelf && GameManager.Instance)
+        if (scoreText && gameplayUIPanel.activeSelf && ScoreManager.Instance)
         {
-            // scoreText.text = "Score: " + GameManager.Instance.GetCurrentScore().ToString();
+            scoreText.text = "Score: " + ScoreManager.Instance.CurrentScore.ToString();
         }
     }
 

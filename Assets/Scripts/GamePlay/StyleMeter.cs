@@ -1,61 +1,20 @@
 using UnityEngine;
 
 /// <summary>
-/// Tracks player style score based on advanced actions.
-/// Perfect Dodge support is OPTIONAL and safely ignored if unavailable.
+/// Provides a visual representation of the player's style meter.
+/// It reads data directly from the StyleManager to update the UI.
 /// </summary>
 public class StyleMeter : MonoBehaviour
 {
-    [Header("Style Settings")]
-    [SerializeField] private int perfectDodgeBonus = 10;
-    [SerializeField] private int maxStyle = 100;
-
-    private int currentStyle;
-
-    private void OnEnable()
-    {
-        var detector =FindFirstObjectByType<MonoBehaviour>()
-            as IPerfectDodgeSource;
-
-        if (detector != null)
-        {
-            detector.OnPerfectDodge += HandlePerfectDodge;
-        }
-    }
-
-    private void OnDisable()
-    {
-        var detector = FindFirstObjectByType<MonoBehaviour>()
-            as IPerfectDodgeSource;
-
-        if (detector != null)
-        {
-            detector.OnPerfectDodge -= HandlePerfectDodge;
-        }
-    }
-
-    private void HandlePerfectDodge()
-    {
-        AddStyle(perfectDodgeBonus);
-    }
-
-    private void AddStyle(int amount)
-    {
-        currentStyle = Mathf.Clamp(currentStyle + amount, 0, maxStyle);
-    }
-
-    // ✅ REQUIRED BY StyleBonusCalculator (READ-ONLY)
+    // This method is required by StyleBonusCalculator.
     public float GetStylePercent()
     {
-        if (maxStyle <= 0) return 0f;
-        return (float)currentStyle / maxStyle;
-    }
-}
+        if (StyleManager.Instance == null) return 0f;
+        
+        // Prevent division by zero if maxStyle is not set.
+        if (StyleManager.Instance.maxStyle <= 0) return 0f;
 
-/// <summary>
-/// OPTIONAL interface for future Perfect Dodge systems.
-/// </summary>
-public interface IPerfectDodgeSource
-{
-    event System.Action OnPerfectDodge;
+        // Calculate the percentage of the current style relative to the max style.
+        return StyleManager.Instance.CurrentStyle / StyleManager.Instance.maxStyle;
+    }
 }

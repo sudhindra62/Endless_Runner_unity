@@ -25,14 +25,15 @@ public class SkinDatabase : ScriptableObject
 
         allSkins = new List<SkinData>();
 
-        CreateSkin("default_runner", "Default Runner", SkinRarity.Common, SkinUnlockType.Free, 0);
-        CreateSkin("street_runner", "Street Runner", SkinRarity.Common, SkinUnlockType.Coins, 1000);
-        CreateSkin("neon_runner", "Neon Runner", SkinRarity.Rare, SkinUnlockType.Coins, 5000);
-        CreateSkin("shadow_ninja", "Shadow Ninja", SkinRarity.Epic, SkinUnlockType.Gems, 250);
-        CreateSkin("fire_skater", "Fire Skater", SkinRarity.Epic, SkinUnlockType.Gems, 500);
-        CreateSkin("lion_rider", "Lion Rider", SkinRarity.Legendary, SkinUnlockType.Paid, 0);
-        CreateSkin("tiger_runner", "Tiger Runner", SkinRarity.Legendary, SkinUnlockType.Paid, 0);
-        CreateSkin("hoverboard_hero", "Hoverboard Hero", SkinRarity.Legendary, SkinUnlockType.Paid, 0);
+        CreateSkin("default_runner", "Default Runner", SkinRarity.Common, SkinUnlockType.Free, 0, null);
+        CreateSkin("street_runner", "Street Runner", SkinRarity.Common, SkinUnlockType.Coins, 1000, null);
+        CreateSkin("neon_runner", "Neon Runner", SkinRarity.Rare, SkinUnlockType.Coins, 5000, null);
+        CreateSkin("shadow_ninja", "Shadow Ninja", SkinRarity.Epic, SkinUnlockType.Gems, 250, null);
+        CreateSkin("fire_skater", "Fire Skater", SkinRarity.Epic, SkinUnlockType.Gems, 500, null);
+        CreateSkin("lion_rider", "Lion Rider", SkinRarity.Legendary, SkinUnlockType.Paid, 0, null);
+        CreateSkin("tiger_runner", "Tiger Runner", SkinRarity.Legendary, SkinUnlockType.Paid, 0, null);
+        CreateSkin("hoverboard_hero", "Hoverboard Hero", SkinRarity.Legendary, SkinUnlockType.Paid, 0, null);
+        CreateSkin("sci_fi_runner", "Sci-Fi Runner", SkinRarity.Epic, SkinUnlockType.Gems, 750, null);
     }
 
     private void CreateSkin(
@@ -40,7 +41,8 @@ public class SkinDatabase : ScriptableObject
         string name,
         SkinRarity rarity,
         SkinUnlockType unlockType,
-        int cost)
+        int cost,
+        GameObject prefab)
     {
         var skin = ScriptableObject.CreateInstance<SkinData>();
 
@@ -48,6 +50,7 @@ public class SkinDatabase : ScriptableObject
         skin.SetName(name);
         skin.SetUnlockType(unlockType);
         skin.SetCost(cost);
+        skin.SetPrefab(prefab);
 
         // Rarity is read-only in compatibility → stored implicitly
         allSkins.Add(skin);

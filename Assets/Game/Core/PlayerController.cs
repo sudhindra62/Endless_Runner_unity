@@ -20,7 +20,7 @@ public class PlayerController : MonoBehaviour
     [Header("References")]
     public Animator animator;
 
-    public bool IsDead { get; private set; }
+    public bool IsDead { get; set; } // Changed to public set for the Death Handler
 
     private CharacterController controller;
     private Vector3 velocity;
@@ -37,7 +37,6 @@ public class PlayerController : MonoBehaviour
     private int dieTriggerHash;
     private WaitForSeconds slideWait;
 
-    private ScoreMultiplierManager scoreMultiplierManager;
     private MissionProgressTracker missionProgressTracker;
     private ScoreManager scoreManager;
     
@@ -72,7 +71,6 @@ public class PlayerController : MonoBehaviour
 
     private void Start()
     {
-        scoreMultiplierManager = ScoreMultiplierManager.Instance;
         missionProgressTracker = MissionProgressTracker.Instance;
         scoreManager = ScoreManager.Instance;
 
@@ -215,29 +213,14 @@ public class PlayerController : MonoBehaviour
         isSliding = false;
     }
 
-    public void Die()
-    {
-        if (IsDead) return;
-
-        IsDead = true;
-
-        animator?.SetTrigger(dieTriggerHash);
-
-        scoreMultiplierManager?.ResetMultiplier();
-
-        if (EndOfRunManager.Instance != null)
-        {
-            EndOfRunManager.Instance.EndRun();
-        }
-    }
-
     public void Revive()
     {
         IsDead = false;
         velocity = Vector3.zero;
 
+        // The Die trigger should be reset to allow the animation state machine to return to normal.
         animator?.ResetTrigger(dieTriggerHash);
-        animator?.Play("Run");
+        animator?.Play("Run"); // Or your default running animation state
     }
 
     public void ResetPlayer()
@@ -246,6 +229,7 @@ public class PlayerController : MonoBehaviour
         velocity = Vector3.zero;
         currentLane = 1;
 
+        // Temporarily disable the controller to teleport the player
         controller.enabled = false;
         transform.position = Vector3.zero;
         transform.rotation = Quaternion.identity;

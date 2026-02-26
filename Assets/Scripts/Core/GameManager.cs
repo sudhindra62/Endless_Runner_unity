@@ -65,12 +65,4 @@ public class GameManager : MonoBehaviour
 
         OnGameOver?.Invoke();
     }
-
-    public int GetCurrentScore() => ScoreManager.Instance != null ? ScoreManager.Instance.CurrentScore : 0;
-    public int GetBestScore() => ScoreManager.Instance != null ? ScoreManager.Instance.GetBestScore() : 0;
-
-    // Compatibility triggers
-    public void TriggerPause() => PauseGame();
-    public void TriggerResume() => ResumeGame();
-    public void TriggerGameOver() => EndGame();
 }
