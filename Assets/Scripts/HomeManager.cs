@@ -97,7 +97,8 @@ public class HomeManager : MonoBehaviour
 
     public void PlayGame()
     {
-        SceneManager.LoadScene(mainSceneName);
+        SceneManager.LoadScene(mainSceneName, LoadSceneMode.Single);
+        GameManager.Instance.StartGame();
     }
 
     #endregion

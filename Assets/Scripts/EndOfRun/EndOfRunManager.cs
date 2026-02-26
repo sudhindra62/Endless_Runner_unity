@@ -1,23 +1,10 @@
-
 using UnityEngine;
 
-/// <summary>
-/// An orchestrator singleton that manages the entire end-of-run process.
-/// It uses the other EndOfRun components to build, calculate, and apply rewards.
-/// 
-/// --- INTEGRATION ---
-/// This component should be placed on a persistent GameManager object.
-/// The existing GameManager should call this singleton's `ProcessEndOfRun` method when the game is over.
-/// Example: `EndOfRunManager.Instance.ProcessEndOfRun();`
-/// </summary>
-[RequireComponent(typeof(RunSummaryBuilder), typeof(EndRunRewardApplier), typeof(BonusMultiplierHandler))]
 public class EndOfRunManager : MonoBehaviour
 {
     public static EndOfRunManager Instance { get; private set; }
 
-    [SerializeField] private RunSummaryBuilder summaryBuilder;
-    [SerializeField] private EndRunRewardApplier rewardApplier;
-    [SerializeField] private BonusMultiplierHandler multiplierHandler;
+    private RunSummaryData runSummaryData;
 
     private void Awake()
     {
@@ -32,31 +19,34 @@ public class EndOfRunManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// The main entry point to be called by the GameManager when a run ends.
-    /// This orchestrates the entire process of summarizing, calculating, and applying rewards.
-    /// </summary>
-    public void ProcessEndOfRun()
+    public void EndRun()
     {
-        // 1. Build the initial summary from the run data.
-        RunSummaryData summary = summaryBuilder.BuildSummary();
+        runSummaryData = new RunSummaryData
+        {
+            score = ScoreManager.Instance.GetScore(),
+            coinsCollected = RunStatsManager.Instance.CoinsCollectedThisRun,
+            distanceTraveled = RunStatsManager.Instance.DistanceTraveledThisRun
+        };
 
-        // 2. Get the current multiplier (defaults to 1.0).
-        summary.bonusMultiplier = multiplierHandler.GetCurrentMultiplier();
+        // The GameFlowController will handle pausing the game and showing the revive UI.
+        if (GameFlowController.Instance != null)
+        {
+            GameFlowController.Instance.PauseForDeath();
+        } 
+        else
+        {
+            // Fallback for when GameFlowController is not in the scene
+            ShowRunSummary();
+        }
+    }
 
-        // 3. Calculate final rewards.
-        var rewardCalculator = new EndRunRewardCalculator(summary);
-        var (finalCoins, finalXP) = rewardCalculator.CalculateFinalRewards();
-
-        // 4. Apply the rewards to the player's persistent data.
-        rewardApplier.ApplyRewards(finalCoins, finalXP);
-
-        // 5. Reset the multiplier for the next run.
-        multiplierHandler.ResetMultiplier();
-
-        Debug.Log($"End of Run Process Complete. Rewarded {finalCoins} coins and {finalXP} XP.");
-
-        // FUTURE HOOK: The End-Run UI system will be triggered from here, passing the `summary` object.
-        // e.g., EndRunUIManager.Instance.ShowSummaryScreen(summary);
+    // This method will be called by the UI when the player declines to revive.
+    public void ShowRunSummary()
+    {
+        // TODO: Implement UI for run summary
+        Debug.Log("Run Summary:");
+        Debug.Log("Score: " + runSummaryData.score);
+        Debug.Log("Coins Collected: " + runSummaryData.coinsCollected);
+        Debug.Log("Distance Traveled: " + runSummaryData.distanceTraveled.ToString("F2"));
     }
 }

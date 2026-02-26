@@ -1,12 +1,16 @@
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(PlayerDeathHandler))]
 public class PlayerController : MonoBehaviour
 {
+    public static PlayerController Instance { get; private set; }
+
     [Header("Movement")]
-    public float forwardSpeed = 10f;
+    private float forwardSpeed = 10f;
     public float laneDistance = 3f;
     public float laneSwitchSpeed = 12f;
+    public float speedMultiplier { get; private set; } = 1f;
 
     [Header("Jump & Slide")]
     public float jumpForce = 8f;
@@ -21,6 +25,7 @@ public class PlayerController : MonoBehaviour
     private CharacterController controller;
     private Vector3 velocity;
     private PlayerPowerUp powerUpManager;
+    private PlayerDeathHandler deathHandler;
 
     private int currentLane = 1;
     private float originalHeight;
@@ -35,11 +40,23 @@ public class PlayerController : MonoBehaviour
     private ScoreMultiplierManager scoreMultiplierManager;
     private MissionProgressTracker missionProgressTracker;
     private ScoreManager scoreManager;
+    
+    private float baseSpeed;
 
     private void Awake()
     {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+
         controller = GetComponent<CharacterController>();
         powerUpManager = GetComponent<PlayerPowerUp>();
+        deathHandler = GetComponent<PlayerDeathHandler>();
 
         originalHeight = controller.height;
         originalCenter = controller.center;
@@ -49,6 +66,8 @@ public class PlayerController : MonoBehaviour
         dieTriggerHash = Animator.StringToHash("Die");
 
         slideWait = new WaitForSeconds(slideDuration);
+        
+        baseSpeed = forwardSpeed;
     }
 
     private void Start()
@@ -66,6 +85,7 @@ public class PlayerController : MonoBehaviour
     private void OnEnable()
     {
         ReviveManager.OnReviveSuccess += Revive;
+        GameDifficultyManager.OnSpeedMultiplierChanged += SetSpeedMultiplier;
 
         if (SwipeInput.Instance != null)
         {
@@ -79,6 +99,7 @@ public class PlayerController : MonoBehaviour
     private void OnDisable()
     {
         ReviveManager.OnReviveSuccess -= Revive;
+        GameDifficultyManager.OnSpeedMultiplierChanged -= SetSpeedMultiplier;
 
         if (SwipeInput.Instance != null)
         {
@@ -89,57 +110,60 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-private void Update()
-{
-    if (IsDead) return;
-
-    // Keyboard input (Laptop testing)
-    if (Input.GetKeyDown(KeyCode.LeftArrow)) ChangeLane(-1);
-    if (Input.GetKeyDown(KeyCode.RightArrow)) ChangeLane(1);
-    if (Input.GetKeyDown(KeyCode.UpArrow)) Jump();
-    if (Input.GetKeyDown(KeyCode.DownArrow)) Slide();
-
-    Move();
-}
-private void Move()
-{
-    // Forward movement
-    Vector3 move = Vector3.forward * forwardSpeed;
-
-    // Calculate target lane position
-    float targetX = (currentLane - 1) * laneDistance;
-
-    // Smooth lane movement
-    float difference = targetX - transform.position.x;
-    float laneMove = difference * laneSwitchSpeed;
-
-    move.x = laneMove;
-
-    // Gravity
-    if (controller.isGrounded)
-{
-    if (velocity.y < 0)
-        velocity.y = -2f;
-
-    if (!isSliding)
+    private void Update()
     {
-        controller.height = originalHeight;
-        controller.center = originalCenter;
+        if (IsDead) return;
+
+        if (Input.GetKeyDown(KeyCode.LeftArrow)) ChangeLane(-1);
+        if (Input.GetKeyDown(KeyCode.RightArrow)) ChangeLane(1);
+        if (Input.GetKeyDown(KeyCode.UpArrow)) Jump();
+        if (Input.GetKeyDown(KeyCode.DownArrow)) Slide();
+
+        Move();
     }
-}
 
-    velocity.y += gravity * Time.deltaTime;
+    private void Move()
+    {
+        float finalSpeed = baseSpeed * speedMultiplier;
+        
+        Vector3 move = Vector3.forward * finalSpeed;
 
-    Vector3 finalVelocity = new Vector3(move.x, velocity.y, move.z) * Time.deltaTime;
+        float targetX = (currentLane - 1) * laneDistance;
 
-    controller.Move(finalVelocity);
+        float difference = targetX - transform.position.x;
+        float laneMove = difference * laneSwitchSpeed;
 
-    // Distance scoring
-    float distanceMoved = forwardSpeed * Time.deltaTime;
+        move.x = laneMove;
 
-    scoreManager?.AddScoreFromDistance(distanceMoved);
-    missionProgressTracker?.UpdateDistance(distanceMoved);
-}
+        if (controller.isGrounded)
+        {
+            if (velocity.y < 0)
+                velocity.y = -5f;
+
+            if (!isSliding)
+            {
+                controller.height = originalHeight;
+                controller.center = originalCenter;
+            }
+        }
+
+        velocity.y += gravity * Time.deltaTime;
+
+        Vector3 finalVelocity = new Vector3(move.x, velocity.y, move.z) * Time.deltaTime;
+
+        controller.Move(finalVelocity);
+
+        float distanceMoved = finalSpeed * Time.deltaTime;
+
+        scoreManager?.AddScoreFromDistance(distanceMoved);
+        missionProgressTracker?.UpdateDistance(distanceMoved);
+        MilestoneManager.Instance?.AddDistance(distanceMoved);
+    }
+    
+    public void SetSpeedMultiplier(float multiplier)
+    {
+        speedMultiplier = Mathf.Max(0, multiplier);
+    }
 
     private void HandleSwipeLeft()
     {
@@ -163,6 +187,7 @@ private void Move()
         velocity.y = jumpForce;
         animator?.SetTrigger(jumpTriggerHash);
         missionProgressTracker?.OnJump();
+        MilestoneManager.Instance?.ReportJump();
     }
 
     public void Slide()
@@ -179,6 +204,8 @@ private void Move()
 
         controller.height = originalHeight / 2;
         controller.center = originalCenter / 2;
+        
+        MilestoneManager.Instance?.ReportSlide();
 
         yield return slideWait;
 
@@ -191,17 +218,17 @@ private void Move()
     public void Die()
     {
         if (IsDead) return;
-        ConfirmDeath();
-    }
 
-    private void ConfirmDeath()
-    {
         IsDead = true;
 
         animator?.SetTrigger(dieTriggerHash);
 
         scoreMultiplierManager?.ResetMultiplier();
-        ScoreManager.Instance?.GameOver();
+
+        if (EndOfRunManager.Instance != null)
+        {
+            EndOfRunManager.Instance.EndRun();
+        }
     }
 
     public void Revive()
@@ -227,7 +254,6 @@ private void Move()
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        // COIN COLLECTION (Restored from original)
         if (hit.gameObject.CompareTag("Coin"))
         {
             Coin coin = hit.gameObject.GetComponent<Coin>();
@@ -235,7 +261,6 @@ private void Move()
                 coin.Collect();
         }
 
-        // OBSTACLE HANDLING
         if (hit.gameObject.CompareTag("Obstacle"))
         {
             HandleObstacleCollision(hit.gameObject);
@@ -251,6 +276,6 @@ private void Move()
             return;
         }
 
-        Die();
+        deathHandler?.HandleDeath();
     }
 }

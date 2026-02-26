@@ -10,24 +10,15 @@ public class ReviveManager : MonoBehaviour
 {
     public static ReviveManager Instance { get; private set; }
 
-    /* -------------------------
-     * Events
-     * ------------------------- */
     public static event Action OnReviveSuccess;
     public static event Action OnReviveFailed;
 
-    /* -------------------------
-     * Configuration
-     * ------------------------- */
     [Header("Configuration")]
     [SerializeField] private int reviveGemCost = 50;
     [SerializeField] private float invincibilityDuration = 3f;
 
     private bool hasRevivedThisRun = false;
 
-    /* -------------------------
-     * Lifecycle
-     * ------------------------- */
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -40,9 +31,6 @@ public class ReviveManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    /* -------------------------
-     * Run State
-     * ------------------------- */
     public void ResetForNewRun()
     {
         hasRevivedThisRun = false;
@@ -55,10 +43,6 @@ public class ReviveManager : MonoBehaviour
 
     public int GetReviveGemCost() => reviveGemCost;
     public float GetInvincibilityDuration() => invincibilityDuration;
-
-    /* -------------------------
-     * Revive Entry Points
-     * ------------------------- */
 
     public void ReviveWithToken()
     {
@@ -105,9 +89,10 @@ public class ReviveManager : MonoBehaviour
         OnReviveFailed?.Invoke();
     }
 
-    /* -------------------------
-     * Core Revive Logic
-     * ------------------------- */
+    /// <summary>
+    /// Core revive logic. This method is called after a revive option is successfully chosen.
+    /// It updates the revive state, notifies other systems, and resumes the game flow.
+    /// </summary>
     public void RevivePlayer()
     {
         if (!CanRevive())
@@ -118,25 +103,10 @@ public class ReviveManager : MonoBehaviour
 
         hasRevivedThisRun = true;
 
-        // Resume time
-        Time.timeScale = 1f;
-
-        // Restore player
-        GameObject player = GameObject.FindWithTag("Player");
-        if (player != null)
-        {
-            PlayerDeathHandler death = player.GetComponent<PlayerDeathHandler>();
-            if (death != null)
-                death.ResetDeath();
-
-            PlayerMovement movement = player.GetComponent<PlayerMovement>();
-            if (movement != null)
-                movement.Resume();
-        }
-
+        // The PlayerController is subscribed to this event and will handle its own state reset.
         OnReviveSuccess?.Invoke();
 
-        // Resume game flow
+        // The GameFlowController will handle resuming time and the overall game state.
         GameFlowController.Instance?.ResumeAfterRevive();
     }
 }

@@ -4,7 +4,9 @@ using System.Collections;
 
 public class ShieldTimerUI : MonoBehaviour
 {
-    public Image fillImage;
+    [Header("UI References")]
+    public Image timerImage;
+
     private Coroutine countdownCoroutine;
 
     public void StartCountdown(float duration)
@@ -13,7 +15,7 @@ public class ShieldTimerUI : MonoBehaviour
         {
             StopCoroutine(countdownCoroutine);
         }
-        countdownCoroutine = StartCoroutine(Countdown(duration));
+        countdownCoroutine = StartCoroutine(CountdownRoutine(duration));
     }
 
     public void StopCountdown()
@@ -21,27 +23,29 @@ public class ShieldTimerUI : MonoBehaviour
         if (countdownCoroutine != null)
         {
             StopCoroutine(countdownCoroutine);
+            countdownCoroutine = null;
         }
-        fillImage.fillAmount = 0;
-    }
-
-    public void UpdateFillAmount(float fillAmount)
-    {
-        if (fillImage != null)
+        if (timerImage != null)
         {
-            fillImage.fillAmount = fillAmount;
+            timerImage.fillAmount = 0;
         }
     }
 
-    private IEnumerator Countdown(float duration)
+    private IEnumerator CountdownRoutine(float duration)
     {
+        if (timerImage == null) yield break;
+
         float timer = duration;
+        timerImage.fillAmount = 1f;
+
         while (timer > 0)
         {
             timer -= Time.unscaledDeltaTime;
-            UpdateFillAmount(timer / duration);
+            timerImage.fillAmount = timer / duration;
             yield return null;
         }
-        UpdateFillAmount(0);
+
+        timerImage.fillAmount = 0;
+        countdownCoroutine = null;
     }
 }

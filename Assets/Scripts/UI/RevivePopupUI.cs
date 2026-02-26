@@ -25,17 +25,16 @@ public class RevivePopupUI : MonoBehaviour
 
     private void OnEnable()
     {
-        // In your GameManager, you should have an event like this:
-        // GameManager.OnPlayerDied += ShowPopup;
+        GameFlowController.OnPauseForDeath += ShowPopup;
         ReviveManager.OnReviveSuccess += HidePopup;
-        ReviveManager.OnReviveFailed += HidePopup; // Or show a "failed" message
+        ReviveManager.OnReviveFailed += HandleReviveFailed; 
     }
 
     private void OnDisable()
     {
-        // GameManager.OnPlayerDied -= ShowPopup;
+        GameFlowController.OnPauseForDeath -= ShowPopup;
         ReviveManager.OnReviveSuccess -= HidePopup;
-        ReviveManager.OnReviveFailed -= HidePopup;
+        ReviveManager.OnReviveFailed -= HandleReviveFailed;
     }
 
     private void Start()
@@ -55,7 +54,7 @@ public class RevivePopupUI : MonoBehaviour
         if (!ReviveManager.Instance.CanRevive())
         {
             // Immediately proceed to game over if no revives are left
-            // Your GameManager should handle this transition
+            GameFlowController.Instance.EndRunFinal();
             return; 
         }
 
@@ -98,10 +97,14 @@ public class RevivePopupUI : MonoBehaviour
 
     private void OnDeclineClicked()
     {
-        // Notify the GameManager that the player has declined the revive
-        // This would typically trigger the full game over sequence.
         Debug.Log("Player declined revive.");
         HidePopup();
-        // GameManager.Instance.EndRun(); // Example call
+        GameFlowController.Instance.EndRunFinal();
+    }
+
+    private void HandleReviveFailed()
+    {
+        HidePopup();
+        GameFlowController.Instance.EndRunFinal();
     }
 }

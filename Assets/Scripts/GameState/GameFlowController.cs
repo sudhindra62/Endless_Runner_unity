@@ -1,9 +1,13 @@
 using UnityEngine;
+using System;
 
 public class GameFlowController : MonoBehaviour
 {
     public static GameFlowController Instance { get; private set; }
 
+    public static event Action OnPauseForDeath;
+
+    private TimeControlManager timeControlManager;
     private bool runActive = false;
 
     private void Awake()
@@ -16,16 +20,14 @@ public class GameFlowController : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-    }
 
-    /* -------------------------
-     * RUN LIFECYCLE
-     * ------------------------- */
+        timeControlManager = GetComponent<TimeControlManager>();
+    }
 
     public void StartRun()
     {
         runActive = true;
-        Time.timeScale = 1f;
+        timeControlManager.ResumeTime();
 
         ReviveManager.Instance?.ResetForNewRun();
 
@@ -34,16 +36,19 @@ public class GameFlowController : MonoBehaviour
 
     public void PauseForDeath()
     {
+        if (!runActive) return;
+
         runActive = false;
-        Time.timeScale = 0f;
+        timeControlManager.PauseTime();
 
         Debug.Log("Run paused (player died)");
+        OnPauseForDeath?.Invoke();
     }
 
     public void ResumeAfterRevive()
     {
         runActive = true;
-        Time.timeScale = 1f;
+        timeControlManager.ResumeTime();
 
         Debug.Log("Run resumed after revive");
     }
@@ -51,10 +56,13 @@ public class GameFlowController : MonoBehaviour
     public void EndRunFinal()
     {
         runActive = false;
-        Time.timeScale = 1f;
+        timeControlManager.ResumeTime();
 
         Debug.Log("Run ended permanently (no revive)");
-        // Phase 8 will hook Game Over UI here
+        if (EndOfRunManager.Instance != null)
+        {
+            EndOfRunManager.Instance.ShowRunSummary();
+        }
     }
 
     public bool IsRunActive() => runActive;
