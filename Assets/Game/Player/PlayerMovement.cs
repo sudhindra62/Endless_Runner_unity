@@ -1,101 +1,176 @@
-using UnityEngine;
 
-/// <summary>
-/// The definitive authority on player movement.
-/// This script consolidates all movement-related logic, from input handling to character control.
-/// </summary>
+using UnityEngine;
+using System.Collections;
+
 public class PlayerMovement : MonoBehaviour
 {
-    private PlayerController playerController;
-    private CharacterController characterController;
-    private Animator animator;
-    private SwipeInput swipeInput;
+    [Header("Movement")]
+    public float forwardSpeed = 10f;
+    public float laneDistance = 3f;
+    public float laneSwitchSpeed = 12f;
+    public float speedMultiplier { get; private set; } = 1f;
 
-    [SerializeField]
-    private float laneWidth = 3.0f;
-    [SerializeField]
-    private float jumpForce = 10.0f;
-    [SerializeField]
-    private float gravity = 20.0f;
-    [SerializeField]
-    private float forwardSpeed = 10.0f;
+    [Header("Jump & Slide")]
+    public float jumpForce = 8f;
+    public float gravity = -25f;
+    public float slideDuration = 1f;
+    public float slideAttackBonus = 100f;
+
+    [Header("References")]
+    public Animator animator;
+
+    private CharacterController controller;
+    private PlayerPowerUp powerUpManager;
+    private Vector3 velocity;
 
     private int currentLane = 1;
-    private Vector3 verticalVelocity;
+    private float originalHeight;
+    private Vector3 originalCenter;
+    private bool isSliding;
+
+    private int jumpTriggerHash;
+    private int slideTriggerHash;
+    private WaitForSeconds slideWait;
+    
+    private float baseSpeed;
+
+    private MissionProgressTracker missionProgressTracker;
+    private ScoreManager scoreManager;
 
     private void Awake()
     {
-        playerController = GetComponent<PlayerController>();
-        characterController = GetComponent<CharacterController>();
-        animator = GetComponentInChildren<Animator>();
-        swipeInput = GetComponent<SwipeInput>();
+        controller = GetComponent<CharacterController>();
+        powerUpManager = GetComponent<PlayerPowerUp>();
+
+        originalHeight = controller.height;
+        originalCenter = controller.center;
+
+        jumpTriggerHash = Animator.StringToHash("Jump");
+        slideTriggerHash = Animator.StringToHash("Slide");
+
+        slideWait = new WaitForSeconds(slideDuration);
+        
+        baseSpeed = forwardSpeed;
     }
 
-    private void Update()
+    private void Start()
     {
-        if (playerController.IsDead) return;
-
-        HandleInput();
-        MovePlayer();
+        missionProgressTracker = MissionProgressTracker.Instance;
+        scoreManager = ScoreManager.Instance;
     }
 
-    private void HandleInput()
+    private void OnEnable()
     {
-        if (swipeInput.SwipeLeft)
+        GameDifficultyManager.OnSpeedMultiplierChanged += SetSpeedMultiplier;
+    }
+
+    private void OnDisable()
+    {
+        GameDifficultyManager.OnSpeedMultiplierChanged -= SetSpeedMultiplier;
+    }
+    
+    public void Move()
+    {
+        float finalSpeed = baseSpeed * speedMultiplier;
+        
+        Vector3 move = Vector3.forward * finalSpeed;
+
+        float targetX = (currentLane - 1) * laneDistance;
+
+        float difference = targetX - transform.position.x;
+        float laneMove = difference * laneSwitchSpeed;
+
+        move.x = laneMove;
+
+        if (controller.isGrounded)
         {
-            ChangeLane(-1);
+            if (velocity.y < 0)
+                velocity.y = -5f;
+
+            if (!isSliding)
+            {
+                controller.height = originalHeight;
+                controller.center = originalCenter;
+            }
         }
-        else if (swipeInput.SwipeRight)
+
+        velocity.y += gravity * Time.deltaTime;
+
+        Vector3 finalVelocity = new Vector3(move.x, velocity.y, move.z) * Time.deltaTime;
+
+        controller.Move(finalVelocity);
+
+        float distanceMoved = finalSpeed * Time.deltaTime;
+
+        scoreManager?.AddScoreFromDistance(distanceMoved);
+        missionProgressTracker?.UpdateDistance(distanceMoved);
+        MilestoneManager.Instance?.AddDistance(distanceMoved);
+    }
+    
+    public void SetSpeedMultiplier(float multiplier)
+    {
+        speedMultiplier = Mathf.Max(0, multiplier);
+    }
+
+    public void ChangeLane(int direction)
+    {
+        currentLane = Mathf.Clamp(currentLane + direction, 0, 2);
+    }
+
+    public void Jump()
+    {
+        if (!controller.isGrounded || isSliding) return;
+
+        velocity.y = jumpForce;
+        animator?.SetTrigger(jumpTriggerHash);
+        missionProgressTracker?.OnJump();
+        MilestoneManager.Instance?.ReportJump();
+    }
+
+    public void Slide()
+    {
+        if (!controller.isGrounded) return;
+
+        if (powerUpManager.HasShield())
         {
-            ChangeLane(1);
+            if(Physics.Raycast(transform.position, Vector3.forward, out RaycastHit hit, 2f))
+            {
+                if(hit.collider.CompareTag("Obstacle"))
+                {
+                    Destroy(hit.collider.gameObject);
+                    powerUpManager.BreakShield();
+                    scoreManager.AddPoints((int)slideAttackBonus);
+                }
+            }
         }
-        else if (swipeInput.SwipeUp)
-        {
-            Jump();
+
+        if (!isSliding) {
+            StartCoroutine(SlideRoutine());
         }
     }
 
-    private void MovePlayer()
+    private IEnumerator SlideRoutine()
     {
-        // --- Horizontal Movement ---
-        Vector3 targetPosition = new Vector3((currentLane - 1) * laneWidth, 0, 0);
-        Vector3 moveDirection = (targetPosition - transform.position).normalized;
-        characterController.Move(moveDirection * forwardSpeed * Time.deltaTime);
+        isSliding = true;
 
-        // --- Vertical Movement ---
-        if (characterController.isGrounded)
-        {
-            verticalVelocity.y = -gravity * Time.deltaTime;
-        }
-        else
-        {
-            verticalVelocity.y -= gravity * Time.deltaTime;
-        }
+        animator?.SetTrigger(slideTriggerHash);
 
-        characterController.Move(verticalVelocity * Time.deltaTime);
+        controller.height = originalHeight / 2;
+        controller.center = originalCenter / 2;
+        
+        MilestoneManager.Instance?.ReportSlide();
 
-        // --- Forward Movement ---
-        characterController.Move(Vector3.forward * forwardSpeed * Time.deltaTime);
+        yield return slideWait;
 
-        // --- Animation ---
-        animator.SetFloat("Speed", characterController.velocity.magnitude);
+        controller.height = originalHeight;
+        controller.center = originalCenter;
+
+        isSliding = false;
     }
 
-    private void ChangeLane(int direction)
+    public void ResetMovement()
     {
-        int newLane = currentLane + direction;
-        if (newLane >= 0 && newLane <= 2)
-        {
-            currentLane = newLane;
-        }
-    }
-
-    private void Jump()
-    {
-        if (characterController.isGrounded)
-        {
-            verticalVelocity.y = jumpForce;
-            animator.SetTrigger("Jump");
-        }
+        velocity = Vector3.zero;
+        currentLane = 1;
     }
 }

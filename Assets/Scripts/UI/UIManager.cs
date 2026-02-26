@@ -4,7 +4,7 @@ using TMPro;
 
 /// <summary>
 /// Manages the primary in-game UI, including the score display and game state panels (Pause, Game Over).
-/// Subscribes to GameManager events to automatically show/hide relevant UI screens.
+/// Subscribes to GameStateManager events to automatically show/hide relevant UI screens.
 /// </summary>
 public class UIManager : MonoBehaviour
 {
@@ -28,26 +28,23 @@ public class UIManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // Subscribe to GameManager events to automatically manage UI states
-        GameManager.OnGamePaused += ShowPauseUI;
-        GameManager.OnGameResumed += HidePauseUI;
-        GameManager.OnGameOver += ShowGameOverUI;
+        // Subscribe to the new, centralized GameStateManager event
+        GameStateManager.OnGameStateChanged += HandleGameStateChanged;
     }
 
     private void OnDisable()
     {
         // Always unsubscribe from events when the object is disabled
-        GameManager.OnGamePaused -= ShowPauseUI;
-        GameManager.OnGameResumed -= HidePauseUI;
-        GameManager.OnGameOver -= ShowGameOverUI;
+        GameStateManager.OnGameStateChanged -= HandleGameStateChanged;
     }
 
     private void Start()
     {
-        // Ensure a clean UI state at the start of the game
-        if (gameplayUIPanel) gameplayUIPanel.SetActive(true);
-        if (pauseUIPanel) pauseUIPanel.SetActive(false);
-        if (gameOverUIPanel) gameOverUIPanel.SetActive(false);
+        // Initial UI setup based on the starting game state
+        if (GameStateManager.Instance != null)
+        {
+            HandleGameStateChanged(GameStateManager.Instance.CurrentState);
+        }
     }
 
     private void Update()
@@ -58,25 +55,22 @@ public class UIManager : MonoBehaviour
 
     #endregion
 
-    #region UI Event Handlers
+    #region State Machine Driven UI
 
-    private void ShowPauseUI()
+    private void HandleGameStateChanged(GameState newState)
     {
-        if (pauseUIPanel) pauseUIPanel.SetActive(true);
-        if (gameplayUIPanel) gameplayUIPanel.SetActive(false); // Hide gameplay UI on pause
+        gameplayUIPanel.SetActive(newState == GameState.Playing);
+        pauseUIPanel.SetActive(newState == GameState.Paused);
+        gameOverUIPanel.SetActive(newState == GameState.GameOver);
+
+        if (newState == GameState.GameOver)
+        {
+            UpdateGameOverScores();
+        }
     }
 
-    private void HidePauseUI()
+    private void UpdateGameOverScores()
     {
-        if (pauseUIPanel) pauseUIPanel.SetActive(false);
-        if (gameplayUIPanel) gameplayUIPanel.SetActive(true); // Restore gameplay UI
-    }
-
-    private void ShowGameOverUI()
-    {
-        if (gameOverUIPanel) gameOverUIPanel.SetActive(true);
-        if (gameplayUIPanel) gameplayUIPanel.SetActive(false); // Hide gameplay UI on game over
-
         // Populate the final scores on the game over screen
         if (finalScoreText && ScoreManager.Instance)
         {
@@ -96,17 +90,17 @@ public class UIManager : MonoBehaviour
 
     public void OnPauseButtonPressed()
     {
-        if (GameManager.Instance) GameManager.Instance.PauseGame();
+        if (GameManager.Instance != null) GameManager.Instance.Flow.Pause();
     }
 
     public void OnResumeButtonPressed()
     {
-        if (GameManager.Instance) GameManager.Instance.ResumeGame();
+        if (GameManager.Instance != null) GameManager.Instance.Flow.Resume();
     }
 
     public void OnRestartButtonPressed()
     {
-        if (GameManager.Instance) GameManager.Instance.StartGame();
+        if (GameManager.Instance != null) GameManager.Instance.Flow.StartRun();
     }
 
     #endregion

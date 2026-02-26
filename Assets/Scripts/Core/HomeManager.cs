@@ -97,8 +97,9 @@ public class HomeManager : MonoBehaviour
 
     public void PlayGame()
     {
+        // Correctly loads the main game scene.
+        // The GameFlowManager within that scene will handle the run initialization.
         SceneManager.LoadScene(mainSceneName, LoadSceneMode.Single);
-        GameManager.Instance.StartGame();
     }
 
     #endregion

@@ -1,32 +1,41 @@
+
 using UnityEngine;
 
-/// <summary>
-/// Handles all player collision events, acting as the single authority for collision detection and response.
-/// </summary>
 public class PlayerCollisionHandler : MonoBehaviour
 {
+    private PlayerPowerUp powerUpManager;
     private PlayerDeathHandler deathHandler;
-    private ScoreManager scoreManager;
 
     private void Awake()
     {
+        powerUpManager = GetComponent<PlayerPowerUp>();
         deathHandler = GetComponent<PlayerDeathHandler>();
-        scoreManager = ScoreManager.Instance;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        if (other.CompareTag("Obstacle"))
+        if (hit.gameObject.CompareTag("Coin"))
         {
-            deathHandler.HandleDeath();
+            Coin coin = hit.gameObject.GetComponent<Coin>();
+            if (coin != null)
+                coin.Collect();
         }
-        else if (other.CompareTag("Coin"))
+
+        if (hit.gameObject.CompareTag("Obstacle"))
         {
-            if (scoreManager != null)
-            {
-                scoreManager.AddScore(1);
-            }
-            other.gameObject.SetActive(false); 
+            HandleObstacleCollision(hit.gameObject);
         }
+    }
+
+    private void HandleObstacleCollision(GameObject obstacle)
+    {
+        if (powerUpManager != null && powerUpManager.HasShield())
+        {
+            powerUpManager.BreakShield();
+            Destroy(obstacle);
+            return;
+        }
+
+        deathHandler?.HandleDeath();
     }
 }

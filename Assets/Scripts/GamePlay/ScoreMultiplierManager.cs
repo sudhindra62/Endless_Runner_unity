@@ -1,7 +1,14 @@
-using UnityEngine;
-using TMPro;
-using System;
 
+using UnityEngine;
+using System;
+using System.Collections.Generic;
+
+[System.Serializable]
+public class MultiplierTier
+{
+    public float styleThreshold;
+    public int multiplier;
+}
 
 /// <summary>
 /// Manages the score multiplier.
@@ -13,13 +20,19 @@ public class ScoreMultiplierManager : MonoBehaviour
     public static ScoreMultiplierManager Instance { get; private set; }
 
     [Header("Multiplier Settings")]
-    [SerializeField] private float[] multiplierTiers = { 1f, 2f, 3f, 4f, 5f };
-    [SerializeField] private string increaseAnimationTrigger = "OnMultiplierIncrease";
+    [Tooltip("The amount of style points gained for a perfect dodge.")]
+    public float perfectDodgeBonus = 10f;
+    [Tooltip("The rate at which the style meter decays over time.")]
+    public float styleDecayRate = 2f;
+    [Tooltip("The maximum amount of style points.")]
+    public float maxStyle = 100f;
 
-    private TextMeshProUGUI multiplierText;
-    private Animator multiplierAnimator;
+    [Header("Multiplier Tiers")]
+    [Tooltip("The list of multiplier tiers. Make sure to order them by styleThreshold in ascending order.")]
+    public List<MultiplierTier> multiplierTiers = new List<MultiplierTier>();
 
-    private int currentTierIndex = 0;
+    public float CurrentStyle { get; private set; }
+    public int ScoreMultiplier { get; private set; } = 1;
 
     private void Awake()
     {
@@ -35,12 +48,6 @@ public class ScoreMultiplierManager : MonoBehaviour
 
     private void Start()
     {
-        if (GameHUDController.Instance != null)
-        {
-            multiplierText = GameHUDController.Instance.MultiplierText;
-            multiplierAnimator = GameHUDController.Instance.MultiplierAnimator;
-        }
-
         ReviveManager.OnReviveSuccess += ResetMultiplier;
         ResetMultiplier();
     }
@@ -50,38 +57,52 @@ public class ScoreMultiplierManager : MonoBehaviour
         ReviveManager.OnReviveSuccess -= ResetMultiplier;
     }
 
-    public void IncreaseMultiplier()
+    private void Update()
     {
-        if (currentTierIndex < multiplierTiers.Length - 1)
+        // Decay the style meter over time
+        if (CurrentStyle > 0)
         {
-            currentTierIndex++;
-            UpdateUI();
-
-            if (multiplierAnimator != null && !string.IsNullOrEmpty(increaseAnimationTrigger))
-            {
-                multiplierAnimator.SetTrigger(increaseAnimationTrigger);
-            }
+            CurrentStyle -= styleDecayRate * Time.deltaTime;
+            CurrentStyle = Mathf.Max(0, CurrentStyle);
         }
+
+        UpdateScoreMultiplier();
+    }
+
+    public void PerfectDodge()
+    {
+        CurrentStyle += perfectDodgeBonus;
+        CurrentStyle = Mathf.Min(CurrentStyle, maxStyle);
     }
 
     public void ResetMultiplier()
     {
-        currentTierIndex = 0;
-        UpdateUI();
+        CurrentStyle = 0;
+        UpdateScoreMultiplier();
+    }
+
+    private void UpdateScoreMultiplier()
+    {
+        int oldMultiplier = ScoreMultiplier;
+
+        ScoreMultiplier = 1;
+        for (int i = multiplierTiers.Count - 1; i >= 0; i--)
+        {
+            if (CurrentStyle >= multiplierTiers[i].styleThreshold)
+            {
+                ScoreMultiplier = multiplierTiers[i].multiplier;
+                break;
+            }
+        }
+
+        if (oldMultiplier != ScoreMultiplier)
+        {
+            OnMultiplierChanged?.Invoke(ScoreMultiplier);
+        }
     }
 
     public float GetCurrentMultiplier()
     {
-        return multiplierTiers[currentTierIndex];
-    }
-
-    private void UpdateUI()
-    {
-        if (multiplierText != null)
-        {
-            multiplierText.text = $"x{GetCurrentMultiplier()}";
-        }
-
-        OnMultiplierChanged?.Invoke(GetCurrentMultiplier());
+        return ScoreMultiplier;
     }
 }
