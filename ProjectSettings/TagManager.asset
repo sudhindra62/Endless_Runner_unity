@@ -9,6 +9,7 @@ TagManager:
   - PowerUp
   - 'PowerUp '
   - Shield
+  - Magnet
   layers:
   - Default
   - TransparentFX
