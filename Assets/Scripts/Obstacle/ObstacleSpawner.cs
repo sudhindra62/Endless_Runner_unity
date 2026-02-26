@@ -27,11 +27,11 @@ public class ObstacleSpawner : MonoBehaviour
     [Header("Difficulty Settings")]
     public float startSpawnGap = 14f;
     public float minSpawnGap = 9f;
-    public float difficultyRampTime = 90f;
+    public float difficultyRampTime = 180f;
 
     [Header("Wave / Rest Settings")]
-    public float waveDuration = 22f;
-    public float restDuration = 7f;
+    public float waveDuration = 90f;
+    public float restDuration = 4f;
 
     private float nextSpawnZ;
     private float gameTimer;

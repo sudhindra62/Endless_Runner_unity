@@ -14,7 +14,7 @@ public class AdReviveHandler : MonoBehaviour
 
     private void Start()
     {
-        reviveManager = FindObjectOfType<ReviveManager>();
+        reviveManager = FindFirstObjectByType<ReviveManager>();
         if (reviveManager == null)
         {
             Debug.LogError("ReviveManager not found in the scene!");

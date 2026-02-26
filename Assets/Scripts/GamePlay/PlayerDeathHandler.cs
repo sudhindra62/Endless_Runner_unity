@@ -19,10 +19,9 @@ public class PlayerDeathHandler : MonoBehaviour
         Time.timeScale = 0f;
 
         // Stop movement
-        PlayerMovement movement = GetComponent<PlayerMovement>();
-        if (movement != null)
-            movement.Stop();
-
+        PlayerController controller = GetComponent<PlayerController>();
+if (controller != null)
+    controller.Die();
         // Show revive UI
         if (ReviveUIBinder.Instance != null)
             ReviveUIBinder.Instance.Show();
@@ -41,12 +40,12 @@ public class PlayerDeathHandler : MonoBehaviour
      * ------------------------- */
     private void OnCollisionEnter(Collision collision)
     {
-        if (isDead) return;
+       // if (isDead) return;
 
-        if (collision.gameObject.CompareTag("Obstacle"))
-        {
-            Die();
-        }
+       // if (collision.gameObject.CompareTag("Obstacle"))
+       // {
+        //    Die();
+        // }
     }
 
     /* -------------------------
@@ -72,10 +71,9 @@ public class PlayerDeathHandler : MonoBehaviour
         Time.timeScale = 1f;
 
         // Resume movement
-        PlayerMovement movement = GetComponent<PlayerMovement>();
-        if (movement != null)
-            movement.Resume();
-
+        PlayerController controller = GetComponent<PlayerController>();
+if (controller != null)
+    controller.Revive();
         // Hide revive UI
         if (ReviveUIBinder.Instance != null)
             ReviveUIBinder.Instance.Hide();

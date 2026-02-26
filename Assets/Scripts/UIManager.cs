@@ -118,7 +118,7 @@ public class UIManager : MonoBehaviour
         // Update the score text, but only if the gameplay UI is active
         if (scoreText && gameplayUIPanel.activeSelf && GameManager.Instance)
         {
-            scoreText.text = "Score: " + GameManager.Instance.GetCurrentScore().ToString();
+            // scoreText.text = "Score: " + GameManager.Instance.GetCurrentScore().ToString();
         }
     }
 

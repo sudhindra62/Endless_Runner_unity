@@ -101,28 +101,45 @@ private void Update()
 
     Move();
 }
+private void Move()
+{
+    // Forward movement
+    Vector3 move = Vector3.forward * forwardSpeed;
 
+    // Calculate target lane position
+    float targetX = (currentLane - 1) * laneDistance;
 
-    private void Move()
+    // Smooth lane movement
+    float difference = targetX - transform.position.x;
+    float laneMove = difference * laneSwitchSpeed;
+
+    move.x = laneMove;
+
+    // Gravity
+    if (controller.isGrounded)
+{
+    if (velocity.y < 0)
+        velocity.y = -2f;
+
+    if (!isSliding)
     {
-        Vector3 move = Vector3.forward * forwardSpeed;
-
-        float targetX = (currentLane - 1) * laneDistance;
-        move.x = Mathf.Lerp(transform.position.x, targetX, laneSwitchSpeed * Time.deltaTime) - transform.position.x;
-
-        if (controller.isGrounded && velocity.y < 0)
-            velocity.y = -2f;
-
-        velocity.y += gravity * Time.deltaTime;
-
-        Vector3 finalVelocity = (move + velocity) * Time.deltaTime;
-        controller.Move(finalVelocity);
-
-        float distanceMoved = finalVelocity.z;
-
-        scoreManager?.AddScoreFromDistance(distanceMoved);
-        missionProgressTracker?.UpdateDistance(distanceMoved);
+        controller.height = originalHeight;
+        controller.center = originalCenter;
     }
+}
+
+    velocity.y += gravity * Time.deltaTime;
+
+    Vector3 finalVelocity = new Vector3(move.x, velocity.y, move.z) * Time.deltaTime;
+
+    controller.Move(finalVelocity);
+
+    // Distance scoring
+    float distanceMoved = forwardSpeed * Time.deltaTime;
+
+    scoreManager?.AddScoreFromDistance(distanceMoved);
+    missionProgressTracker?.UpdateDistance(distanceMoved);
+}
 
     private void HandleSwipeLeft()
     {

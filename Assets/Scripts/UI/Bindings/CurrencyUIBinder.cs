@@ -34,6 +34,13 @@ namespace EndlessRunner.UI.Bindings
 
         private void UpdateCoins(int value)
         {
+            // ADDED: Prevent overwriting in-run score UI
+            if (GameStateManager.Instance != null &&
+                GameStateManager.Instance.CurrentState == GameState.Playing)
+            {
+                return;
+            }
+
             if (coinsText != null)
                 coinsText.text = value.ToString();
         }

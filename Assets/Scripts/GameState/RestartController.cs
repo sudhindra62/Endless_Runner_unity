@@ -11,8 +11,8 @@ public class RestartController : MonoBehaviour
 
     void Awake()
     {
-        runSessionData = FindObjectOfType<RunSessionData>();
-        metaProgressionManager = FindObjectOfType<MetaProgressionManager>();
+        runSessionData = FindFirstObjectByType<RunSessionData>();
+        metaProgressionManager = FindFirstObjectByType<MetaProgressionManager>();
     }
 
     public void RestartGame()

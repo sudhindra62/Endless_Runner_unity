@@ -11,9 +11,9 @@ public class PlayerCollisionHandler : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Obstacle"))
-        {
-            deathHandler?.Die();
-        }
+       // if (collision.gameObject.CompareTag("Obstacle"))
+       // {
+        //    deathHandler?.Die();
+       // }
     }
 }

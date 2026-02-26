@@ -32,10 +32,21 @@ public class PlayerMovement : MonoBehaviour
     /* -------------------------
      * Forward movement
      * ------------------------- */
-    void MoveForward()
+   void MoveForward()
+{
+    Vector3 movement = Vector3.forward * forwardSpeed * Time.deltaTime;
+
+    // Use CharacterController if exists
+    CharacterController controller = GetComponent<CharacterController>();
+    if (controller != null)
     {
-        transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
+        controller.Move(movement);
     }
+    else
+    {
+        transform.Translate(movement, Space.World);
+    }
+}
 
     /* -------------------------
      * Lane input

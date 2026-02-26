@@ -12,7 +12,7 @@ public class SpecialCollectible : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             // Find the effect controller in the scene and execute the conversion
-            ObstacleConversionEffect conversionEffect = FindObjectOfType<ObstacleConversionEffect>();
+            ObstacleConversionEffect conversionEffect = FindFirstObjectByType<ObstacleConversionEffect>();
             if (conversionEffect != null)
             {
                 conversionEffect.ConvertAllObstacles();

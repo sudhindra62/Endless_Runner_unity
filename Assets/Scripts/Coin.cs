@@ -28,16 +28,18 @@ public class Coin : MonoBehaviour
         }
     }
 
-    public void Collect()
+ public void Collect()
+{
+    if (hasBeenCollected) return;
+
+    hasBeenCollected = true;
+
+    if (ScoreManager.Instance != null)
     {
-        if (hasBeenCollected) return;
-
-        hasBeenCollected = true;
-
-        ScoreManager.instance?.AddScore(value);
-
-        // If using pooling → disable
-        // If not using pooling → still safe
-        gameObject.SetActive(false);
+        ScoreManager.Instance.AddScore(value);
     }
+
+    gameObject.SetActive(false);
+}
+
 }

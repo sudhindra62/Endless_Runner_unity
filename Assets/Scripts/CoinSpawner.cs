@@ -70,15 +70,21 @@ public class CoinSpawner : MonoBehaviour
         }
     }
 
-    private GameObject GetPooledCoin()
+  private GameObject GetPooledCoin()
+{
+    for (int i = 0; i < coinPool.Count; i++)
     {
-        for (int i = 0; i < coinPool.Count; i++)
-        {
-            if (!coinPool[i].activeInHierarchy)
-                return coinPool[i];
-        }
-        return null;
+        if (!coinPool[i].activeInHierarchy)
+            return coinPool[i];
     }
+
+    // SAFE EXPANSION (only when needed)
+    GameObject coin = Instantiate(coinPrefab);
+    coin.SetActive(false);
+    coinPool.Add(coin);
+
+    return coin;
+}
 
     private void Update()
     {

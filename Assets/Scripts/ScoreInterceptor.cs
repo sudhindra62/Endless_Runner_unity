@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class ScoreInterceptor : MonoBehaviour
@@ -8,7 +7,7 @@ public class ScoreInterceptor : MonoBehaviour
 
     void Start()
     {
-        scoreManager = FindObjectOfType<ScoreManager>();
+        scoreManager = FindFirstObjectByType<ScoreManager>();
         if (scoreManager != null)
         {
             lastScore = scoreManager.GetScore();
@@ -17,8 +16,20 @@ public class ScoreInterceptor : MonoBehaviour
 
     void Update()
     {
-        if (scoreManager == null || !CoinDoubler.instance.isDoublerActive)
+        if (scoreManager == null)
+            return;
+
+        // ADDED: Prevent null reference crash
+        if (CoinDoubler.instance == null)
         {
+            lastScore = scoreManager.GetScore(); // ADDED: keep sync
+            return;
+        }
+
+        // ADDED: Always keep lastScore in sync when doubler inactive
+        if (!CoinDoubler.instance.isDoublerActive)
+        {
+            lastScore = scoreManager.GetScore();
             return;
         }
 
@@ -26,7 +37,12 @@ public class ScoreInterceptor : MonoBehaviour
         if (currentScore > lastScore)
         {
             int scoreGained = currentScore - lastScore;
-            scoreManager.AddScore(scoreGained * (CoinDoubler.instance.multiplier - 1));
+
+            // ADDED: Prevent recursive multiplication
+            if (scoreGained > 0)
+            {
+                scoreManager.AddScore(scoreGained * (CoinDoubler.instance.multiplier - 1));
+            }
         }
 
         lastScore = scoreManager.GetScore();

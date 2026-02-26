@@ -14,7 +14,7 @@ public class StyleMeter : MonoBehaviour
 
     private void OnEnable()
     {
-        var detector = FindObjectOfType<MonoBehaviour>()
+        var detector =FindFirstObjectByType<MonoBehaviour>()
             as IPerfectDodgeSource;
 
         if (detector != null)
@@ -25,7 +25,7 @@ public class StyleMeter : MonoBehaviour
 
     private void OnDisable()
     {
-        var detector = FindObjectOfType<MonoBehaviour>()
+        var detector = FindFirstObjectByType<MonoBehaviour>()
             as IPerfectDodgeSource;
 
         if (detector != null)
