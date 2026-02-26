@@ -25,3 +25,64 @@ Thumbs.db
 *.alf
 *.ulf
 Unity_lic.*
+
+########################################################
+# ====== ADDITIONAL SAFE EXCLUSIONS (ADDED ONLY) ======
+########################################################
+
+# Unity Cache & Auto Generated
+MemoryCaptures/
+Recordings/
+Assets/AssetStoreTools*
+Assets/Plugins/Editor/JetBrains*
+*.unityproj
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Crash & Diagnostics
+sysinfo.txt
+*.stacktrace
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# Android / Gradle extra
+local.properties
+*.keystore
+*.jks
+*.bundle
+
+# iOS / Xcode
+DerivedData/
+*.xcworkspace
+*.xcuserdata
+*.xcodeproj
+
+# Firebase / Google Services (if regenerated)
+google-services-desktop.json
+google-services.json
+GoogleService-Info.plist
+
+# Addressables / Streaming cache
+ServerData/
+BuildCache/
+
+# Temporary backup files
+*.bak
+*.tmp
+*.old
+*.orig
+
+# Logs & profiling
+*.log
+*.trace
+*.memory
+
+# Auto generated Unity test artifacts
+TestResults/
