@@ -1,29 +1,24 @@
+
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System;
 
-/// <summary>
-/// Manages the assignment and progress tracking of persistent missions.
-/// This system works similarly to Daily Missions but is intended for ongoing objectives
-/// that do not reset daily.
-/// </summary>
 public class MissionManager : MonoBehaviour
 {
     public static MissionManager Instance { get; private set; }
 
-    // Event fired when mission data changes (progress, completion, claim)
     public static event Action OnMissionsUpdated;
 
     [Header("Mission Configuration")]
-    [Tooltip("A list of all possible missions that can be assigned.")]
-    [SerializeField] private List<ProjectMissionData> allMissions = new List<ProjectMissionData>();
+    [SerializeField] private List<MissionData> missionPool = new List<MissionData>();
 
-    [Tooltip("The current set of active missions for the player.")]
-    [SerializeField] private List<ProjectMissionData> activeMissions = new List<ProjectMissionData>();
+    [Header("Active Missions")]
+    public List<MissionStatus> activeMissions = new List<MissionStatus>();
 
-    // PlayerPrefs key for saving mission state
-    private const string MissionsKey = "ActiveMissions";
+    private const int NumDailyMissions = 3;
+    private const string LastMissionDateKey = "LastMissionDate";
+    private const string ActiveMissionsKey = "ActiveMissions";
 
     private void Awake()
     {
@@ -31,7 +26,7 @@ public class MissionManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            LoadMissions();
+            InitializeMissions();
         }
         else
         {
@@ -39,19 +34,61 @@ public class MissionManager : MonoBehaviour
         }
     }
 
-    #region Public API
+    private void InitializeMissions()
+    {
+        string today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        string lastDate = PlayerPrefs.GetString(LastMissionDateKey, "");
 
-    public List<ProjectMissionData> GetActiveMissions() => activeMissions;
+        if (lastDate != today)
+        {
+            AssignNewDailyMissions();
+            PlayerPrefs.SetString(LastMissionDateKey, today);
+        }
+        
+        LoadMissions();
 
-    /// <summary>
-    /// Reports progress towards a specific mission type.
-    /// </summary>
+        if (activeMissions.Count == 0)
+        {
+            AssignInitialPersistentMissions();
+        }
+
+        OnMissionsUpdated?.Invoke();
+    }
+
+    private void AssignNewDailyMissions()
+    {
+        activeMissions.RemoveAll(m => m.Data.category == MissionCategory.Daily);
+
+        List<MissionData> dailyMissionPool = missionPool.Where(m => m.category == MissionCategory.Daily).ToList();
+        List<MissionData> availableMissions = new List<MissionData>(dailyMissionPool);
+
+        for (int i = 0; i < NumDailyMissions && availableMissions.Count > 0; i++)
+        {
+            int index = UnityEngine.Random.Range(0, availableMissions.Count);
+            activeMissions.Add(new MissionStatus(availableMissions[index]));
+            availableMissions.RemoveAt(index);
+        }
+        
+        SaveMissions();
+    }
+
+    private void AssignInitialPersistentMissions()
+    {
+        List<MissionData> persistentMissionPool = missionPool.Where(m => m.category == MissionCategory.Persistent).ToList();
+        activeMissions.AddRange(persistentMissionPool.Take(3).Select(m => new MissionStatus(m)));
+        SaveMissions();
+    }
+
     public void UpdateMissionProgress(MissionType type, int amount)
     {
         bool updated = false;
-        foreach (var mission in activeMissions.Where(m => m.type == type))
+        foreach (var mission in activeMissions)
         {
-            updated = true;
+            if (mission.Data.type == type && !mission.IsClaimed)
+            {
+                mission.CurrentProgress += amount;
+                updated = true;
+            }
         }
 
         if (updated)
@@ -61,93 +98,72 @@ public class MissionManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Claims the reward for a completed mission and replaces it with a new one if available.
-    /// </summary>
-    public void ClaimMissionReward(string missionID)
+    public void ClaimMissionReward(string missionId)
     {
-        ProjectMissionData mission = activeMissions.FirstOrDefault(m => m.missionId == missionID);
+        MissionStatus mission = activeMissions.FirstOrDefault(m => m.Data.missionId == missionId);
+        if (mission == null || mission.IsClaimed || mission.CurrentProgress < mission.Data.goal) return;
 
-        if (mission != null)
+        mission.IsClaimed = true;
+
+        if (CurrencyManager.Instance != null)
         {
-            // Award currency
-            if (CurrencyManager.Instance != null)
-            {
-                CurrencyManager.Instance.AddCoins(mission.rewardCoins);
-                CurrencyManager.Instance.AddGems(mission.rewardGems);
-            }
-            
-            // Replace the claimed mission with a new one
-            ReplaceMission(missionID);
+            if (mission.Data.rewardType == MissionRewardType.Coins)
+                CurrencyManager.Instance.AddCoins(mission.Data.rewardAmount);
+            else
+                CurrencyManager.Instance.AddGems(mission.Data.rewardAmount);
+        }
 
-            SaveMissions();
-            OnMissionsUpdated?.Invoke();
+        if (mission.Data.category == MissionCategory.Persistent)
+        {
+            ReplacePersistentMission(missionId);
+        }
+
+        SaveMissions();
+        OnMissionsUpdated?.Invoke();
+    }
+
+    private void ReplacePersistentMission(string completedMissionId)
+    {
+        activeMissions.RemoveAll(m => m.Data.missionId == completedMissionId);
+
+        MissionData newMission = missionPool.FirstOrDefault(m => 
+            m.category == MissionCategory.Persistent && 
+            !activeMissions.Any(am => am.Data.missionId == m.missionId));
+
+        if (newMission != null)
+        {
+            activeMissions.Add(new MissionStatus(newMission));
         }
     }
 
-    #endregion
-
-    #region Persistence
+    public IReadOnlyList<MissionStatus> GetActiveMissions()
+    {
+        return activeMissions;
+    }
 
     [Serializable]
-    private class MissionDataList
+    private class MissionStatusList
     {
-        public List<ProjectMissionData> list = new List<ProjectMissionData>();
+        public List<MissionStatus> list = new List<MissionStatus>();
     }
 
     private void SaveMissions()
     {
-        MissionDataList wrapper = new MissionDataList { list = activeMissions };
-        string json = JsonUtility.ToJson(wrapper);
-        PlayerPrefs.SetString(MissionsKey, json);
+        PlayerPrefs.SetString(
+            ActiveMissionsKey,
+            JsonUtility.ToJson(new MissionStatusList { list = activeMissions })
+        );
         PlayerPrefs.Save();
     }
 
     private void LoadMissions()
     {
-        string json = PlayerPrefs.GetString(MissionsKey, "");
+        string json = PlayerPrefs.GetString(ActiveMissionsKey, "");
+
         if (!string.IsNullOrEmpty(json))
         {
-            MissionDataList wrapper = JsonUtility.FromJson<MissionDataList>(json);
-            activeMissions = wrapper.list ?? new List<ProjectMissionData>();
-        }
-        else
-        { 
-            // If no saved data, assign a default set of missions
-            AssignInitialMissions();
-        }
-
-        // Ensure the mission list is never empty if there are missions available
-        if (activeMissions.Count == 0 && allMissions.Count > 0)
-        {
-            AssignInitialMissions();
+            MissionStatusList wrapper = JsonUtility.FromJson<MissionStatusList>(json);
+            activeMissions = wrapper.list ?? new List<MissionStatus>();
         }
     }
-
-    /// <summary>
-    /// Assigns the first few missions from the main list as the starting set.
-    /// </summary>
-    private void AssignInitialMissions()
-    {
-        activeMissions = allMissions.Take(3).Select(m => new ProjectMissionData { missionId = m.missionId, rewardCoins = m.rewardCoins, rewardGems = m.rewardGems, type = m.type, goal = m.goal, rewardAmount = m.rewardAmount, rewardType = m.rewardType }).ToList();
-        SaveMissions();
-    }
-
-    /// <summary>
-    /// Replaces a claimed mission with a new, uncompleted one from the main pool.
-    /// </summary>
-    private void ReplaceMission(string completedMissionID)
-    {
-        activeMissions.RemoveAll(m => m.missionId == completedMissionID);
-
-        // Find a new mission that is not already active
-        ProjectMissionData newMission = allMissions.FirstOrDefault(m => !activeMissions.Any(am => am.missionId == m.missionId));
-
-        if (newMission != null)
-        {
-            activeMissions.Add(new ProjectMissionData { missionId = newMission.missionId, rewardCoins = newMission.rewardCoins, rewardGems = newMission.rewardGems, type = newMission.type, goal = newMission.goal, rewardAmount = newMission.rewardAmount, rewardType = newMission.rewardType });
-        }
-    }
-
-    #endregion
 }
