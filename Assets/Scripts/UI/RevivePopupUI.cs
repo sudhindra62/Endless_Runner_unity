@@ -1,98 +1,37 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
-/// <summary>
-/// Manages the revive popup, offering the player a chance to watch an ad to continue the run.
-/// </summary>
 public class RevivePopupUI : MonoBehaviour
 {
-    [Header("UI Components")]
-    [SerializeField] private GameObject popupPanel;
-    [SerializeField] private Button reviveWithAdButton;
+    [SerializeField] private Button gemReviveButton;
+    [SerializeField] private Button adReviveButton;
+    [SerializeField] private Button tokenReviveButton;
     [SerializeField] private Button declineButton;
-    [SerializeField] private TMP_Text countdownText;
 
-    [Header("Configuration")]
-    [SerializeField] private float countdownDuration = 5f;
-
-    private float countdownTimer;
-    private bool isCountingDown;
-
-    private ReviveManager reviveManager;
-    private AdMobManager adMobManager;
-
-    private void Awake()
-    {
-        // Initialize with the panel hidden
-        if (popupPanel != null) popupPanel.SetActive(false);
-
-        // Set up button listeners
-        reviveWithAdButton.onClick.AddListener(OnReviveButtonPressed);
-        declineButton.onClick.AddListener(OnDeclineButtonPressed);
-    }
+    private GameFlowController gameFlowController;
 
     private void Start()
     {
-        reviveManager = ServiceLocator.Get<ReviveManager>();
-        adMobManager = ServiceLocator.Get<AdMobManager>();
+        gameFlowController = FindObjectOfType<GameFlowController>();
+
+        gemReviveButton.onClick.AddListener(() => gameFlowController.OnReviveAccepted(ReviveManager.ReviveType.Gems));
+        adReviveButton.onClick.AddListener(() => gameFlowController.OnReviveAccepted(ReviveManager.ReviveType.Ad));
+        tokenReviveButton.onClick.AddListener(() => gameFlowController.OnReviveAccepted(ReviveManager.ReviveType.Token));
+        declineButton.onClick.AddListener(() => gameFlowController.OnReviveDeclined());
+
+        Hide();
     }
 
-    private void Update()
+    public void Show()
     {
-        if (isCountingDown)
-        {
-            HandleCountdown();
-        }
+        gameObject.SetActive(true);
+        // Here you would also update the UI to show the cost of each revive type
+        // and enable/disable buttons based on availability
     }
 
-    /// <summary>
-    /// Shows the revive popup and starts the countdown timer.
-    /// </summary>
-    public void ShowPopup()
+    public void Hide()
     {
-        if (popupPanel == null) return;
-
-        popupPanel.SetActive(true);
-        countdownTimer = countdownDuration;
-        isCountingDown = true;
-    }
-
-    private void HandleCountdown()
-    {
-        countdownTimer -= Time.deltaTime;
-        countdownText.text = Mathf.CeilToInt(countdownTimer).ToString();
-
-        if (countdownTimer <= 0)
-        {
-            isCountingDown = false;
-            OnDeclineButtonPressed();
-        }
-    }
-
-    private void OnReviveButtonPressed()
-    {
-        isCountingDown = false;
-        reviveWithAdButton.interactable = false; // Prevent multiple clicks
-
-        adMobManager.ShowRewardedAd(() =>
-        {
-            reviveManager.GrantRevive();
-            HidePopup();
-        });
-    }
-
-    private void OnDeclineButtonPressed()
-    {
-        isCountingDown = false;
-        reviveManager.DeclineRevive();
-        HidePopup();
-    }
-
-    private void HidePopup()
-    {
-        if (popupPanel != null) popupPanel.SetActive(false);
-        reviveWithAdButton.interactable = true; // Reset for next time
+        gameObject.SetActive(false);
     }
 }

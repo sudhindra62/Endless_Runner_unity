@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Manages the procedural spawning of collectible items in groups ahead of the player.
+/// Manages the procedural spawning of collectible items in groups on a given tile.
 /// Uses an object pooler to efficiently reuse collectible GameObjects.
 /// </summary>
 public class NewCollectibleSpawner : MonoBehaviour
@@ -20,7 +20,7 @@ public class NewCollectibleSpawner : MonoBehaviour
         public int maxGroupSize = 8;
         [Tooltip("The spacing between individual collectibles within a group along the Z-axis.")]
         public float groupSpacing = 2f;
-        [Tooltip("The probability (0.0 to 1.0) that this group will attempt to spawn in a spawn zone.")]
+        [Tooltip("The probability (0.0 to 1.0) that this group will attempt to spawn on a tile.")]
         public float spawnChance = 0.5f;
     }
 
@@ -29,44 +29,27 @@ public class NewCollectibleSpawner : MonoBehaviour
     [SerializeField] private List<CollectibleGroup> collectibleGroups;
 
     [Header("Spawning Parameters")]
-    [Tooltip("How far ahead of the player the spawner should place collectibles.")]
-    [SerializeField] private float spawnDistanceAhead = 50f;
     [Tooltip("The distance between the center of the track and the side lanes.")]
     [SerializeField] private float laneWidth = 3f;
     [Tooltip("The vertical position (Y-axis) where collectibles will be spawned.")]
     [SerializeField] private float collectibleYPosition = 1f;
-    [Tooltip("The length of the zone where a group might spawn. Spawning is attempted at each interval.")]
-    [SerializeField] private float spawnZoneInterval = 20f;
     [Tooltip("The minimum gap to maintain from obstacles to avoid unfair placements.")]
     [SerializeField] private float obstacleSafeGap = 5f;
 
-    private float lastSpawnZ;
     private ObjectPooler objectPooler;
-    private PlayerController playerController;
 
     private void Start()
     {
         objectPooler = ServiceLocator.Get<ObjectPooler>();
-        playerController = ServiceLocator.Get<PlayerController>();
         if (objectPooler == null)
         {
             Debug.LogError("ObjectPooler not found. Collectible spawning will not work.");
         }
     }
 
-    private void Update()
-    {
-        if (playerController != null && playerController.transform.position.z > lastSpawnZ - spawnDistanceAhead)
-        {
-            SpawnCollectibleGroups();
-        }
-    }
-
-    private void SpawnCollectibleGroups()
+    public void SpawnCollectibles(Transform tileTransform)
     {
         if (objectPooler == null) return;
-
-        lastSpawnZ += spawnZoneInterval;
 
         foreach (var group in collectibleGroups)
         {
@@ -78,7 +61,8 @@ public class NewCollectibleSpawner : MonoBehaviour
                 for (int i = 0; i < groupSize; i++)
                 {
                     float spawnX = (lane - 1) * laneWidth;
-                    float spawnZ = lastSpawnZ + i * group.groupSpacing;
+                    // Spawn collectibles along the length of the tile
+                    float spawnZ = tileTransform.position.z + (i * group.groupSpacing);
                     Vector3 spawnPosition = new Vector3(spawnX, collectibleYPosition, spawnZ);
 
                     if (IsPositionSafe(spawnPosition))
@@ -98,10 +82,5 @@ public class NewCollectibleSpawner : MonoBehaviour
     private bool IsPositionSafe(Vector3 position)
     {
         return !Physics.CheckBox(position, new Vector3(1f, 1f, obstacleSafeGap / 2f), Quaternion.identity, LayerMask.GetMask("Obstacle"));
-    }
-
-    public void ResetSpawner()
-    {
-        lastSpawnZ = 0;
     }
 }

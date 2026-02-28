@@ -1,30 +1,58 @@
-using UnityEngine;
+
 using System;
+using UnityEngine;
 
-public class GameStateManager : MonoBehaviour
+public enum GameState
 {
-    public event Action<GameState> OnGameStateChanged;
+    Menu,
+    Playing,
+    Paused,
+    Dead,
+    Reviving,
+    EndOfRun
+}
 
-    public GameState CurrentState { get; private set; }
+/// <summary>
+/// The single authority for game state transitions and time scale management.
+/// No other script should modify the game state or time scale directly.
+/// </summary>
+public static class GameStateManager
+{
+    public static event Action<GameState> OnGameStateChanged;
 
-    private void Awake()
+    private static GameState currentState;
+    public static GameState CurrentState
     {
-        ServiceLocator.Register<GameStateManager>(this);
-        SetState(GameState.MainMenu); // Default state
+        get => currentState;
+        set
+        {
+            if (currentState != value)
+            {
+                currentState = value;
+                HandleTimeScale(currentState);
+                OnGameStateChanged?.Invoke(currentState);
+            }
+        }
     }
 
-    private void OnDestroy()
+    private static void HandleTimeScale(GameState state)
     {
-        ServiceLocator.Unregister<GameStateManager>();
-    }
-
-    public void SetState(GameState newState)
-    {
-        if (CurrentState == newState) return;
-
-        CurrentState = newState;
-        OnGameStateChanged?.Invoke(newState);
-
-        Time.timeScale = CurrentState == GameState.Paused ? 0f : 1f;
+        switch (state)
+        {
+            case GameState.Playing:
+            case GameState.Menu:
+            case GameState.Reviving: // Time runs during revive animation/transition
+                Time.timeScale = 1f;
+                break;
+            
+            case GameState.Paused:
+            case GameState.EndOfRun:
+                Time.timeScale = 0f;
+                break;
+            
+            case GameState.Dead:
+                Time.timeScale = 0.5f; // Slow-motion effect on death
+                break;
+        }
     }
 }

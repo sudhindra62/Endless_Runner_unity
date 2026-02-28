@@ -1,67 +1,135 @@
+
 using UnityEngine;
 
 public class GameFlowController : MonoBehaviour
 {
-    private GameStateManager gameStateManager;
+    [Header("Component References")]
+    [SerializeField] private PlayerController playerController;
+    [SerializeField] private TileSpawner tileSpawner;
+    [SerializeField] private RevivePopupUI revivePopupUI;
+    [SerializeField] private RunSummaryUI runSummaryUI;
+
+    private RunSessionData runSessionData;
+    private PowerUpManager powerUpManager;
     private ScoreManager scoreManager;
+    private GameDifficultyManager difficultyManager;
     private ReviveManager reviveManager;
     private PlayerDataManager playerDataManager;
-    private PlayerController playerController;
-    private NewCollectibleSpawner collectibleSpawner;
+
+    private float runStartTime;
 
     private void Awake()
     {
-        gameStateManager = ServiceLocator.Get<GameStateManager>();
+        var instances = FindObjectsByType<GameFlowController>(FindObjectsSortMode.None);
+        if (instances.Length > 1)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        DontDestroyOnLoad(gameObject);
+
+        runSessionData = new RunSessionData();
+    }
+
+    private void Start()
+    {
+        GameStateManager.OnGameStateChanged += HandleGameStateChange;
+
+        powerUpManager = ServiceLocator.Get<PowerUpManager>();
         scoreManager = ServiceLocator.Get<ScoreManager>();
+        difficultyManager = ServiceLocator.Get<GameDifficultyManager>();
         reviveManager = ServiceLocator.Get<ReviveManager>();
         playerDataManager = ServiceLocator.Get<PlayerDataManager>();
-        playerController = ServiceLocator.Get<PlayerController>();
-        collectibleSpawner = ServiceLocator.Get<NewCollectibleSpawner>();
+
+        playerController.OnDeath += PlayerDied;
+    }
+
+    private void OnDestroy()
+    {
+        GameStateManager.OnGameStateChanged -= HandleGameStateChange;
+        if (playerController != null)
+        {
+            playerController.OnDeath -= PlayerDied;
+        }
     }
 
     public void StartRun()
     {
-        gameStateManager.SetState(GameState.Playing);
+        runSessionData.Reset();
         scoreManager.ResetScore();
-        // Reset other run-specific data
+        difficultyManager.ResetDifficulty();
+        powerUpManager.ResetPowerUps();
+        tileSpawner.ResetTiles();
+
+        runStartTime = Time.time;
+
+        GameStateManager.CurrentState = GameState.Playing;
     }
 
-    public void Pause()
+    private void PlayerDied()
     {
-        gameStateManager.SetState(GameState.Paused);
+        runSessionData.time = Time.time - runStartTime;
+        GameStateManager.CurrentState = GameState.Dead;
     }
 
-    public void Resume()
+    private void HandleGameStateChange(GameState newState)
     {
-        gameStateManager.SetState(GameState.Playing);
-    }
-
-    public void EndRun()
-    {
-        gameStateManager.SetState(GameState.GameOver);
-        playerDataManager.SavePlayerScore(scoreManager.CurrentScore);
-    }
-
-    public void GoToMainMenu()
-    {
-        gameStateManager.SetState(GameState.MainMenu);
-    }
-
-    public void PlayerDied()
-    {
-        if (reviveManager.CanRevive())
+        switch (newState)
         {
-            reviveManager.OfferRevive();
-        }
-        else
-        {
-            EndRun();
+            case GameState.Playing:
+                scoreManager.Resume();
+                difficultyManager.Resume();
+                break;
+            case GameState.Dead:
+                scoreManager.Pause();
+                difficultyManager.Pause();
+                powerUpManager.PauseAllPowerUps();
+                if (reviveManager.CanRevive(runSessionData))
+                {
+                    revivePopupUI.Show();
+                }
+                else
+                {
+                    EndRun();
+                }
+                break;
+
+            case GameState.EndOfRun:
+                FinalizeRun();
+                break;
         }
     }
 
-    public void PlayerRevived()
+    public void OnReviveAccepted(ReviveManager.ReviveType reviveType)
     {
-        playerController.health = 100; // Or some other revival logic
-        gameStateManager.SetState(GameState.Playing);
+        revivePopupUI.Hide();
+        reviveManager.StartRevive(runSessionData, playerController, reviveType, () =>
+        {
+            runSessionData.hasRevived = true;
+            // Power-Up Revive Policy (Option B): Resume power-ups
+            powerUpManager.ResumeAllPowerUps();
+            GameStateManager.CurrentState = GameState.Playing;
+        });
+    }
+
+    public void OnReviveDeclined()
+    {
+        revivePopupUI.Hide();
+        EndRun();
+    }
+
+    private void EndRun()
+    {
+        GameStateManager.CurrentState = GameState.EndOfRun;
+    }
+
+    private void FinalizeRun()
+    {
+        runSessionData.score = scoreManager.CurrentScore;
+
+        playerDataManager.UpdateBestScore(runSessionData.score);
+        playerDataManager.UpdateBestTime(runSessionData.time);
+        
+        runSummaryUI.Show(runSessionData);
     }
 }

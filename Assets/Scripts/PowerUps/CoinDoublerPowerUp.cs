@@ -3,10 +3,10 @@ using UnityEngine;
 
 namespace PowerUps
 {
-    [CreateAssetMenu(fileName = "ScoreMultiplierPowerUp", menuName = "PowerUps/Score Multiplier")]
-    public class ScoreMultiplierPowerUp : PowerUp
+    [CreateAssetMenu(fileName = "CoinDoublerPowerUp", menuName = "PowerUps/Coin Doubler")]
+    public class CoinDoublerPowerUp : PowerUp
     {
-        public override PowerUpType Type => PowerUpType.ScoreMultiplier;
+        public override PowerUpType Type => PowerUpType.CoinDoubler;
 
         public override void Activate()
         {

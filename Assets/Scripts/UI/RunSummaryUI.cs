@@ -1,38 +1,35 @@
 
-using UnityEngine;
 using TMPro;
+using UnityEngine;
 
-/// <summary>
-/// Displays the end-of-run summary, including the final score, coins collected, and any bonuses.
-/// </summary>
 public class RunSummaryUI : MonoBehaviour
 {
-    [Header("UI Panels")]
-    [SerializeField] private GameObject summaryPanel;
+    [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI timeText;
+    [SerializeField] private TextMeshProUGUI bestScoreText;
+    [SerializeField] private TextMeshProUGUI bestTimeText;
 
-    [Header("UI Text Elements")]
-    [SerializeField] private TMP_Text finalScoreText;
-    [SerializeField] private TMP_Text coinsCollectedText;
-    [SerializeField] private TMP_Text styleBonusText;
+    private PlayerDataManager playerDataManager;
 
     private void Start()
     {
-        // Hide the panel by default
-        summaryPanel.SetActive(false);
+        playerDataManager = ServiceLocator.Get<PlayerDataManager>();
+        Hide();
     }
 
-    /// <summary>
-    /// Shows the run summary panel with the final stats.
-    /// </summary>
-    /// <param name="finalScore">The player's final score.</param>
-    /// <param name="coinsCollected">The number of coins collected during the run.</param>
-    /// <param name="styleBonus">The style bonus awarded.</param>
-    public void Show(int finalScore, int coinsCollected, int styleBonus)
+    public void Show(RunSessionData runSessionData)
     {
-        finalScoreText.text = "Final Score: " + finalScore;
-        coinsCollectedText.text = "Coins: " + coinsCollected;
-        styleBonusText.text = "Style Bonus: " + styleBonus;
+        gameObject.SetActive(true);
 
-        summaryPanel.SetActive(true);
+        scoreText.text = "Score: " + runSessionData.score;
+        timeText.text = "Time: " + runSessionData.time.ToString("F2");
+
+        bestScoreText.text = "Best Score: " + playerDataManager.GetBestScore();
+        bestTimeText.text = "Best Time: " + playerDataManager.GetBestTime().ToString("F2");
+    }
+
+    public void Hide()
+    {
+        gameObject.SetActive(false);
     }
 }

@@ -65,13 +65,7 @@ public class ObjectPooler : MonoBehaviour
                 continue;
             }
 
-            Pool newPool = new Pool(item.objectToPool, item.shouldExpand, transform);
-            poolDictionary.Add(item.tag, newPool);
-
-            for (int i = 0; i < item.amountToPool; i++)
-            {
-                CreateAndEnqueueObject(newPool);
-            }
+            AddPool(item.tag, item.objectToPool, item.amountToPool, item.shouldExpand);
         }
     }
 
@@ -82,6 +76,32 @@ public class ObjectPooler : MonoBehaviour
             ServiceLocator.Unregister<ObjectPooler>();
         }
     }
+    
+    /// <summary>
+    /// Adds a new object pool at runtime.
+    /// </summary>
+    public void AddPool(string tag, GameObject objectToPool, int amountToPool, bool shouldExpand = true)
+    {
+        if (poolDictionary.ContainsKey(tag))
+        {
+            Debug.LogWarning($"[ObjectPooler] Pool with tag ''{tag}'' already exists.");
+            return;
+        }
+
+        if (objectToPool == null)
+        {
+            Debug.LogWarning($"[ObjectPooler] Prefab for tag ''{tag}'' is null. Pool not created.");
+            return;
+        }
+
+        Pool newPool = new Pool(objectToPool, shouldExpand, transform);
+        poolDictionary.Add(tag, newPool);
+
+        for (int i = 0; i < amountToPool; i++)
+        {
+            CreateAndEnqueueObject(newPool);
+        }
+    }
 
     /// <summary>
     /// Retrieves a disabled object from the specified pool.
@@ -90,7 +110,7 @@ public class ObjectPooler : MonoBehaviour
     {
         if (!poolDictionary.TryGetValue(tag, out Pool pool))
         {
-            Debug.LogWarning($"[ObjectPooler] Pool with tag '{tag}' doesn't exist.");
+            Debug.LogWarning($"[ObjectPooler] Pool with tag ''{tag}'' doesn't exist.");
             return null;
         }
 
@@ -98,18 +118,19 @@ public class ObjectPooler : MonoBehaviour
         {
             if (pool.ShouldExpand)
             {
-                Debug.Log($"[ObjectPooler] Expanding pool with tag '{tag}'.");
+                Debug.Log($"[ObjectPooler] Expanding pool with tag ''{tag}''");
                 CreateAndEnqueueObject(pool);
             }
             else
             {
-                Debug.LogWarning($"[ObjectPooler] Pool with tag '{tag}' is empty and cannot expand.");
+                Debug.LogWarning($"[ObjectPooler] Pool with tag ''{tag}'' is empty and cannot expand.");
                 return null;
             }
         }
 
         GameObject objectFromPool = pool.ObjectQueue.Dequeue();
         objectFromPool.transform.SetParent(null);
+        objectFromPool.SetActive(true); // Make sure the object is active when taken from the pool
         return objectFromPool;
     }
 
@@ -120,7 +141,7 @@ public class ObjectPooler : MonoBehaviour
     {
         if (!poolDictionary.TryGetValue(tag, out Pool pool))
         {
-            Debug.LogWarning($"[ObjectPooler] Pool with tag '{tag}' doesn't exist. Object '{objectToReturn.name}' will be destroyed.");
+            Debug.LogWarning($"[ObjectPooler] Pool with tag ''{tag}'' doesn't exist. Object ''{objectToReturn.name}'' will be destroyed.");
             Destroy(objectToReturn);
             return;
         }
@@ -133,6 +154,7 @@ public class ObjectPooler : MonoBehaviour
     private void CreateAndEnqueueObject(Pool pool)
     {
         GameObject obj = Instantiate(pool.Prefab, pool.ParentTransform);
+        obj.name = pool.Prefab.name; // Use prefab name to make it easier to return to pool
         obj.SetActive(false);
         pool.ObjectQueue.Enqueue(obj);
     }

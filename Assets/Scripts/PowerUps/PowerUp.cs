@@ -1,31 +1,26 @@
+
 using UnityEngine;
-using System;
 
-public abstract class PowerUp : MonoBehaviour
+namespace PowerUps
 {
-    public static event Action<PowerUp> OnPowerUpCompleted;
-
-    [Header("Configuration")]
-    [SerializeField] private float duration = 5f;
-
-    protected float Timer { get; private set; }
-
-    public virtual void ApplyPowerUp() { }
-
-    public virtual void RemovePowerUp() { }
-
-    protected void CompletePowerUp()
+    public enum PowerUpType
     {
-        OnPowerUpCompleted?.Invoke(this);
+        CoinDoubler,
+        Magnet,
+        ScoreMultiplier,
+        Shield,
     }
 
-    private void Update()
+    public abstract class PowerUp : ScriptableObject
     {
-        Timer += Time.deltaTime;
-        if (Timer >= duration)
-        {
-            RemovePowerUp();
-            CompletePowerUp();
-        }
+        [Header("Configuration")]
+        [SerializeField] private float duration;
+
+        public float Duration => duration;
+
+        public abstract PowerUpType Type { get; }
+
+        public abstract void Activate();
+        public abstract void Deactivate();
     }
 }
