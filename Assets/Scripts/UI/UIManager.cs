@@ -24,33 +24,34 @@ public class UIManager : MonoBehaviour
     [Tooltip("Text element on the game over screen to show the best score.")]
     [SerializeField] private TMP_Text bestScoreText;
 
+    private GameStateManager gameStateManager;
+    private ScoreManager scoreManager;
+    private GameFlowController gameFlowController;
+
     #region Unity Lifecycle Methods
+
+    private void Awake()
+    {
+        gameStateManager = FindObjectOfType<GameStateManager>();
+        scoreManager = FindObjectOfType<ScoreManager>();
+        gameFlowController = FindObjectOfType<GameFlowController>();
+    }
 
     private void OnEnable()
     {
-        // Subscribe to the new, centralized GameStateManager event
-        GameStateManager.OnGameStateChanged += HandleGameStateChanged;
+        gameStateManager.OnGameStateChanged += HandleGameStateChanged;
+        scoreManager.OnScoreChanged += UpdateScoreDisplay;
     }
 
     private void OnDisable()
     {
-        // Always unsubscribe from events when the object is disabled
-        GameStateManager.OnGameStateChanged -= HandleGameStateChanged;
+        gameStateManager.OnGameStateChanged -= HandleGameStateChanged;
+        scoreManager.OnScoreChanged -= UpdateScoreDisplay;
     }
 
     private void Start()
     {
-        // Initial UI setup based on the starting game state
-        if (GameStateManager.Instance != null)
-        {
-            HandleGameStateChanged(GameStateManager.Instance.CurrentState);
-        }
-    }
-
-    private void Update()
-    {
-        // Continuously update the score display during gameplay
-        UpdateScoreDisplay();
+        HandleGameStateChanged(gameStateManager.CurrentState);
     }
 
     #endregion
@@ -71,14 +72,13 @@ public class UIManager : MonoBehaviour
 
     private void UpdateGameOverScores()
     {
-        // Populate the final scores on the game over screen
-        if (finalScoreText && ScoreManager.Instance)
+        if (finalScoreText)
         {
-            finalScoreText.text = "Score: " + ScoreManager.Instance.CurrentScore.ToString();
+            finalScoreText.text = "Score: " + scoreManager.CurrentScore.ToString();
         }
-        if (bestScoreText && ScoreManager.Instance)
+        if (bestScoreText) 
         { 
-            bestScoreText.text = "Best: " + ScoreManager.Instance.GetBestScore().ToString();
+            bestScoreText.text = "Best: " + scoreManager.GetBestScore().ToString();
         }
     }
 
@@ -86,33 +86,30 @@ public class UIManager : MonoBehaviour
 
     #region Public UI Methods
 
-    // These methods can be linked to UI buttons in the Inspector
-
     public void OnPauseButtonPressed()
     {
-        if (GameManager.Instance != null) GameManager.Instance.Flow.Pause();
+        gameFlowController.Pause();
     }
 
     public void OnResumeButtonPressed()
     {
-        if (GameManager.Instance != null) GameManager.Instance.Flow.Resume();
+        gameFlowController.Resume();
     }
 
     public void OnRestartButtonPressed()
     {
-        if (GameManager.Instance != null) GameManager.Instance.Flow.StartRun();
+        gameFlowController.StartRun();
     }
 
     #endregion
 
     #region Private Helpers
 
-    private void UpdateScoreDisplay()
+    private void UpdateScoreDisplay(int newScore)
     {
-        // Update the score text, but only if the gameplay UI is active
-        if (scoreText && gameplayUIPanel.activeSelf && ScoreManager.Instance)
+        if (scoreText)
         {
-            scoreText.text = "Score: " + ScoreManager.Instance.CurrentScore.ToString();
+            scoreText.text = "Score: " + newScore.ToString();
         }
     }
 
