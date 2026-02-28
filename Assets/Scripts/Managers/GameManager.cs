@@ -1,67 +1,51 @@
+
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    public enum GameState
+    {
+        MainMenu,
+        Gameplay,
+        Paused
+    }
+
     public static GameManager Instance { get; private set; }
 
-    [Header("Manager Prefabs")]
-    [SerializeField] private GameObject buildSettingsPrefab;
-    [SerializeField] private GameObject playerDataManagerPrefab;
-    [SerializeField] private GameObject scoreManagerPrefab;
-    [SerializeField] private GameObject sceneControllerPrefab;
-    [SerializeField] private GameObject firebaseManagerPrefab;
-    [SerializeField] private GameObject adMobManagerPrefab;
+    public GameState CurrentState { get; private set; }
 
-    private void Awake()
+    void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
         {
             Destroy(gameObject);
-            return;
         }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-
-        InitializeManagers();
     }
 
-    private void InitializeManagers()
+    void Start()
     {
-        InitializeManager<BuildSettings>(buildSettingsPrefab);
-        InitializeManager<PlayerDataManager>(playerDataManagerPrefab);
-        InitializeManager<ScoreManager>(scoreManagerPrefab);
-        InitializeManager<SceneController>(sceneControllerPrefab);
-        InitializeManager<FirebaseManager>(firebaseManagerPrefab);
-        InitializeManager<AdMobManager>(adMobManagerPrefab);
+        ChangeState(GameState.MainMenu);
+    }
 
-        // Initialize managers that depend on BuildSettings after it's been initialized
-        if (BuildSettings.Instance != null)
+    public void ChangeState(GameState newState)
+    {
+        CurrentState = newState;
+        switch (newState)
         {
-            FirebaseManager.Instance?.Initialize();
-            AdMobManager.Instance?.Initialize();
+            case GameState.MainMenu:
+                // Handle main menu logic
+                break;
+            case GameState.Gameplay:
+                // Handle gameplay logic
+                break;
+            case GameState.Paused:
+                // Handle paused logic
+                break;
         }
-
-        Debug.Log("[GameManager] All core managers initialized.");
-    }
-
-    private void InitializeManager<T>(GameObject prefab) where T : MonoBehaviour
-    {
-        if (FindFirstObjectByType<T>() == null)
-        {
-            if (prefab != null)
-            {
-                Instantiate(prefab, transform);
-                Debug.Log($"[GameManager] Instantiated {typeof(T).Name} from prefab.");
-            }
-            else
-            {
-                Debug.LogWarning($"[GameManager] No instance of {typeof(T).Name} found and no prefab was provided.");
-            }
-        }
-    }
-
-    public void CompleteChallenge()
-    {
-        PlayerDataManager.Instance.AddGems(5);
     }
 }

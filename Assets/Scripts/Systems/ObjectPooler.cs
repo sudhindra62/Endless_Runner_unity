@@ -16,17 +16,12 @@ public class ObjectPoolItem
 }
 
 /// <summary>
-/// A robust, persistent singleton-based object pooling system that manages reusable GameObjects.
+/// A robust, persistent object pooling system that manages reusable GameObjects.
 /// It helps to reduce instantiation overhead by pre-instantiating objects and recycling them.
-/// This singleton persists across scene loads.
+/// This system is registered with the ServiceLocator and persists across scene loads.
 /// </summary>
 public class ObjectPooler : MonoBehaviour
 {
-    /// <summary>
-    /// The static singleton instance of the ObjectPooler.
-    /// </summary>
-    public static ObjectPooler Instance { get; private set; }
-
     // Internal class to manage the data for a single object pool.
     private class Pool
     {
@@ -50,14 +45,15 @@ public class ObjectPooler : MonoBehaviour
 
     private void Awake()
     {
-        // Standard persistent singleton pattern
-        if (Instance != null && Instance != this)
+        // Make this a persistent service, registered with the ServiceLocator.
+        var instances = FindObjectsByType<ObjectPooler>(FindObjectsSortMode.None);
+        if (instances.Length > 1)
         {
             Destroy(gameObject);
             return;
         }
-        Instance = this;
-        DontDestroyOnLoad(gameObject); // Ensure the pooler persists across scenes
+        DontDestroyOnLoad(gameObject);
+        ServiceLocator.Register<ObjectPooler>(this);
 
         poolDictionary = new Dictionary<string, Pool>();
 
@@ -69,11 +65,9 @@ public class ObjectPooler : MonoBehaviour
                 continue;
             }
 
-            // Create a new pool and add it to the dictionary
             Pool newPool = new Pool(item.objectToPool, item.shouldExpand, transform);
             poolDictionary.Add(item.tag, newPool);
 
-            // Pre-populate the pool with the specified number of objects
             for (int i = 0; i < item.amountToPool; i++)
             {
                 CreateAndEnqueueObject(newPool);
@@ -81,11 +75,17 @@ public class ObjectPooler : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        if (ServiceLocator.Get<ObjectPooler>() == this)
+        {
+            ServiceLocator.Unregister<ObjectPooler>();
+        }
+    }
+
     /// <summary>
     /// Retrieves a disabled object from the specified pool.
     /// </summary>
-    /// <param name="tag">The tag of the pool to retrieve an object from.</param>
-    /// <returns>A GameObject from the pool, or null if the pool doesn't exist or cannot expand.</returns>
     public GameObject GetPooledObject(string tag)
     {
         if (!poolDictionary.TryGetValue(tag, out Pool pool))
@@ -94,7 +94,6 @@ public class ObjectPooler : MonoBehaviour
             return null;
         }
 
-        // If the pool is empty, try to expand it
         if (pool.ObjectQueue.Count == 0)
         {
             if (pool.ShouldExpand)
@@ -110,15 +109,13 @@ public class ObjectPooler : MonoBehaviour
         }
 
         GameObject objectFromPool = pool.ObjectQueue.Dequeue();
-        objectFromPool.transform.SetParent(null); // Un-parent for use in the scene
+        objectFromPool.transform.SetParent(null);
         return objectFromPool;
     }
 
     /// <summary>
     /// Returns an object to its pool, deactivating it and parenting it back to the pooler.
     /// </summary>
-    /// <param name="tag">The tag of the pool the object belongs to.</param>
-    /// <param name="objectToReturn">The GameObject to return to the pool.</param>
     public void ReturnToPool(string tag, GameObject objectToReturn)
     {
         if (!poolDictionary.TryGetValue(tag, out Pool pool))
@@ -129,17 +126,14 @@ public class ObjectPooler : MonoBehaviour
         }
 
         objectToReturn.SetActive(false);
-        objectToReturn.transform.SetParent(pool.ParentTransform); // Re-parent to the pooler
+        objectToReturn.transform.SetParent(pool.ParentTransform);
         pool.ObjectQueue.Enqueue(objectToReturn);
     }
 
-    /// <summary>
-    /// Instantiates a new object, deactivates it, and enqueues it in the specified pool.
-    /// </summary>
     private void CreateAndEnqueueObject(Pool pool)
     {
         GameObject obj = Instantiate(pool.Prefab, pool.ParentTransform);
-        obj.SetActive(false); // Ensure it's inactive when pooled
+        obj.SetActive(false);
         pool.ObjectQueue.Enqueue(obj);
     }
 }

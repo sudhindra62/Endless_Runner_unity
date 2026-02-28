@@ -1,83 +1,138 @@
+
 using UnityEngine;
 using GoogleMobileAds.Api;
 using System;
 
 public class AdMobManager : MonoBehaviour
 {
-    public static AdMobManager Instance { get; private set; }
     private bool isInitialized = false;
     private RewardedAd rewardedAd;
-    private Action onRewardEarned;
+    private BuildSettings buildSettings;
 
     [Header("Ad Unit IDs")]
-    [SerializeField] private string rewardedAdUnitId_production = "ca-app-pub-YOUR_AD_UNIT_ID"; // Replace with your Production Ad Unit ID
+    // TODO: Add your production Ad Unit ID here
+    private string rewardedAdUnitId_production = "";
     private string rewardedAdUnitId_test = "ca-app-pub-3940256099942544/5224354917";
 
     void Awake()
     {
-        if (Instance == null)
+        ServiceLocator.Register<AdMobManager>(this);
+    }
+
+    void Start()
+    {
+        buildSettings = ServiceLocator.Get<BuildSettings>();
+        if (buildSettings == null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            Debug.LogError("BuildSettings not found in ServiceLocator. AdMobManager requires it for initialization.");
+            return;
         }
-        else
+
+        Initialize();
+    }
+
+    void OnDestroy()
+    {
+        ServiceLocator.Unregister<AdMobManager>();
+        if (rewardedAd != null)
         {
-            Destroy(gameObject);
+            rewardedAd.Destroy();
+            rewardedAd = null;
         }
     }
 
-    public void Initialize()
+    private void Initialize()
     {
-        if (isInitialized) return;
+        if (isInitialized || !buildSettings.AdsEnabled) return;
 
         MobileAds.Initialize(initStatus =>
         {
             isInitialized = true;
-            RequestRewardedAd();
+            LoadRewardedAd();
         });
     }
 
-    private void RequestRewardedAd()
+    private void LoadRewardedAd()
     {
-        string adUnitId = BuildSettings.Instance.IsProductionBuild ? rewardedAdUnitId_production : rewardedAdUnitId_test;
-        this.rewardedAd = new RewardedAd(adUnitId);
+        if (this.rewardedAd != null)
+        {
+            this.rewardedAd.Destroy();
+            this.rewardedAd = null;
+        }
 
-        // Subscribe to events
-        this.rewardedAd.OnAdOpening += HandleRewardedAdOpening;
-        this.rewardedAd.OnUserEarnedReward += HandleUserEarnedReward;
-        this.rewardedAd.OnAdClosed += HandleRewardedAdClosed;
+        string adUnitId = buildSettings.IsProductionBuild ? rewardedAdUnitId_production : rewardedAdUnitId_test;
+        var adRequest = new AdRequest.Builder().Build();
 
-        AdRequest request = new AdRequest.Builder().Build();
-        this.rewardedAd.LoadAd(request);
+        Debug.Log("Loading rewarded ad...");
+        RewardedAd.Load(adUnitId, adRequest,
+            (RewardedAd ad, LoadAdError error) =>
+            {
+                if (error != null || ad == null)
+                {
+                    Debug.LogError("Rewarded ad failed to load an ad with error : " + error);
+                    return;
+                }
+
+                Debug.Log("Rewarded ad loaded with response : " + ad.GetResponseInfo());
+                this.rewardedAd = ad;
+                RegisterEventHandlers(ad);
+            });
     }
 
     public void ShowRewardedAd(Action onRewardEarnedCallback)
     {
-        this.onRewardEarned = onRewardEarnedCallback;
-        if (this.rewardedAd.IsLoaded())
+        if (!buildSettings.AdsEnabled) 
         {
-            this.rewardedAd.Show();
+            Debug.LogWarning("Ads are disabled. Cannot show rewarded ad.");
+            onRewardEarnedCallback?.Invoke(); // still call callback to not stall game flow
+            return;
+        }
+        
+        if (this.rewardedAd != null && this.rewardedAd.CanShowAd())
+        {
+            this.rewardedAd.Show((Reward reward) =>
+            {
+                Debug.Log($"User earned reward: {reward.Amount} {reward.Type}");
+                onRewardEarnedCallback?.Invoke();
+            });
+        }
+        else
+        {
+            Debug.LogWarning("Rewarded ad not ready yet. Simulating reward for seamless gameplay.");
+            onRewardEarnedCallback?.Invoke(); // still call callback to not stall game flow
+            LoadRewardedAd(); // Attempt to load a new ad for next time
         }
     }
-
-    private void HandleRewardedAdOpening(object sender, EventArgs args)
+    
+    private void RegisterEventHandlers(RewardedAd ad)
     {
-        if (!BuildSettings.Instance.IsProductionBuild)
-            Debug.Log("Rewarded ad opened.");
-    }
-
-    private void HandleUserEarnedReward(object sender, Reward args)
-    {
-        if (!BuildSettings.Instance.IsProductionBuild)
-            Debug.Log($"User earned reward: {args.Amount} {args.Type}");
-        onRewardEarned?.Invoke();
-    }
-
-    private void HandleRewardedAdClosed(object sender, EventArgs args)
-    {
-        if (!BuildSettings.Instance.IsProductionBuild)
-            Debug.Log("Rewarded ad closed.");
-        // Pre-load the next ad
-        this.RequestRewardedAd();
+        ad.OnAdPaid += (AdValue adValue) =>
+        {
+            Debug.Log(String.Format("Rewarded ad paid {0} {1}.",
+                adValue.Value,
+                adValue.CurrencyCode));
+        };
+        ad.OnAdImpressionRecorded += () =>
+        {
+            Debug.Log("Rewarded ad recorded an impression.");
+        };
+        ad.OnAdClicked += () =>
+        {
+            Debug.Log("Rewarded ad was clicked.");
+        };
+        ad.OnAdFullScreenContentOpened += () =>
+        {
+            Debug.Log("Rewarded ad full screen content opened.");
+        };
+        ad.OnAdFullScreenContentClosed += () =>
+        {
+            Debug.Log("Rewarded ad full screen content closed.");
+            LoadRewardedAd();
+        };
+        ad.OnAdFullScreenContentFailed += (AdError error) =>
+        {
+            Debug.LogError("Rewarded ad failed to open full screen content with error : " + error);
+            LoadRewardedAd();
+        };
     }
 }

@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -31,34 +32,13 @@ public class ShopProductCard : MonoBehaviour
     {
         associatedProduct = product;
 
-        nameText.text = product.productName;
-        descriptionText.text = product.description;
-        priceText.text = GetPriceString(product);
-        iconImage.sprite = product.icon;
-
-        if (bestValueBanner != null)
-        {
-            bestValueBanner.SetActive(product.isBestValue);
-        }
+        nameText.text = product.Title;
+        descriptionText.text = product.Description;
+        priceText.text = product.Price.ToString();
+        iconImage.sprite = product.Icon;
 
         purchaseButton.onClick.RemoveAllListeners();
         purchaseButton.onClick.AddListener(OnPurchaseClicked);
-    }
-
-    private string GetPriceString(ProductData product)
-    {
-        switch (product.currencyType)
-        {
-            case CurrencyType.Coins:
-            case CurrencyType.Gems:
-                // You can add icons here later if you have them in TMP
-                return $"{product.price}"; 
-            case CurrencyType.RealMoney:
-                // This would typically come from the IAP service
-                return $"${product.price:F2}";
-            default:
-                return "FREE";
-        }
     }
 
     private void OnPurchaseClicked()
@@ -66,7 +46,7 @@ public class ShopProductCard : MonoBehaviour
         // Delegate the purchase logic to the ShopManager
         if (ShopManager.Instance != null)
         {
-            ShopManager.Instance.PurchaseProduct(associatedProduct);
+            ShopManager.Instance.PurchaseProduct(associatedProduct.ProductId);
         }
     }
 }

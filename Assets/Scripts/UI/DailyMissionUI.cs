@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -28,42 +29,21 @@ public class DailyMissionUI : MonoBehaviour
         DailyMissionManager.OnMissionProgress -= UpdateMissionDisplay;
     }
 
-    // 🔹 ORIGINAL — KEPT
     public void Setup(MissionState mission)
     {
         this.currentMission = mission;
         UpdateMissionDisplay(mission);
     }
 
-    // 🔹 ADDITIVE OVERLOAD — REQUIRED
-    // Allows MissionStatus input without breaking existing systems
-    public void Setup(MissionStatus status)
-    {
-        if (currentMission == null)
-            currentMission = new MissionState(status);
-        else
-            currentMission.SyncFrom(status);
-
-        UpdateMissionDisplay(currentMission);
-    }
-
-    // 🔹 ADDITIVE (Action delegate compatibility)
-    private void UpdateMissionDisplay()
-    {
-        if (currentMission != null)
-            UpdateMissionDisplay(currentMission);
-    }
-
-    // 🔹 ORIGINAL — UNCHANGED
     private void UpdateMissionDisplay(MissionState mission)
     {
         if (mission.data.missionId != currentMission.data.missionId) return;
 
-        descriptionText.text = mission.data.description;
+        descriptionText.text = mission.data.Description;
 
-        float progressRatio = (float)mission.progress / mission.data.goal;
+        float progressRatio = (float)mission.progress / mission.data.TargetValue;
         progressBar.value = progressRatio;
-        progressText.text = $"{mission.progress} / {mission.data.goal}";
+        progressText.text = $"{mission.progress} / {mission.data.TargetValue}";
 
         if (mission.isClaimed)
         {

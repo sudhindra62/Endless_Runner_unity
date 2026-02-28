@@ -3,26 +3,38 @@ using Firebase;
 using Firebase.Analytics;
 using Firebase.RemoteConfig;
 using System.Threading.Tasks;
+using System;
 
 public class FirebaseManager : MonoBehaviour
 {
-    public static FirebaseManager Instance { get; private set; }
+    public static event Action OnRemoteConfigFetchedAndActivated;
+
     private bool isInitialized = false;
+    private BuildSettings buildSettings;
 
     void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        ServiceLocator.Register<FirebaseManager>(this);
     }
 
-    public void Initialize()
+    void Start()
+    {
+        buildSettings = ServiceLocator.Get<BuildSettings>();
+        if (buildSettings == null)
+        {
+            Debug.LogError("BuildSettings not found in ServiceLocator. FirebaseManager requires it for initialization.");
+            return;
+        }
+
+        Initialize();
+    }
+
+    void OnDestroy()
+    {
+        ServiceLocator.Unregister<FirebaseManager>();
+    }
+
+    private void Initialize()
     {
         if (isInitialized) return;
 
@@ -35,13 +47,13 @@ public class FirebaseManager : MonoBehaviour
                 FirebaseAnalytics.SetAnalyticsCollectionEnabled(true);
                 InitializeRemoteConfig();
 
-                if (!BuildSettings.Instance.IsProductionBuild)
+                if (!buildSettings.IsProductionBuild)
                     Debug.Log("Firebase initialized successfully.");
                 isInitialized = true;
             }
             else
             {
-                if (!BuildSettings.Instance.IsProductionBuild)
+                if (!buildSettings.IsProductionBuild)
                     Debug.LogError($"Could not resolve all Firebase dependencies: {dependencyStatus}");
             }
         });
@@ -53,7 +65,7 @@ public class FirebaseManager : MonoBehaviour
         FirebaseRemoteConfig.DefaultInstance.SetDefaultsAsync(defaults)
             .ContinueWithOnMainThread(task =>
             {
-                if (!BuildSettings.Instance.IsProductionBuild)
+                if (!buildSettings.IsProductionBuild)
                     Debug.Log("Remote Config defaults set.");
                 FetchRemoteConfig();
             });
@@ -61,16 +73,24 @@ public class FirebaseManager : MonoBehaviour
 
     public Task FetchRemoteConfig()
     {
-        if (!BuildSettings.Instance.IsProductionBuild)
+        if (!buildSettings.IsProductionBuild)
             Debug.Log("Fetching Remote Config data...");
         Task fetchTask = FirebaseRemoteConfig.DefaultInstance.FetchAsync(System.TimeSpan.Zero);
         return fetchTask.ContinueWithOnMainThread(task =>
         {
             if (task.IsCompleted)
             {
-                if (!BuildSettings.Instance.IsProductionBuild)
+                if (!buildSettings.IsProductionBuild)
                     Debug.Log("Fetch completed.");
-                FirebaseRemoteConfig.DefaultInstance.ActivateAsync();
+                FirebaseRemoteConfig.DefaultInstance.ActivateAsync().ContinueWithOnMainThread(activationTask =>
+                {
+                    if (activationTask.IsCompleted)
+                    {
+                        if (!buildSettings.IsProductionBuild)
+                            Debug.Log("Remote Config activated.");
+                        OnRemoteConfigFetchedAndActivated?.Invoke();
+                    }
+                });
             }
         });
     }

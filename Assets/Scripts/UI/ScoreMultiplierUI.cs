@@ -9,6 +9,7 @@ public class ScoreMultiplierUI : MonoBehaviour
 {
     private TextMeshProUGUI multiplierText;
     private Animator multiplierAnimator;
+    private ScoreManager scoreManager;
 
     private void Start()
     {
@@ -17,16 +18,16 @@ public class ScoreMultiplierUI : MonoBehaviour
             multiplierText = GameHUDController.Instance.MultiplierText;
             multiplierAnimator = GameHUDController.Instance.MultiplierAnimator;
         }
-
-        ScoreMultiplierManager.OnMultiplierChanged += UpdateUI;
+        scoreManager = ServiceLocator.Get<ScoreManager>();
+        scoreManager.OnMultiplierChanged += UpdateUI;
     }
 
     private void OnDestroy()
     {
-        ScoreMultiplierManager.OnMultiplierChanged -= UpdateUI;
+        scoreManager.OnMultiplierChanged -= UpdateUI;
     }
 
-    private void UpdateUI(float multiplier)
+    private void UpdateUI(int multiplier)
     {
         if (multiplierText != null)
         {

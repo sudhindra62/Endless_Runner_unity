@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 /// <summary>
@@ -7,17 +6,24 @@ using UnityEngine;
 /// </summary>
 public class GameFlowController : MonoBehaviour
 {
-    [Header("Required Managers")]
-    [SerializeField] private GameStateManager gameStateManager;
-    [SerializeField] private ScoreManager scoreManager;
-    [SerializeField] private ReviveManager reviveManager;
-    [SerializeField] private PlayerController playerController;
-    [SerializeField] private NewCollectibleSpawner collectibleSpawner;
+    public PlayerController playerController;
+    public NewCollectibleSpawner collectibleSpawner;
+
+    private GameStateManager gameStateManager;
+    private ScoreManager scoreManager;
+    private ReviveManager reviveManager;
+    private PlayerDataManager playerDataManager;
 
     #region Unity Lifecycle & Event Subscriptions
 
-    private void OnEnable()
+    private void Start()
     {
+        // Using ServiceLocator to get manager instances
+        gameStateManager = ServiceLocator.Current.Get<GameStateManager>();
+        scoreManager = ServiceLocator.Current.Get<ScoreManager>();
+        reviveManager = ServiceLocator.Current.Get<ReviveManager>();
+        playerDataManager = ServiceLocator.Current.Get<PlayerDataManager>();
+
         if (reviveManager != null)
         {
             reviveManager.OnPlayerRevived += OnPlayerRevived;
@@ -72,8 +78,11 @@ public class GameFlowController : MonoBehaviour
     public void EndRun()
     {
         gameStateManager.SetState(GameState.GameOver);
-        scoreManager.SaveBestScore();
-        PlayerDataManager.Instance.AddXPFromRun(scoreManager.CurrentScore);
+        scoreManager.SaveHighScore(); // Corrected method name
+        if (playerDataManager != null)
+        {
+            playerDataManager.AddXPFromRun(scoreManager.CurrentScore); // Direct call
+        }
         reviveManager.InitiateReviveFlow();
     }
 
@@ -90,6 +99,11 @@ public class GameFlowController : MonoBehaviour
     private void OnReviveDeclined()
     {
         // Game is over, no action needed. The UI will handle the transition.
+    }
+
+    public void GoToMainMenu()
+    {
+        gameStateManager.SetState(GameState.MainMenu);
     }
 
     #endregion

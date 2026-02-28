@@ -43,43 +43,47 @@ public class NewCollectibleSpawner : MonoBehaviour
     [SerializeField] private float obstacleSafeGap = 5f;
 
     private float lastSpawnZ;
+    private ObjectPooler objectPooler;
+
+    private void Start()
+    {
+        objectPooler = ServiceLocator.Get<ObjectPooler>();
+        if (objectPooler == null)
+        {
+            Debug.LogError("ObjectPooler not found. Collectible spawning will not work.");
+        }
+    }
 
     private void Update()
     {
-        // Check if the player has moved far enough to trigger the next spawn cycle.
         if (player.position.z > lastSpawnZ - spawnDistanceAhead)
         {
             SpawnCollectibleGroups();
         }
     }
 
-    /// <summary>
-    /// The main method for spawning collectibles. It advances the spawn position
-    /// and attempts to place collectible groups in the new zone.
-    /// </summary>
     private void SpawnCollectibleGroups()
     {
+        if (objectPooler == null) return;
+
         lastSpawnZ += spawnZoneInterval;
 
         foreach (var group in collectibleGroups)
         {
-            // First, check if this group should spawn based on its spawn chance.
             if (Random.value < group.spawnChance)
             {
-                int lane = Random.Range(0, 3); // 0: Left, 1: Middle, 2: Right
+                int lane = Random.Range(0, 3);
                 int groupSize = Random.Range(group.minGroupSize, group.maxGroupSize + 1);
 
                 for (int i = 0; i < groupSize; i++)
                 {
-                    // Calculate the position for the next collectible in the group.
                     float spawnX = (lane - 1) * laneWidth;
                     float spawnZ = lastSpawnZ + i * group.groupSpacing;
                     Vector3 spawnPosition = new Vector3(spawnX, collectibleYPosition, spawnZ);
 
-                    // Before placing, ensure the position is not inside an obstacle.
                     if (IsPositionSafe(spawnPosition))
                     {
-                        GameObject collectible = ObjectPooler.Instance.GetPooledObject(group.poolerTag);
+                        GameObject collectible = objectPooler.GetPooledObject(group.poolerTag);
                         if (collectible != null)
                         {
                             collectible.transform.position = spawnPosition;
@@ -91,21 +95,11 @@ public class NewCollectibleSpawner : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Checks if a potential spawn position is clear of any obstacles.
-    /// </summary>
-    /// <param name="position">The world position to check.</param>
-    /// <returns>True if the position is safe to spawn a collectible, false otherwise.</returns>
     private bool IsPositionSafe(Vector3 position)
     {
-        // Use a physics check (CheckBox) to see if any objects on the "Obstacle" layer overlap with the spawn area.
-        // This prevents collectibles from spawning inside or too close to obstacles.
         return !Physics.CheckBox(position, new Vector3(1f, 1f, obstacleSafeGap / 2f), Quaternion.identity, LayerMask.GetMask("Obstacle"));
     }
 
-    /// <summary>
-    /// Resets the spawner to its initial state, typically called at the start of a new run.
-    /// </summary>
     public void ResetSpawner()
     {
         lastSpawnZ = 0;

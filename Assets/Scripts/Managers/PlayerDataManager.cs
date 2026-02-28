@@ -1,94 +1,52 @@
 
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
-/// <summary>
-/// A centralized, persistent manager for all player-related data, including currency and progression.
-/// It handles loading from and saving to PlayerPrefs, providing a single source of truth for player stats.
-/// </summary>
 public class PlayerDataManager : MonoBehaviour
 {
-    public static PlayerDataManager Instance { get; private set; }
-
-    // --- Player Data ---
-    public int Coins { get; private set; }
-    public int Gems { get; private set; }
     public int Level { get; private set; }
     public int XP { get; private set; }
-    public int XpForNextLevel { get; private set; }
+    public int XPForNextLevel { get; private set; }
+
+    public List<PlayerChestState> chestStates;
+
 
     [Header("XP Configuration")]
-    [Tooltip("The base XP required for the first level-up.")]
     [SerializeField] private int baseXpRequirement = 100;
-    [Tooltip("The multiplier that increases the XP requirement per level.")]
     [SerializeField] private float xpMultiplierPerLevel = 1.5f;
-    [Tooltip("The conversion rate from score to XP at the end of a run.")]
     [SerializeField] private float xpPerScorePoint = 0.1f;
+    [SerializeField] private int gemsPerLevel = 5;
 
-    // --- Events ---
-    public static event Action<int> OnCoinsChanged;
-    public static event Action<int> OnGemsChanged;
     public static event Action<int> OnLevelChanged;
     public static event Action<int, int> OnXPChanged;
 
-    #region Unity Lifecycle & Persistence
+    private CurrencyManager currencyManager;
 
     private void Awake()
     {
-        if (Instance == null)
+        ServiceLocator.Register<PlayerDataManager>(this);
+        LoadData();
+    }
+
+    private void Start()
+    {
+        currencyManager = ServiceLocator.Get<CurrencyManager>();
+        if (currencyManager == null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            LoadData();
+            Debug.LogError("CurrencyManager not found in ServiceLocator. PlayerDataManager requires it to award gems on level up.");
         }
-        else
-        {
-            Destroy(gameObject);
-        }
+    }
+
+    private void OnDestroy()
+    {
+        ServiceLocator.Unregister<PlayerDataManager>();
     }
 
     private void OnApplicationQuit()
     {
         SaveData();
     }
-
-    #endregion
-
-    #region Currency Management
-
-    public void AddCoins(int amount)
-    {
-        if (amount <= 0) return;
-        Coins += amount;
-        OnCoinsChanged?.Invoke(Coins);
-    }
-
-    public bool SpendCoins(int amount)
-    {
-        if (amount <= 0 || Coins < amount) return false;
-        Coins -= amount;
-        OnCoinsChanged?.Invoke(Coins);
-        return true;
-    }
-
-    public void AddGems(int amount)
-    {
-        if (amount <= 0) return;
-        Gems += amount;
-        OnGemsChanged?.Invoke(Gems);
-    }
-
-    public bool SpendGems(int amount)
-    {
-        if (amount <= 0 || Gems < amount) return false;
-        Gems -= amount;
-        OnGemsChanged?.Invoke(Gems);
-        return true;
-    }
-
-    #endregion
-
-    #region Progression Management
 
     public void AddXPFromRun(int scoreFromRun)
     {
@@ -101,16 +59,40 @@ public class PlayerDataManager : MonoBehaviour
         Debug.Log($"Granted {xpGained} XP for a score of {scoreFromRun}.");
 
         CheckForLevelUp();
-        OnXPChanged?.Invoke(XP, XpForNextLevel);
+        OnXPChanged?.Invoke(XP, XPForNextLevel);
     }
+
+    public PlayerChestState GetChestState(string chestId)
+    {
+        return chestStates.Find(c => c.chestId == chestId);
+    }
+
+    public void UpdateChestState(string chestId)
+    {
+        PlayerChestState chestState = GetChestState(chestId);
+        if (chestState != null)
+        {
+            chestState.lastOpenedTime = DateTime.UtcNow;
+        } else {
+            chestStates.Add(new PlayerChestState { chestId = chestId, lastOpenedTime = DateTime.UtcNow });
+        }
+        SaveData();
+    }
+
 
     private void CheckForLevelUp()
     {
-        while (XP >= XpForNextLevel)
+        while (XP >= XPForNextLevel)
         {
-            XP -= XpForNextLevel;
+            XP -= XPForNextLevel;
             Level++;
             UpdateXpRequirement();
+
+            if (currencyManager != null)
+            {
+                currencyManager.AddGems(gemsPerLevel);
+                Debug.Log($"{gemsPerLevel} gems awarded for reaching Level {Level}.");
+            }
             
             Debug.Log($"Player leveled up to Level {Level}!");
             OnLevelChanged?.Invoke(Level);
@@ -119,7 +101,7 @@ public class PlayerDataManager : MonoBehaviour
 
     private void UpdateXpRequirement()
     {
-        XpForNextLevel = GetXPForLevel(Level + 1);
+        XPForNextLevel = GetXPForLevel(Level + 1);
     }
 
     private int GetXPForLevel(int level)
@@ -128,34 +110,32 @@ public class PlayerDataManager : MonoBehaviour
         return (int)(baseXpRequirement * Mathf.Pow(level, xpMultiplierPerLevel));
     }
 
-    #endregion
-
-    #region Data Persistence Implementation
-
     private void LoadData()
     {
-        Coins = PlayerPrefs.GetInt("PlayerCoins", 0);
-        Gems = PlayerPrefs.GetInt("PlayerGems", 0);
         Level = PlayerPrefs.GetInt("PlayerLevel", 1);
         XP = PlayerPrefs.GetInt("PlayerXP", 0);
+        string chestStatesJson = PlayerPrefs.GetString("ChestStates", "");
+        if (!string.IsNullOrEmpty(chestStatesJson))
+        {
+            chestStates = JsonUtility.FromJson<List<PlayerChestState>>(chestStatesJson);
+        }
+        else
+        {
+            chestStates = new List<PlayerChestState>();
+        }
         UpdateXpRequirement();
 
-        // Invoke events to ensure the UI is updated on load
-        OnCoinsChanged?.Invoke(Coins);
-        OnGemsChanged?.Invoke(Gems);
         OnLevelChanged?.Invoke(Level);
-        OnXPChanged?.Invoke(XP, XpForNextLevel);
+        OnXPChanged?.Invoke(XP, XPForNextLevel);
     }
 
     private void SaveData()
     {
-        PlayerPrefs.SetInt("PlayerCoins", Coins);
-        PlayerPrefs.SetInt("PlayerGems", Gems);
         PlayerPrefs.SetInt("PlayerLevel", Level);
         PlayerPrefs.SetInt("PlayerXP", XP);
+        string chestStatesJson = JsonUtility.ToJson(chestStates);
+        PlayerPrefs.SetString("ChestStates", chestStatesJson);
         PlayerPrefs.Save();
         Debug.Log("Player data saved successfully.");
     }
-
-    #endregion
 }

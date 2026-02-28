@@ -3,21 +3,19 @@ using System;
 
 public class GameStateManager : MonoBehaviour
 {
-    public static GameStateManager Instance { get; private set; }
-
     public event Action<GameState> OnGameStateChanged;
 
     public GameState CurrentState { get; private set; }
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        ServiceLocator.Register<GameStateManager>(this);
+        SetState(GameState.MainMenu); // Default state
+    }
+
+    private void OnDestroy()
+    {
+        ServiceLocator.Unregister<GameStateManager>();
     }
 
     public void SetState(GameState newState)

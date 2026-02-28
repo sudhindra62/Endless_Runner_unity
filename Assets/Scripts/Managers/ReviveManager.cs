@@ -6,30 +6,42 @@ public class ReviveManager : MonoBehaviour
     public event Action OnPlayerRevived;
     public event Action OnReviveDeclined;
 
-    [Header("Configuration")]
-    [SerializeField] private int reviveGemCost = 10;
-    
-    private bool hasRevivedThisRun = false;
+    // Dependencies
+    public ReviveTokenManager reviveTokenManager;
+    public RunSessionData runSessionData;
 
-    public void ResetReviveState()
+    private CurrencyManager currencyManager;
+    private BuildSettings buildSettings;
+    private AdMobManager adMobManager;
+
+    private void Awake()
     {
-        hasRevivedThisRun = false;
+        ServiceLocator.Register<ReviveManager>(this);
     }
+
+    private void Start()
+    {
+        currencyManager = ServiceLocator.Get<CurrencyManager>();
+        buildSettings = ServiceLocator.Get<BuildSettings>();
+        adMobManager = ServiceLocator.Get<AdMobManager>();
+    }
+
+    private void OnDestroy()
+    {
+        ServiceLocator.Unregister<ReviveManager>();
+    }
+
+    public void ResetReviveState() { }
 
     public void InitiateReviveFlow()
     {
-        if (hasRevivedThisRun)
-        {
-            DeclineRevive();
-            return;
-        }
-
-        // Additional logic for presenting revive options can go here
+        // The UI will now determine which revive options are available.
+        // This method can be used to trigger the revive UI.
     }
 
-    public void AttemptGemRevive()
+    public void ReviveWithGems(int gemCost)
     {
-        if (PlayerDataManager.Instance.RemoveGems(reviveGemCost))
+        if (currencyManager != null && currencyManager.SpendGems(gemCost))
         {
             GrantRevive();
         }
@@ -39,11 +51,23 @@ public class ReviveManager : MonoBehaviour
         }
     }
 
-    public void AttemptAdRevive()
+    public void ReviveWithToken()
     {
-        if (BuildSettings.Instance.AdsEnabled)
+        if (reviveTokenManager != null && reviveTokenManager.UseToken())
         {
-            AdMobManager.Instance.ShowRewardedAd(GrantRevive);
+            GrantRevive();
+        }
+        else
+        {
+            DeclineRevive();
+        }
+    }
+
+    public void ReviveWithAd()
+    {
+        if (buildSettings != null && buildSettings.AdsEnabled && adMobManager != null)
+        { 
+            adMobManager.ShowRewardedAd(GrantRevive);
         }
         else
         {
@@ -58,7 +82,11 @@ public class ReviveManager : MonoBehaviour
 
     private void GrantRevive()
     {
-        hasRevivedThisRun = true;
+        if (runSessionData != null)
+        {
+            runSessionData.RevivesUsed++;
+        }
+
         OnPlayerRevived?.Invoke();
     }
 }

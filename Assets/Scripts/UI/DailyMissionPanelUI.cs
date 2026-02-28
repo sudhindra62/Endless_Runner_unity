@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -25,27 +26,28 @@ public class DailyMissionPanelUI : MonoBehaviour
         DailyMissionManager.OnMissionsRefreshed -= RefreshMissionDisplay;
     }
 
-    void Start()
-    {
-        RefreshMissionDisplay();
-    }
-
     private void RefreshMissionDisplay()
     {
         foreach (GameObject uiObject in activeMissionUIObjects)
+        {
             missionUIPool.ReturnObject(uiObject);
-
+        }
         activeMissionUIObjects.Clear();
 
-        if (DailyMissionManager.Instance == null ||
-            DailyMissionManager.Instance.activeMissions == null) return;
+        if (DailyMissionManager.Instance == null) return;
 
-        foreach (var missionState in DailyMissionManager.Instance.activeMissions)
+        var missions = DailyMissionManager.Instance.GetActiveMissions();
+        if (missions == null) return;
+
+        foreach (var missionState in missions)
         {
             GameObject missionObj = missionUIPool.GetObject();
-            missionObj.transform.SetParent(missionContainer, false);
-            missionObj.GetComponent<DailyMissionUI>().Setup(missionState);
-            activeMissionUIObjects.Add(missionObj);
+            if (missionObj != null)
+            {
+                missionObj.transform.SetParent(missionContainer, false);
+                missionObj.GetComponent<DailyMissionUI>().Setup(missionState);
+                activeMissionUIObjects.Add(missionObj);
+            }
         }
     }
 }

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <dependencies>
   <androidPackages>
-    <androidPackage spec="com.google.firebase:firebase-analytics-unity:11.6.0" />
-    <androidPackage spec="com.google.firebase:firebase-app-unity:11.6.0" />
-    <androidPackage spec="com.google.firebase:firebase-config-unity:11.6.0" />
+    <androidPackage spec="com.google.firebase:firebase-analytics-unity:12.0.0" />
+    <androidPackage spec="com.google.firebase:firebase-app-unity:12.0.0" />
+    <androidPackage spec="com.google.firebase:firebase-config-unity:12.0.0" />
     <androidPackage spec="com.google.android.gms:play-services-ads:22.6.0" />
   </androidPackages>
 </dependencies>

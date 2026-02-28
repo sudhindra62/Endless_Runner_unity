@@ -1,82 +1,98 @@
-
 using UnityEngine;
 using System;
 
-/// <summary>
-/// A singleton manager for tracking the player's score and high score.
-/// It provides methods for adding points and handles saving and loading the high score.
-/// </summary>
 public class ScoreManager : MonoBehaviour
 {
-    /// <summary>
-    /// The static singleton instance of the ScoreManager.
-    /// </summary>
-    public static ScoreManager Instance { get; private set; }
-
-    /// <summary>
-    /// Fired whenever the current score changes. The integer payload is the new score.
-    /// </summary>
+    // Events
     public event Action<int> OnScoreChanged;
-
-    /// <summary>
-    /// Fired when a new high score is set. The integer payload is the new high score.
-    /// </summary>
     public event Action<int> OnHighScoreChanged;
+    public event Action<int> OnMultiplierChanged;
+    public event Action<int> OnScoreAdded;
 
-    /// <summary>
-    /// Gets the player's score for the current run.
-    /// </summary>
+    // Properties
     public int CurrentScore { get; private set; }
-
-    /// <summary>
-    /// Gets the highest score achieved by the player.
-    /// </summary>
     public int HighScore { get; private set; }
+    public ScoreInterceptor Interceptor => scoreInterceptor;
+    public RunSessionData SessionData => runSessionData;
 
+    // Dependencies
+    [SerializeField] private ScoreInterceptor scoreInterceptor;
+    [SerializeField] private RunSessionData runSessionData;
+
+    private int scoreMultiplier = 1;
     private const string HighScoreKey = "HighScore";
 
     private void Awake()
     {
-        // Standard singleton pattern with persistence
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-
+        ServiceLocator.Register<ScoreManager>(this);
         LoadHighScore();
+        if (runSessionData != null) runSessionData.Reset();
     }
 
-    /// <summary>
-    /// Adds the specified number of points to the current score.
-    /// </summary>
-    /// <param name="pointsToAdd">The number of points to add. Must be non-negative.</param>
-    public void AddPoints(int pointsToAdd)
+    private void OnDestroy()
     {
-        if (pointsToAdd < 0)
+        ServiceLocator.Unregister<ScoreManager>();
+    }
+
+    public void SetScoreMultiplier(int multiplier)
+    {
+        if (multiplier > 0)
         {
-            Debug.LogWarning("[ScoreManager] Cannot add a negative number of points.");
-            return;
+            scoreMultiplier = multiplier;
+            OnMultiplierChanged?.Invoke(scoreMultiplier);
+        }
+    }
+
+    public void AddScore(int pointsToAdd)
+    {
+        if (pointsToAdd <= 0) return;
+
+        float modifiedPoints = pointsToAdd;
+        if (scoreInterceptor != null)
+        {
+            modifiedPoints = scoreInterceptor.Intercept(modifiedPoints);
         }
 
-        CurrentScore += pointsToAdd;
+        int finalPoints = (int)modifiedPoints * scoreMultiplier;
+        CurrentScore += finalPoints;
+
+        if (runSessionData != null)
+        {
+            runSessionData.TotalScore = CurrentScore;
+        }
+
+        OnScoreAdded?.Invoke(finalPoints);
         OnScoreChanged?.Invoke(CurrentScore);
     }
 
-    /// <summary>
-    /// Resets the current score to zero. Typically called at the start of a new run.
-    /// </summary>
+    public void RecordPerfectDodge()
+    {
+        if (runSessionData != null)
+        {
+            runSessionData.PerfectDodges++;
+        }
+    }
+
+    public void RecordObstacleDodged()
+    {
+        if (runSessionData != null)
+        {
+            runSessionData.ObstaclesDodged++;
+        }
+    }
+
     public void ResetScore()
     {
         CurrentScore = 0;
         OnScoreChanged?.Invoke(CurrentScore);
+        scoreMultiplier = 1;
+
+        if (runSessionData != null)
+        {
+            runSessionData.Reset();
+        }
     }
 
-    /// <summary>
-    /// Compares the current score with the high score and updates the high score if it has been surpassed.
-    /// </summary>
     public void SaveHighScore()
     {
         if (CurrentScore > HighScore)
@@ -85,13 +101,9 @@ public class ScoreManager : MonoBehaviour
             PlayerPrefs.SetInt(HighScoreKey, HighScore);
             PlayerPrefs.Save();
             OnHighScoreChanged?.Invoke(HighScore);
-            Debug.Log($"[ScoreManager] New high score saved: {HighScore}");
         }
     }
 
-    /// <summary>
-    /// Loads the high score from PlayerPrefs at startup.
-    /// </summary>
     private void LoadHighScore()
     {
         HighScore = PlayerPrefs.GetInt(HighScoreKey, 0);
