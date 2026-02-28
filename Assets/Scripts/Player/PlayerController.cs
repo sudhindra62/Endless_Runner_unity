@@ -1,54 +1,268 @@
 
+using UnityEngine;
 using System;
 using System.Collections;
-using UnityEngine;
 
+[RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
+    // Movement
+    [Header("Movement")]
+    [SerializeField] private float initialSpeed = 10f;
+    [SerializeField] private float laneWidth = 4f;
+    [SerializeField] private int maxLaneOffset = 1;
+    [SerializeField] private float laneChangeSpeed = 15f;
+
+    // Jumping & Sliding
+    [Header("Jumping & Sliding")]
+    [SerializeField] private float jumpForce = 8f;
+    [SerializeField] private float gravityScale = 2f;
+    [SerializeField] private float slideDuration = 0.8f;
+    [SerializeField] private float slideColliderHeight = 0.5f;
+
+    // Collision & Revive
+    [Header("Collision & Revive")]
+    [SerializeField] private float reviveImmunityDuration = 2.0f;
+    [SerializeField] private LayerMask groundMask;
+    [SerializeField] private float groundCheckDistance = 0.2f;
+
+    // Animation
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
+    private readonly int isRunningHash = Animator.StringToHash("isRunning");
+    private readonly int jumpHash = Animator.StringToHash("Jump");
+    private readonly int slideHash = Animator.StringToHash("Slide");
+    private readonly int dieHash = Animator.StringToHash("Die");
+
+    // Events
     public event Action OnDeath;
 
-    [Header("Configuration")]
-    [SerializeField] private float reviveImmunityTime = 2f;
+    // State
+    private CharacterController controller;
+    private Vector3 velocity;
+    private int currentLane = 0;
+    private float targetHorizontalPosition;
+    private float currentSpeed;
+    private bool isSliding = false;
+    private bool isGrounded;
+    private float originalColliderHeight;
+    private Vector3 startPosition;
 
-    private PlayerMotor motor;
     private bool isDead = false;
+    private bool isImmune = false;
+    private bool isPaused = false;
+
+    // Dependencies
+    private GameDifficultyManager difficultyManager;
+    private PowerUpManager powerUpManager;
 
     private void Awake()
     {
-        motor = GetComponent<PlayerMotor>();
+        controller = GetComponent<CharacterController>();
+        originalColliderHeight = controller.height;
+        startPosition = transform.position;
+        ServiceLocator.Register(this);
     }
 
-    private void OnCollisionEnter(Collision other)
+    private void Start()
     {
-        if (isDead) return;
+        difficultyManager = ServiceLocator.Get<GameDifficultyManager>();
+        powerUpManager = ServiceLocator.Get<PowerUpManager>();
 
-        // In a real game, you would check for a specific tag or layer
-        if (other.gameObject.CompareTag("Obstacle"))
+        GameManager.OnGameStateChanged += OnGameStateChanged;
+
+        currentSpeed = initialSpeed;
+        transform.position = startPosition;
+    }
+
+    private void OnDestroy()
+    {
+        GameManager.OnGameStateChanged -= OnGameStateChanged;
+        ServiceLocator.Unregister<PlayerController>();
+    }
+
+    private void Update()
+    {
+        if (isPaused) return;
+        
+        bool isPlaying = GameManager.Instance.CurrentState == GameState.Playing;
+        animator.SetBool(isRunningHash, isPlaying && isGrounded && !isDead);
+
+        if (!isPlaying || isDead)
         {
-            Die();
+            return;
+        }
+        
+        HandleForwardMovement();
+        HandleLaneChanging();
+        HandleGravity();
+        HandleGroundDetection();
+    }
+
+    private void HandleForwardMovement()
+    {
+        if (difficultyManager != null)
+        {
+            currentSpeed = difficultyManager.GetCurrentPlayerSpeed();
+        }
+        controller.Move(transform.forward * currentSpeed * Time.deltaTime);
+    }
+
+    private void HandleLaneChanging()
+    {
+        targetHorizontalPosition = currentLane * laneWidth;
+        Vector3 currentPosition = transform.position;
+
+        if (Mathf.Abs(currentPosition.x - targetHorizontalPosition) > 0.01f)
+        {
+            float newX = Mathf.Lerp(currentPosition.x, targetHorizontalPosition, Time.deltaTime * laneChangeSpeed);
+            transform.position = new Vector3(newX, currentPosition.y, currentPosition.z);
         }
     }
 
-    private void Die()
+    private void HandleGravity()
+    {
+        if (!isGrounded)
+        {
+            velocity.y += Physics.gravity.y * gravityScale * Time.deltaTime;
+        }
+        else if (velocity.y < 0)
+        {
+            velocity.y = -2f;
+        }
+        controller.Move(velocity * Time.deltaTime);
+    }
+
+    private void HandleGroundDetection()
+    {
+        // Use non-allocating raycast for performance
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, out _, groundCheckDistance, groundMask);
+    }
+
+    public void OnSwipe(Vector2 direction)
+    {
+        if (GameManager.Instance.CurrentState != GameState.Playing || isDead) return;
+
+        if (direction == Vector2.left && currentLane > -maxLaneOffset)
+        {
+            currentLane--;
+        }
+        else if (direction == Vector2.right && currentLane < maxLaneOffset)
+        {
+            currentLane++;
+        }
+        else if (direction == Vector2.up && isGrounded)
+        {
+            Jump();
+        }
+        else if (direction == Vector2.down && !isSliding)
+        {
+            StartCoroutine(Slide());
+        }
+    }
+
+    private void Jump()
+    {
+        if (!isGrounded) return;
+        velocity.y = Mathf.Sqrt(jumpForce * -2f * Physics.gravity.y * gravityScale);
+        animator.SetTrigger(jumpHash);
+    }
+
+    private IEnumerator Slide()
+    {
+        isSliding = true;
+        controller.height = slideColliderHeight;
+        controller.center = new Vector3(0, slideColliderHeight / 2, 0);
+        animator.SetTrigger(slideHash);
+
+        yield return new WaitForSeconds(slideDuration);
+
+        controller.height = originalColliderHeight;
+        controller.center = new Vector3(0, originalColliderHeight / 2, 0);
+        isSliding = false;
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (isDead || isImmune || !hit.gameObject.CompareTag("Obstacle")) return;
+
+        if (powerUpManager != null && powerUpManager.IsPowerUpActive(PowerUpType.Shield))
+        {
+            powerUpManager.DeactivatePowerUp(PowerUpType.Shield);
+            hit.gameObject.SetActive(false);
+            return;
+        }
+
+        Die();
+    }
+
+    public void Die()
     {
         if (isDead) return;
         isDead = true;
 
-        motor.Stop();
+        animator.SetTrigger(dieHash);
         OnDeath?.Invoke();
     }
-
+    
     public void Revive()
     {
         isDead = false;
-        motor.ResetVelocity();
+        animator.Rebind();
+        animator.Update(0f);
         StartCoroutine(ActivateImmunity());
+    }
+
+    public void ResetPlayer()
+    {
+        isDead = false;
+        isPaused = false;
+        isImmune = false;
+        currentSpeed = initialSpeed;
+        velocity = Vector3.zero;
+        currentLane = 0;
+
+        controller.enabled = false;
+        transform.position = startPosition;
+        controller.enabled = true;
+
+        animator.Rebind();
+        animator.Update(0f);
     }
 
     private IEnumerator ActivateImmunity()
     {
-        motor.SetImmune(true);
-        yield return new WaitForSeconds(reviveImmunityTime);
-        motor.SetImmune(false);
+        isImmune = true;
+        yield return new WaitForSeconds(reviveImmunityDuration);
+        isImmune = false;
+    }
+    
+    private void OnGameStateChanged(GameState newState)
+    {
+        if (newState == GameState.Menu || newState == GameState.EndOfRun)
+        {
+            ResetPlayer();
+        } else if (newState == GameState.Paused)
+        {
+            isPaused = true;
+        } else if (newState == GameState.Playing)
+        {
+            isPaused = false;
+        }
+    }
+
+    public void Stop()
+    {
+        isPaused = true;
+    }
+
+    public void ResetVelocity()
+    {
+        velocity = Vector3.zero;
+    }
+
+    public void SetImmune(bool immune)
+    {
+        isImmune = immune;
     }
 }

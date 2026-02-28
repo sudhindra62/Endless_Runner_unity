@@ -1,81 +1,118 @@
 
-using UnityEngine;
 using System;
+using UnityEngine;
 
-public class DailyLoginManager : MonoBehaviour
+[Serializable]
+public struct DailyReward
 {
-    public static DailyLoginManager Instance { get; private set; }
+    public int Coins;
+    public int Gems;
+    public int Xp;
+}
 
-    private const string LastLoginKey = "LastLoginTime_Binary";
-    private const string DailyLoginChestId = "daily_login_chest";
+/// <summary>
+/// Manages daily login rewards and streaks. It is the authority for determining when a daily reward should be granted.
+/// It includes protection against time manipulation by checking against the last saved login time.
+/// </summary>
+public class DailyLoginManager : Singleton<DailyLoginManager>
+{
+    [Tooltip("A list of rewards for each consecutive day of logging in. The list size determines the streak cycle.")]
+    [SerializeField] private DailyReward[] streakRewards;
 
-    private RewardChestManager _rewardChestManager;
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
-    }
+    private const string LastLoginKey = "DailyLogin_LastLoginTime";
+    private const string LoginStreakKey = "DailyLogin_LoginStreak";
+    private const string LastRewardClaimedKeyPrefix = "DailyLogin_LastRewardClaimed_";
 
     private void Start()
     {
-        _rewardChestManager = ServiceLocator.Get<RewardChestManager>();
-        if (_rewardChestManager == null)
+        CheckDailyLogin();
+    }
+
+    private void CheckDailyLogin()
+    {
+        DateTime lastLoginDate = GetLastLoginDate();
+        DateTime currentDate = DateTime.UtcNow.Date;
+
+        // Anti-cheat: If the current time is earlier than the last recorded login, the user might be manipulating the system time.
+        if (currentDate < lastLoginDate)
         {
-            Debug.LogError("RewardChestManager not found!");
+            Debug.LogWarning("System time appears to have been wound back. Daily login reward will not be granted.");
             return;
         }
-        CheckForDailyLogin();
-    }
 
-    public void CheckForDailyLogin()
-    {
-        DateTime lastLogin = GetLastLoginTime();
-        DateTime now = DateTime.UtcNow;
-
-        if (IsNewDay(lastLogin, now))
+        // Check if a reward has already been claimed for the current date.
+        if (IsRewardClaimedForDate(currentDate))
         {
-            if (_rewardChestManager.IsChestReady(DailyLoginChestId))
+            Debug.Log("Daily reward for today has already been claimed.");
+            return;
+        }
+
+        if (currentDate > lastLoginDate)
+        {
+            int streak = PlayerPrefs.GetInt(LoginStreakKey, 0);
+
+            // If the last login was yesterday, continue the streak. Otherwise, reset it.
+            if ((currentDate - lastLoginDate).TotalDays == 1.0)
             {
-                _rewardChestManager.OpenChest(DailyLoginChestId);
-                Debug.Log("Daily login chest awarded!");
-                PlayerPrefs.SetString(LastLoginKey, now.ToBinary().ToString());
+                streak++;
             }
+            else
+            {
+                streak = 1;
+            }
+
+            // Grant reward
+            GrantStreakReward(streak);
+
+            // Save state
+            PlayerPrefs.SetString(LastLoginKey, currentDate.ToString("o"));
+            PlayerPrefs.SetInt(LoginStreakKey, streak);
+            MarkRewardAsClaimedForDate(currentDate);
+            PlayerPrefs.Save();
         }
     }
 
-    private bool IsNewDay(DateTime lastLogin, DateTime now)
+    private void GrantStreakReward(int streak)
     {
-        return now.Date > lastLogin.Date;
+        if (streakRewards.Length == 0)
+        {
+            Debug.LogWarning("No daily rewards have been configured.");
+            return;
+        }
+
+        // The streak cycles through the available rewards.
+        int rewardIndex = (streak - 1) % streakRewards.Length;
+        DailyReward reward = streakRewards[rewardIndex];
+
+        RewardManager.Instance.GrantDailyLoginReward(streak, reward.Coins, reward.Gems, reward.Xp);
+        Debug.Log($"Daily login reward granted for streak day {streak}.");
     }
 
-    private DateTime GetLastLoginTime()
+    private DateTime GetLastLoginDate()
     {
-        string lastLoginString = PlayerPrefs.GetString(LastLoginKey, null);
-        if (string.IsNullOrEmpty(lastLoginString))
+        string dateString = PlayerPrefs.GetString(LastLoginKey, null);
+        if (string.IsNullOrEmpty(dateString))
         {
             return DateTime.MinValue;
         }
-
-        long lastLoginBinary;
-        if (long.TryParse(lastLoginString, out lastLoginBinary))
-        {
-            return DateTime.FromBinary(lastLoginBinary);
-        }
-
-        return DateTime.MinValue;
+        return DateTime.Parse(dateString).Date;
+    }
+    
+    private bool IsRewardClaimedForDate(DateTime date)
+    {
+        return PlayerPrefs.GetInt(LastRewardClaimedKeyPrefix + date.ToString("yyyy-MM-dd"), 0) == 1;
     }
 
-    private void OnApplicationQuit()
+    private void MarkRewardAsClaimedForDate(DateTime date)
     {
-        PlayerPrefs.Save();
+        PlayerPrefs.SetInt(LastRewardClaimedKeyPrefix + date.ToString("yyyy-MM-dd"), 1);
+    }
+    
+    [ContextMenu("Reset Daily Login")]
+    public void ResetDailyLogin()
+    {
+        PlayerPrefs.DeleteKey(LastLoginKey);
+        PlayerPrefs.DeleteKey(LoginStreakKey);
+        Debug.Log("Daily login data has been reset.");
     }
 }

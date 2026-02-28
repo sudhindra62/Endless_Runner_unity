@@ -1,47 +1,48 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Manages the in-game Pause button.
-/// It handles player input to toggle the pause state and updates its own icon.
+/// A simple UI component that triggers the pause functionality.
+/// It finds the GameFlowController via the ServiceLocator and calls its PauseGame method.
 /// </summary>
+[RequireComponent(typeof(Button))]
 public class PauseButtonUI : MonoBehaviour
 {
-    [Header("Icon Sprites")]
-    [Tooltip("The icon to display when the game is playing (i.e., the Pause icon).")]
-    [SerializeField] private Sprite pauseIcon;
-
-    [Tooltip("The icon to display when the game is paused (i.e., the Play icon).")]
-    [SerializeField] private Sprite playIcon;
-
     private Button pauseButton;
-    private Image buttonImage;
-    private bool isPaused = false;
+    private GameFlowController gameFlowController;
 
-    void Awake()
+    private void Awake()
     {
         pauseButton = GetComponent<Button>();
-        buttonImage = GetComponent<Image>();
-        pauseButton.onClick.AddListener(TogglePause);
     }
 
-    void Start()
+    private void Start()
     {
-        // Set the initial icon to the pause symbol
-        buttonImage.sprite = pauseIcon;
+        // Resolve dependency using the ServiceLocator.
+        gameFlowController = ServiceLocator.Get<GameFlowController>();
+        if (gameFlowController == null)
+        {
+            Debug.LogError("GameFlowController not found in the scene!");
+            // Disable the button if the controller is missing to prevent errors.
+            pauseButton.interactable = false;
+        }
     }
 
-    /// <summary>
-    /// Called when the player clicks the pause button.
-    /// </summary>
-    private void TogglePause()
+    private void OnEnable()
     {
-        isPaused = !isPaused;
+        pauseButton.onClick.AddListener(OnPauseClicked);
+    }
 
-        // Notify the central notifier of the state change
-        PlayerStatusNotifier.Instance.NotifyPauseState(isPaused);
+    private void OnDisable()
+    {
+        pauseButton.onClick.RemoveListener(OnPauseClicked);
+    }
 
-        // Update the button's icon to reflect the new state
-        buttonImage.sprite = isPaused ? playIcon : pauseIcon;
+    private void OnPauseClicked()
+    {
+        // It's crucial that this button doesn't handle the pause logic itself.
+        // It only sends a request to the central controller.
+        gameFlowController?.PauseGame();
     }
 }

@@ -1,38 +1,54 @@
+
+using System;
 using UnityEngine;
-using System.Collections.Generic;
 
-public class RankManager : MonoBehaviour
+[Serializable]
+public struct Rank
 {
-    [SerializeField] private List<RankData> ranks;
-    private PlayerDataManager _playerDataManager;
+    public string Name;
+    public int MinLevel;
+}
 
-    private void Start()
+/// <summary>
+/// Calculates player rank based on level. It does not store rank, as it is derived data.
+/// </summary>
+public class RankManager : Singleton<RankManager>
+{
+    public static event Action<Rank> OnRankChanged;
+
+    [SerializeField] private Rank[] ranks;
+    private Rank _currentRank;
+
+    private void OnEnable()
     {
-        _playerDataManager = ServiceLocator.Get<PlayerDataManager>();
-        if (_playerDataManager == null)
-        { 
-            Debug.LogError("PlayerDataManager not found!");
+        XPManager.OnLevelUp += HandleLevelUp;
+    }
+
+    private void OnDisable()
+    {
+        XPManager.OnLevelUp -= HandleLevelUp;
+    }
+
+    private void HandleLevelUp(int newLevel)
+    {
+        Rank newRank = GetRankForLevel(newLevel);
+        if (newRank.Name != _currentRank.Name)
+        {
+            _currentRank = newRank;
+            OnRankChanged?.Invoke(_currentRank);
+            Debug.Log($"Player promoted to new rank: {_currentRank.Name}");
         }
     }
 
-    public RankData GetCurrentRank()
+    public Rank GetRankForLevel(int level)
     {
-        if (_playerDataManager == null) return null;
-
-        int playerLevel = _playerDataManager.Level;
-        RankData currentRank = null;
-
-        foreach (var rank in ranks)
+        for (int i = ranks.Length - 1; i >= 0; i--)
         {
-            if (playerLevel >= rank.levelRequirement)
+            if (level >= ranks[i].MinLevel)
             {
-                currentRank = rank;
-            }
-            else
-            {
-                break;
+                return ranks[i];
             }
         }
-        return currentRank;
+        return ranks[0]; // Default to the first rank
     }
 }

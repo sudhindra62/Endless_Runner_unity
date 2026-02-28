@@ -1,140 +1,88 @@
 
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 
-public class UIManager : MonoBehaviour
+/// <summary>
+/// The authoritative manager for all UI. It listens to game state and other manager events
+/// to show/hide the correct UI panels and orchestrate UI updates.
+/// It acts as the single source of truth for UI state.
+/// </summary>
+public class UIManager : Singleton<UIManager>
 {
-    [Header("UI Panels")]
-    [SerializeField] private GameObject gameplayUIPanel;
-    [SerializeField] private GameObject pauseUIPanel;
-    [SerializeField] private GameObject gameOverUIPanel;
-    [SerializeField] private GameObject mainMenuUIPanel;
-    [SerializeField] private GameObject settingsUIPanel;
-    [SerializeField] private GameObject shopUIPanel;
+    [Header("UI Controller References")]
+    [SerializeField] private HomeScreenController homeScreenController;
+    [SerializeField] private GameHUDController hudController;
+    [SerializeField] private PauseMenuController pauseMenuController;
+    [SerializeField] private RevivePopupUI revivePopupController;
+    [SerializeField] private RunSummaryUI runSummaryController;
 
-    [Header("Text Elements")]
-    [SerializeField] private TMP_Text scoreText;
-    [SerializeField] private TMP_Text finalScoreText;
-    [SerializeField] private TMP_Text bestScoreText;
-    [SerializeField] private TMP_Text coinText;
-    [SerializeField] private TMP_Text gemText;
-    [SerializeField] private TMP_Text levelText;
-
-    [Header("UI Controls")]
-    [SerializeField] private Slider xpSlider;
-
-    private GameStateManager gameStateManager;
-    private ScoreManager scoreManager;
-    private CurrencyManager currencyManager;
-    private PlayerDataManager playerDataManager;
-    private GameFlowController gameFlowController;
-
-    private void Awake()
+    protected override void Awake()
     {
-        gameStateManager = ServiceLocator.Get<GameStateManager>();
-        scoreManager = ServiceLocator.Get<ScoreManager>();
-        currencyManager = ServiceLocator.Get<CurrencyManager>();
-        playerDataManager = ServiceLocator.Get<PlayerDataManager>();
-        gameFlowController = ServiceLocator.Get<GameFlowController>();
+        base.Awake();
+        // This ensures that all critical UI components are assigned in the editor.
+        ValidateReferences();
     }
 
     private void OnEnable()
     {
-        if (gameStateManager != null) gameStateManager.OnGameStateChanged += HandleGameStateChanged;
-        if (scoreManager != null) scoreManager.OnScoreChanged += UpdateScoreDisplay;
-        if (currencyManager != null) 
-        {
-            CurrencyManager.OnCoinsChanged += UpdateCoinDisplay;
-            CurrencyManager.OnGemsChanged += UpdateGemDisplay;
-        }
-        if (playerDataManager != null)
-        {
-            PlayerDataManager.OnLevelChanged += UpdateLevelDisplay;
-            PlayerDataManager.OnXPChanged += UpdateXPDisplay;
-        }
+        // Subscribing to the central game state machine.
+        GameFlowController.OnGameStateChanged += HandleGameStateChanged;
     }
 
     private void OnDisable()
     {
-        if (gameStateManager != null) gameStateManager.OnGameStateChanged -= HandleGameStateChanged;
-        if (scoreManager != null) scoreManager.OnScoreChanged -= UpdateScoreDisplay;
-        if (currencyManager != null)
-        {
-            CurrencyManager.OnCoinsChanged -= UpdateCoinDisplay;
-            CurrencyManager.OnGemsChanged -= UpdateGemDisplay;
-        }
-        if (playerDataManager != null)
-        {
-            PlayerDataManager.OnLevelChanged -= UpdateLevelDisplay;
-            PlayerDataManager.OnXPChanged -= UpdateXPDisplay;
-        }
+        // Always unsubscribe from events to prevent memory leaks.
+        GameFlowController.OnGameStateChanged -= HandleGameStateChanged;
     }
 
-    private void Start()
-    {
-        if (gameStateManager != null) HandleGameStateChanged(gameStateManager.CurrentState);
-        if (scoreManager != null) UpdateScoreDisplay(scoreManager.CurrentScore);
-        if (currencyManager != null) 
-        {
-            UpdateCoinDisplay(currencyManager.Coins);
-            UpdateGemDisplay(currencyManager.Gems);
-        }
-        if (playerDataManager != null)
-        {
-            UpdateLevelDisplay(playerDataManager.Level);
-            UpdateXPDisplay(playerDataManager.XP, playerDataManager.XPForNextLevel);
-        }
-    }
-
+    /// <summary>
+    /// Acts as a state machine for the UI, showing and hiding panels based on game state.
+    /// This is the only place where the visibility of major UI panels should be controlled.
+    /// </summary>
     private void HandleGameStateChanged(GameState newState)
     {
-        gameplayUIPanel.SetActive(newState == GameState.Playing);
-        pauseUIPanel.SetActive(newState == GameState.Paused);
-        gameOverUIPanel.SetActive(newState == GameState.GameOver);
-        mainMenuUIPanel.SetActive(newState == GameState.MainMenu);
+        // Deactivate all panels first to prevent overlapping UI or inconsistent states.
+        if (homeScreenController != null) homeScreenController.Hide();
+        if (hudController != null) hudController.Hide();
+        if (pauseMenuController != null) pauseMenuController.Hide();
+        if (revivePopupController != null) revivePopupController.Hide();
+        if (runSummaryController != null) runSummaryController.Hide();
 
-        if (newState == GameState.GameOver)
+        // Activate the correct panel(s) for the new state.
+        switch (newState)
         {
-            UpdateGameOverScores();
+            case GameState.Menu:
+                if (homeScreenController != null) homeScreenController.Show();
+                break;
+
+            case GameState.Playing:
+                if (hudController != null) hudController.Show();
+                break;
+
+            case GameState.Paused:
+                // The HUD is often kept visible behind the pause menu for context.
+                if (hudController != null) hudController.Show();
+                if (pauseMenuController != null) pauseMenuController.Show();
+                break;
+
+            case GameState.Dead:
+                // When the player dies, the HUD is still visible to show the final score/stats
+                // before the revive prompt appears.
+                if (hudController != null) hudController.Show();
+                if (revivePopupController != null) revivePopupController.Show();
+                break;
+
+            case GameState.EndOfRun:
+                if (runSummaryController != null) runSummaryController.Show();
+                break;
         }
     }
 
-    private void UpdateScoreDisplay(int newScore)
+    private void ValidateReferences()
     {
-        if (scoreText != null) scoreText.text = "Score: " + newScore.ToString();
+        if (homeScreenController == null) Debug.LogError("HomeScreenController is not assigned in the UIManager.");
+        if (hudController == null) Debug.LogError("GameHUDController is not assigned in the UIManager.");
+        if (pauseMenuController == null) Debug.LogError("PauseMenuController is not assigned in the UIManager.");
+        if (revivePopupController == null) Debug.LogError("RevivePopupUI is not assigned in the UIManager.");
+        if (runSummaryController == null) Debug.LogError("RunSummaryUI is not assigned in the UIManager.");
     }
-
-    private void UpdateGameOverScores()
-    {
-        if (finalScoreText != null) finalScoreText.text = "Score: " + scoreManager.CurrentScore.ToString();
-        if (bestScoreText != null) bestScoreText.text = "Best: " + scoreManager.HighScore.ToString();
-    }
-
-    private void UpdateCoinDisplay(int newBalance)
-    {
-        if (coinText != null) coinText.text = newBalance.ToString();
-    }
-
-    private void UpdateGemDisplay(int newBalance)
-    {
-        if (gemText != null) gemText.text = newBalance.ToString();
-    }
-
-    private void UpdateLevelDisplay(int newLevel)
-    {
-        if (levelText != null) levelText.text = "Level " + newLevel.ToString();
-    }
-
-    private void UpdateXPDisplay(int currentXP, int xpForNextLevel)
-    {
-        if (xpSlider != null) xpSlider.value = (float)currentXP / xpForNextLevel;
-    }
-
-    public void OnPauseButtonPressed() => gameFlowController.Pause();
-    public void OnResumeButtonPressed() => gameFlowController.Resume();
-    public void OnRestartButtonPressed() => gameFlowController.StartRun();
-    public void OnMainMenuButtonPressed() => gameFlowController.GoToMainMenu();
-    public void OnSettingsButtonPressed() => settingsUIPanel.SetActive(true); // Or navigate to a settings scene
-    public void OnShopButtonPressed() => shopUIPanel.SetActive(true); // Or navigate to a shop scene
 }

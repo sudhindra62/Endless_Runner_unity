@@ -1,55 +1,89 @@
-using UnityEngine;
-using System;
+
 using System.Collections.Generic;
+using UnityEngine;
 
-public class MilestoneManager : MonoBehaviour
+/// <summary>
+/// Authoritative singleton for tracking and completing all long-term milestones.
+/// It subscribes to game events and persists all milestone data to prevent exploits.
+/// </summary>
+public class MilestoneManager : Singleton<MilestoneManager>
 {
-    public static event Action<MilestoneData> OnMilestoneCompleted;
+    [SerializeField] private MilestoneDatabase milestoneDatabase;
 
-    [SerializeField] private List<MilestoneData> allMilestones;
-    private PlayerDataManager _playerDataManager;
+    private const string CompletedMilestonesKey = "CompletedMilestones";
+    private HashSet<string> _completedMilestones = new HashSet<string>();
 
-    private void Start()
+    protected override void Awake()
     {
-        _playerDataManager = ServiceLocator.Get<PlayerDataManager>();
-        if (_playerDataManager == null) 
-        {
-            Debug.LogError("PlayerDataManager not found!");
-            return;
-        }
-
-        _playerDataManager.OnLevelUp += CheckForLevelMilestones;
-        _playerDataManager.OnNewHighScore += CheckForScoreMilestones;
+        base.Awake();
+        LoadMilestoneData();
     }
 
-    private void CheckForLevelMilestones(int newLevel)
+    private void OnEnable()
     {
-        foreach (var milestone in allMilestones)
+        // Subscribe to relevant game events
+        XPManager.OnLevelUp += HandleLevelUp;
+        // Example: ScoreManager.OnScoreIncreased += HandleScoreIncreased;
+    }
+
+    private void OnDisable()
+    {
+        XPManager.OnLevelUp -= HandleLevelUp;
+        // Example: ScoreManager.OnScoreIncreased -= HandleScoreIncreased;
+    }
+
+    private void LoadMilestoneData()
+    {
+        string completedMilestonesString = PlayerPrefs.GetString(CompletedMilestonesKey, string.Empty);
+        if (!string.IsNullOrEmpty(completedMilestonesString))
         {
-            if (milestone.milestoneType == MilestoneType.Level && newLevel >= milestone.targetValue)
+            _completedMilestones = new HashSet<string>(completedMilestonesString.Split(','));
+        }
+    }
+
+    private void SaveMilestoneData()
+    {
+        PlayerPrefs.SetString(CompletedMilestonesKey, string.Join(",", _completedMilestones));
+        PlayerPrefs.Save();
+    }
+
+    private void HandleLevelUp(int newLevel)
+    {
+        List<Milestone> levelMilestones = milestoneDatabase.GetMilestonesByType("Level");
+        foreach (Milestone milestone in levelMilestones)
+        {
+            if (newLevel >= milestone.RequiredAmount)
             {
                 CompleteMilestone(milestone);
             }
         }
     }
 
-    private void CheckForScoreMilestones(int newScore)
+    // Example handler for a score-based milestone
+    // private void HandleScoreIncreased(int newScore)
+    // {
+    //     List<Milestone> scoreMilestones = milestoneDatabase.GetMilestonesByType("Score");
+    //     foreach (Milestone milestone in scoreMilestones)
+    //     {
+    //         if (newScore >= milestone.RequiredAmount)
+    //         {
+    //             CompleteMilestone(milestone);
+    //         }
+    //     }
+    // }
+
+    private void CompleteMilestone(Milestone milestone)
     {
-        foreach (var milestone in allMilestones)
-        {
-            if (milestone.milestoneType == MilestoneType.Score && newScore >= milestone.targetValue)
-            {
-                CompleteMilestone(milestone);
-            }
-        }
+        if (IsMilestoneCompleted(milestone.MilestoneId)) return;
+
+        _completedMilestones.Add(milestone.MilestoneId);
+        RewardManager.Instance.GrantMissionReward(milestone.MilestoneId, milestone.CoinReward, milestone.GemReward, milestone.XpReward);
+        SaveMilestoneData();
+        Debug.Log($"Milestone {milestone.MilestoneId} completed!");
     }
 
-    private void CompleteMilestone(MilestoneData milestone)
+    public bool IsMilestoneCompleted(string milestoneId)
     {
-        if (!_playerDataManager.IsMilestoneCompleted(milestone.milestoneId))
-        {
-            _playerDataManager.CompleteMilestone(milestone.milestoneId);
-            OnMilestoneCompleted?.Invoke(milestone);
-        }
+        return _completedMilestones.Contains(milestoneId);
     }
 }

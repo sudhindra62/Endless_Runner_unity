@@ -1,17 +1,19 @@
 
 /// <summary>
-/// A plain data class to hold all the relevant information about the current run.
+/// A data class that holds all the relevant information for a single run.
 /// </summary>
 public class RunSessionData
 {
-    public int score;
-    public float time;
-    public bool hasRevived;
+    public int Score { get; set; }
+    public int CoinsCollected { get; set; }
+    public float Distance { get; set; }
+    public bool HasRevived { get; set; }
 
     public void Reset()
     {
-        score = 0;
-        time = 0f;
-        hasRevived = false;
+        Score = 0;
+        CoinsCollected = 0;
+        Distance = 0f;
+        HasRevived = false;
     }
 }

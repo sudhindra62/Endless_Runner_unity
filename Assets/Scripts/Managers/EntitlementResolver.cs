@@ -1,75 +1,92 @@
 
+using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 
-/// <summary>
-/// Resolves entitlements for purchased products.
-/// </summary>
-public class EntitlementResolver : MonoBehaviour
+public class EntitlementResolver : Singleton<EntitlementResolver>
 {
-    public static EntitlementResolver Instance { get; private set; }
+    private const string RemoveAdsKey = "IAP_RemoveAds";
+    private const string ProcessedTransactionsKey = "ProcessedTransactions";
 
-    [SerializeField]
-    private MonetizationConfigProvider configProvider;
+    private List<string> _processedTransactionIds = new List<string>();
 
-    private CurrencyManager _currencyManager;
-
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            ServiceLocator.Register<EntitlementResolver>(this);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        base.Awake();
+        LoadProcessedTransactions();
     }
 
-    private void OnDestroy()
+    public void ResolvePurchase(string productId, string transactionId)
     {
-        if (Instance == this)
+        if (IsTransactionProcessed(transactionId))
         {
-            ServiceLocator.Unregister<EntitlementResolver>();
-            Instance = null;
-        }
-    }
-
-    private void Start()
-    {
-        _currencyManager = ServiceLocator.Get<CurrencyManager>();
-    }
-
-    public void ResolveEntitlement(string productId)
-    {
-        if (configProvider == null || configProvider.config == null)
-        {
-            Debug.LogError("MonetizationConfigProvider is not set up!");
+            Debug.LogWarning($"Transaction '{transactionId}' has already been processed. Ignoring.");
+            IAPManager.Instance.ConfirmPurchase(productId);
             return;
         }
 
-        ProductDefinition product = configProvider.config.products.FirstOrDefault(p => p.productId == productId);
+        bool success = false;
+        switch (productId)
+        {
+            case "com.gamestudio.remove_ads":
+                GrantRemoveAds();
+                success = true;
+                break;
+            case "com.gamestudio.revive_tokens_5":
+                // Assume a ReviveTokenManager exists
+                // ReviveTokenManager.Instance.AddTokens(5);
+                success = true;
+                break;
+            case "com.gamestudio.gem_pack_1":
+                CurrencyManager.Instance.AddGems(100);
+                success = true;
+                break;
+            case "com.gamestudio.coin_pack_1":
+                CurrencyManager.Instance.AddCoins(5000);
+                success = true;
+                break;
+            case "com.gamestudio.premium_subscription":
+                // Grant subscription benefits
+                success = true;
+                break;
+        }
 
-        if (product != null)
+        if (success)
         {
-            switch (product.productType)
-            {
-                case ProductType.Gems:
-                    _currencyManager.AddGems(product.amount);
-                    break;
-                case ProductType.Coins:
-                    _currencyManager.AddCoins(product.amount);
-                    break;
-                default:
-                    Debug.LogWarning($"Unknown product type: {product.productType}");
-                    break;
-            }
+            AddProcessedTransaction(transactionId);
+            IAPManager.Instance.ConfirmPurchase(productId);
         }
-        else
+    }
+
+    private void GrantRemoveAds()
+    {
+        PlayerPrefs.SetInt(RemoveAdsKey, 1);
+        PlayerPrefs.Save();
+        Debug.Log("Ads have been permanently removed.");
+    }
+
+    public bool AreAdsRemoved()
+    {
+        return PlayerPrefs.GetInt(RemoveAdsKey, 0) == 1;
+    }
+
+    private void LoadProcessedTransactions()
+    {
+        string transactions = PlayerPrefs.GetString(ProcessedTransactionsKey, "");
+        if (!string.IsNullOrEmpty(transactions))
         {
-            Debug.LogWarning($"Product with ID '{productId}' not found.");
+            _processedTransactionIds = new List<string>(transactions.Split(','));
         }
+    }
+
+    private void AddProcessedTransaction(string transactionId)
+    {
+        _processedTransactionIds.Add(transactionId);
+        PlayerPrefs.SetString(ProcessedTransactionsKey, string.Join(",", _processedTransactionIds));
+        PlayerPrefs.Save();
+    }
+
+    private bool IsTransactionProcessed(string transactionId)
+    {
+        return _processedTransactionIds.Contains(transactionId);
     }
 }

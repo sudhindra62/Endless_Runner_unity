@@ -1,13 +1,12 @@
-
 using UnityEngine;
 
-[System.Serializable]
-public class SkinData
+namespace Skins
 {
-    public string skinName;
-    public int skinId;
-    public SkinRarity rarity;
-    public SkinUnlockType unlockType;
-    public int cost;
-    public GameObject skinPrefab;
+    [CreateAssetMenu(fileName = "NewSkin", menuName = "Skins/Skin Data")]
+    public class SkinData : ScriptableObject
+    {
+        public string skinName;
+        public int price;
+        public SkinRarity rarity;
+    }
 }

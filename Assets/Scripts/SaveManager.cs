@@ -34,12 +34,29 @@ public class SaveManager : MonoBehaviour
             data.quests.Add(new QuestData(quest));
         }
 
-        SaveSystem.SaveGame(data);
+        string json = JsonUtility.ToJson(data);
+        string checksum = Checksum.Calculate(json);
+        SaveSystem.SaveGame(json, checksum);
     }
 
     public void LoadGame()
     {
-        GameData data = SaveSystem.LoadGame();
+        string json;
+        string checksum;
+        SaveSystem.LoadGame(out json, out checksum);
+
+        if (string.IsNullOrEmpty(json) || string.IsNullOrEmpty(checksum))
+        {
+            return;
+        }
+
+        if (Checksum.Calculate(json) != checksum)
+        {
+            Debug.LogError("Save file has been tampered with!");
+            return;
+        }
+
+        GameData data = JsonUtility.FromJson<GameData>(json);
 
         if (data != null)
         {

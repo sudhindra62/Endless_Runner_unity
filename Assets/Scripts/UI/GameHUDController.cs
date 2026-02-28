@@ -1,34 +1,166 @@
 
-using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
+using UnityEngine;
+using System.Text;
+using UnityEngine.UI;
 
 /// <summary>
-/// A clean, simple Singleton that holds references to the in-game HUD UI elements.
-/// This script does NOT create UI elements. Instead, you must drag and drop the corresponding
-/// UI elements from your scene onto the public fields of this script in the Unity Inspector.
-/// This provides a stable, centralized point of access for all other gameplay scripts.
+/// Manages the Heads-Up Display for in-game stats. It subscribes to manager events to update its values,
+/// ensuring it acts as a passive view with high performance and no garbage allocation in its update loops.
 /// </summary>
-public class GameHUDController : Singleton<GameHUDController>
+public class GameHUDController : MonoBehaviour
 {
-    // --- Assign these in the Unity Inspector ---
-    [Header("Scene UI Element References")]
-    public TextMeshProUGUI ScoreText;
-    public TextMeshProUGUI TimerText;
-    public TextMeshProUGUI MultiplierText;
-    public Animator MultiplierAnimator;
-    public Image ShieldFillImage;
-    public GameObject ShieldContainer;
-    public Button PauseButton;
+    [Header("Text Components")]
+    [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI multiplierText;
+    [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private TextMeshProUGUI coinText;
+    [SerializeField] private TextMeshProUGUI gemText;
 
-    protected override void Awake()
+    [Header("Buttons")]
+    [SerializeField] private Button pauseButton;
+
+    [Header("Sub-Controllers")]
+    [SerializeField] private PowerUpHUDController powerUpHUDController;
+
+    // Caching for performance to avoid allocations.
+    private readonly StringBuilder scoreBuilder = new StringBuilder(16);
+    private readonly StringBuilder timeBuilder = new StringBuilder(8);
+    private readonly StringBuilder multiplierBuilder = new StringBuilder(4);
+    private readonly StringBuilder currencyBuilder = new StringBuilder(10);
+    
+    private ScoreManager scoreManager;
+    private CurrencyManager currencyManager;
+    private GameFlowController gameFlowController;
+
+    private bool isPaused = false;
+    private float runTime = 0f;
+
+    private void Start()
     {
-        base.Awake();
-        // --- Initial Validation ---
-        // It's good practice to check if the essential references have been assigned.
-        if (ScoreText == null || MultiplierText == null || PauseButton == null)
+        // Resolve dependencies
+        scoreManager = ServiceLocator.Get<ScoreManager>();
+        currencyManager = ServiceLocator.Get<CurrencyManager>();
+        gameFlowController = ServiceLocator.Get<GameFlowController>();
+
+        // Initialize display with current values
+        UpdateScoreText(scoreManager.CurrentScore);
+        UpdateMultiplierText(scoreManager.CurrentMultiplier);
+        UpdateCoinText(currencyManager.Coins);
+        UpdateGemText(currencyManager.Gems);
+        
+        ResetHUD();
+    }
+
+    private void OnEnable()
+    {
+        ScoreManager.OnScoreChanged += UpdateScoreText;
+        ScoreManager.OnMultiplierChanged += UpdateMultiplierText;
+        CurrencyManager.OnCoinsChanged += UpdateCoinText;
+        CurrencyManager.OnGemsChanged += UpdateGemText;
+        if (pauseButton != null) pauseButton.onClick.AddListener(OnPauseClicked);
+
+        GameFlowController.OnGameStateChanged += HandleGameStateChanged;
+    }
+
+    private void OnDisable()
+    {
+        ScoreManager.OnScoreChanged -= UpdateScoreText;
+        ScoreManager.OnMultiplierChanged -= UpdateMultiplierText;
+        CurrencyManager.OnCoinsChanged -= UpdateCoinText;
+        CurrencyManager.OnGemsChanged -= UpdateGemText;
+        if (pauseButton != null) pauseButton.onClick.RemoveListener(OnPauseClicked);
+
+        GameFlowController.OnGameStateChanged -= HandleGameStateChanged;
+    }
+
+    private void Update()
+    {
+        if (!isPaused)
         {
-            Debug.LogError("Critical HUD elements are not assigned in the GameHUDController Inspector! Please assign them.");
+            runTime += Time.deltaTime;
+            UpdateTimerText(runTime);
         }
+    }
+
+    private void HandleGameStateChanged(GameState newState)
+    {
+        isPaused = (newState == GameState.Paused);
+
+        if (newState == GameState.Menu)
+        {
+            ResetHUD();
+        }
+    }
+
+    private void OnPauseClicked()
+    {
+        // Use the centralized GameFlowController to pause the game.
+        gameFlowController?.PauseGame();
+    }
+
+    private void UpdateScoreText(long newScore)
+    {
+        scoreBuilder.Clear();
+        scoreBuilder.Append(newScore);
+        scoreText.SetText(scoreBuilder);
+    }
+
+    private void UpdateMultiplierText(int newMultiplier)
+    {
+        multiplierBuilder.Clear();
+        multiplierBuilder.Append("x").Append(newMultiplier);
+        multiplierText.SetText(multiplierBuilder);
+    }
+
+    private void UpdateCoinText(int amount)
+    {
+        currencyBuilder.Clear();
+        currencyBuilder.Append(amount);
+        coinText.SetText(currencyBuilder);
+    }
+
+    private void UpdateGemText(int amount)
+    {
+        currencyBuilder.Clear();
+        currencyBuilder.Append(amount);
+        gemText.SetText(currencyBuilder);
+    }
+
+    private void UpdateTimerText(float timeInSeconds)
+    {
+        int minutes = (int)(timeInSeconds / 60f);
+        int seconds = (int)(timeInSeconds % 60f);
+
+        timeBuilder.Clear();
+        timeBuilder.Append(minutes.ToString("D2"));
+        timeBuilder.Append(":");
+        timeBuilder.Append(seconds.ToString("D2"));
+
+        timerText.SetText(timeBuilder);
+    }
+
+    public void Show()
+    {
+        gameObject.SetActive(true);
+        if (powerUpHUDController != null) powerUpHUDController.ShowAll();
+    }
+
+    public void Hide()
+    {
+        gameObject.SetActive(false);
+        if (powerUpHUDController != null) powerUpHUDController.HideAll();
+    }
+    
+    public void ResetHUD()
+    {
+        runTime = 0f;
+        UpdateTimerText(0);
+        if (scoreManager != null)
+        {
+            UpdateScoreText(0);
+            UpdateMultiplierText(1);
+        }
+        powerUpHUDController?.ResetIcons();
     }
 }

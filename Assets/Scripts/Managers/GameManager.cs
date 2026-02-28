@@ -1,20 +1,36 @@
 
 using UnityEngine;
 
+public enum GameState
+{
+    Menu,
+    Playing,
+    Paused,
+    Dead,
+    EndOfRun
+}
+
 public class GameManager : MonoBehaviour
 {
-    public enum GameState
-    {
-        MainMenu,
-        Gameplay,
-        Paused
-    }
-
     public static GameManager Instance { get; private set; }
 
-    public GameState CurrentState { get; private set; }
+    public static event System.Action<GameState> OnGameStateChanged;
 
-    void Awake()
+    private GameState currentState;
+    public GameState CurrentState
+    {
+        get => currentState;
+        set
+        {
+            if (currentState != value)
+            {
+                currentState = value;
+                OnGameStateChanged?.Invoke(currentState);
+            }
+        }
+    }
+
+    private void Awake()
     {
         if (Instance == null)
         {
@@ -24,28 +40,6 @@ public class GameManager : MonoBehaviour
         else
         {
             Destroy(gameObject);
-        }
-    }
-
-    void Start()
-    {
-        ChangeState(GameState.MainMenu);
-    }
-
-    public void ChangeState(GameState newState)
-    {
-        CurrentState = newState;
-        switch (newState)
-        {
-            case GameState.MainMenu:
-                // Handle main menu logic
-                break;
-            case GameState.Gameplay:
-                // Handle gameplay logic
-                break;
-            case GameState.Paused:
-                // Handle paused logic
-                break;
         }
     }
 }
