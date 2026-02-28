@@ -27,8 +27,6 @@ public class NewCollectibleSpawner : MonoBehaviour
     [Header("Core Configuration")]
     [Tooltip("The groups of collectibles that can be spawned.")]
     [SerializeField] private List<CollectibleGroup> collectibleGroups;
-    [Tooltip("The player's transform, used to determine where to spawn collectibles.")]
-    [SerializeField] private Transform player;
 
     [Header("Spawning Parameters")]
     [Tooltip("How far ahead of the player the spawner should place collectibles.")]
@@ -44,10 +42,12 @@ public class NewCollectibleSpawner : MonoBehaviour
 
     private float lastSpawnZ;
     private ObjectPooler objectPooler;
+    private PlayerController playerController;
 
     private void Start()
     {
         objectPooler = ServiceLocator.Get<ObjectPooler>();
+        playerController = ServiceLocator.Get<PlayerController>();
         if (objectPooler == null)
         {
             Debug.LogError("ObjectPooler not found. Collectible spawning will not work.");
@@ -56,7 +56,7 @@ public class NewCollectibleSpawner : MonoBehaviour
 
     private void Update()
     {
-        if (player.position.z > lastSpawnZ - spawnDistanceAhead)
+        if (playerController != null && playerController.transform.position.z > lastSpawnZ - spawnDistanceAhead)
         {
             SpawnCollectibleGroups();
         }

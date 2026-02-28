@@ -32,11 +32,11 @@ public class UIManager : MonoBehaviour
 
     private void Awake()
     {
-        gameStateManager = ServiceLocator.Current.Get<GameStateManager>();
-        scoreManager = ServiceLocator.Current.Get<ScoreManager>();
-        currencyManager = ServiceLocator.Current.Get<CurrencyManager>();
-        playerDataManager = ServiceLocator.Current.Get<PlayerDataManager>();
-        gameFlowController = ServiceLocator.Current.Get<GameFlowController>();
+        gameStateManager = ServiceLocator.Get<GameStateManager>();
+        scoreManager = ServiceLocator.Get<ScoreManager>();
+        currencyManager = ServiceLocator.Get<CurrencyManager>();
+        playerDataManager = ServiceLocator.Get<PlayerDataManager>();
+        gameFlowController = ServiceLocator.Get<GameFlowController>();
     }
 
     private void OnEnable()

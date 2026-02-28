@@ -1,68 +1,29 @@
 using UnityEngine;
 
-/// <summary>
-/// Orchestrates the main game loop by coordinating between various game systems.
-/// Handles starting, pausing, resuming, and ending a run.
-/// </summary>
 public class GameFlowController : MonoBehaviour
 {
-    public PlayerController playerController;
-    public NewCollectibleSpawner collectibleSpawner;
-
     private GameStateManager gameStateManager;
     private ScoreManager scoreManager;
     private ReviveManager reviveManager;
     private PlayerDataManager playerDataManager;
+    private PlayerController playerController;
+    private NewCollectibleSpawner collectibleSpawner;
 
-    #region Unity Lifecycle & Event Subscriptions
-
-    private void Start()
+    private void Awake()
     {
-        // Using ServiceLocator to get manager instances
-        gameStateManager = ServiceLocator.Current.Get<GameStateManager>();
-        scoreManager = ServiceLocator.Current.Get<ScoreManager>();
-        reviveManager = ServiceLocator.Current.Get<ReviveManager>();
-        playerDataManager = ServiceLocator.Current.Get<PlayerDataManager>();
-
-        if (reviveManager != null)
-        {
-            reviveManager.OnPlayerRevived += OnPlayerRevived;
-            reviveManager.OnReviveDeclined += OnReviveDeclined;
-        }
+        gameStateManager = ServiceLocator.Get<GameStateManager>();
+        scoreManager = ServiceLocator.Get<ScoreManager>();
+        reviveManager = ServiceLocator.Get<ReviveManager>();
+        playerDataManager = ServiceLocator.Get<PlayerDataManager>();
+        playerController = ServiceLocator.Get<PlayerController>();
+        collectibleSpawner = ServiceLocator.Get<NewCollectibleSpawner>();
     }
-
-    private void OnDisable()
-    {
-        if (reviveManager != null)
-        {
-            reviveManager.OnPlayerRevived -= OnPlayerRevived;
-            reviveManager.OnReviveDeclined -= OnReviveDeclined;
-        }
-    }
-
-    #endregion
-
-    #region Game Flow Control
 
     public void StartRun()
     {
         gameStateManager.SetState(GameState.Playing);
         scoreManager.ResetScore();
-        reviveManager.ResetReviveState();
-        playerController.ResetPlayerToStart();
-        collectibleSpawner.ResetSpawner();
-    }
-
-    public void TogglePause()
-    {
-        if (gameStateManager.CurrentState == GameState.Playing)
-        {
-            Pause();
-        }
-        else if (gameStateManager.CurrentState == GameState.Paused)
-        {
-            Resume();
-        }
+        // Reset other run-specific data
     }
 
     public void Pause()
@@ -78,27 +39,7 @@ public class GameFlowController : MonoBehaviour
     public void EndRun()
     {
         gameStateManager.SetState(GameState.GameOver);
-        scoreManager.SaveHighScore(); // Corrected method name
-        if (playerDataManager != null)
-        {
-            playerDataManager.AddXPFromRun(scoreManager.CurrentScore); // Direct call
-        }
-        reviveManager.InitiateReviveFlow();
-    }
-
-    #endregion
-
-    #region Event Handlers
-
-    private void OnPlayerRevived()
-    {
-        playerController.Revive();
-        gameStateManager.SetState(GameState.Playing);
-    }
-
-    private void OnReviveDeclined()
-    {
-        // Game is over, no action needed. The UI will handle the transition.
+        playerDataManager.SavePlayerScore(scoreManager.CurrentScore);
     }
 
     public void GoToMainMenu()
@@ -106,5 +47,21 @@ public class GameFlowController : MonoBehaviour
         gameStateManager.SetState(GameState.MainMenu);
     }
 
-    #endregion
+    public void PlayerDied()
+    {
+        if (reviveManager.CanRevive())
+        {
+            reviveManager.OfferRevive();
+        }
+        else
+        {
+            EndRun();
+        }
+    }
+
+    public void PlayerRevived()
+    {
+        playerController.health = 100; // Or some other revival logic
+        gameStateManager.SetState(GameState.Playing);
+    }
 }

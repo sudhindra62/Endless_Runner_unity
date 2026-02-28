@@ -1,20 +1,40 @@
+
 using UnityEngine;
+using System.Linq;
 
 /// <summary>
 /// Resolves entitlements for purchased products.
 /// </summary>
 public class EntitlementResolver : MonoBehaviour
 {
+    public static EntitlementResolver Instance { get; private set; }
+
+    [SerializeField]
+    private MonetizationConfigProvider configProvider;
+
     private CurrencyManager _currencyManager;
 
     private void Awake()
     {
-        ServiceLocator.Register<EntitlementResolver>(this);
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+            ServiceLocator.Register<EntitlementResolver>(this);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     private void OnDestroy()
     {
-        ServiceLocator.Unregister<EntitlementResolver>();
+        if (Instance == this)
+        {
+            ServiceLocator.Unregister<EntitlementResolver>();
+            Instance = null;
+        }
     }
 
     private void Start()
@@ -24,15 +44,32 @@ public class EntitlementResolver : MonoBehaviour
 
     public void ResolveEntitlement(string productId)
     {
-        // This is a simplified example. In a real project, 
-        // you would use the MonetizationConfigProvider to get product details.
-        if (productId.Contains("gems"))
+        if (configProvider == null || configProvider.config == null)
         {
-            _currencyManager.AddGems(100); // Example amount
+            Debug.LogError("MonetizationConfigProvider is not set up!");
+            return;
         }
-        else if (productId.Contains("coins"))
+
+        ProductDefinition product = configProvider.config.products.FirstOrDefault(p => p.productId == productId);
+
+        if (product != null)
         {
-            _currencyManager.AddCoins(500); // Example amount
+            switch (product.productType)
+            {
+                case ProductType.Gems:
+                    _currencyManager.AddGems(product.amount);
+                    break;
+                case ProductType.Coins:
+                    _currencyManager.AddCoins(product.amount);
+                    break;
+                default:
+                    Debug.LogWarning($"Unknown product type: {product.productType}");
+                    break;
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"Product with ID '{productId}' not found.");
         }
     }
 }
