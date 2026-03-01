@@ -1,21 +1,34 @@
 
-using UnityEngine;
-
-namespace PowerUps
+/// <summary>
+/// The concrete implementation of the Shield power-up effect.
+/// It inherits from PowerUpEffect and handles the logic for activating and deactivating the player's shield.
+/// </summary>
+public class ShieldPowerUp : PowerUpEffect
 {
-    [CreateAssetMenu(fileName = "ShieldPowerUp", menuName = "PowerUps/Shield")]
-    public class ShieldPowerUp : PowerUp
+    private PlayerController player;
+
+    public ShieldPowerUp(float duration) : base(duration)
     {
-        public override PowerUpType Type => PowerUpType.Shield;
+        player = ServiceLocator.Get<PlayerController>();
+    }
 
-        public override void Activate()
+    public override void Activate()
+    {
+        base.Activate();
+        if (player != null)
         {
-            // Logic to be handled by a central PowerUpController
+            // Assuming PlayerController has a method to set the shield status.
+            // This will need to be implemented in PlayerController.
+            player.SetShield(true);
         }
+    }
 
-        public override void Deactivate()
+    public override void Deactivate()
+    {
+        base.Deactivate();
+        if (player != null)
         {
-            // Logic to be handled by a central PowerUpController
+            player.SetShield(false);
         }
     }
 }

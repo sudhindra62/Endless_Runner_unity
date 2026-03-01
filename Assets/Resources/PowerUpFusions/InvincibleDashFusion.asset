@@ -1,0 +1,4 @@
+public PowerUpType powerUp1 = PowerUpType.Shield;
+public PowerUpType powerUp2 = PowerUpType.SpeedBoost;
+public PowerUpType fusedPowerUp = PowerUpType.InvincibleDash;
+public float fusedDuration = 8f;

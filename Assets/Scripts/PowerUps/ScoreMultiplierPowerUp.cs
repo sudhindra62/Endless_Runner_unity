@@ -1,21 +1,32 @@
 
-using UnityEngine;
-
-namespace PowerUps
+/// <summary>
+/// This power-up multiplies the player's score while active.
+/// It activates by setting the score multiplier in the ScoreManager to 2.
+/// </summary>
+public class ScoreMultiplierPowerUp : PowerUpEffect
 {
-    [CreateAssetMenu(fileName = "ScoreMultiplierPowerUp", menuName = "PowerUps/Score Multiplier")]
-    public class ScoreMultiplierPowerUp : PowerUp
+    private ScoreManager scoreManager;
+
+    public ScoreMultiplierPowerUp(float duration) : base(duration)
     {
-        public override PowerUpType Type => PowerUpType.ScoreMultiplier;
+        scoreManager = ServiceLocator.Get<ScoreManager>();
+    }
 
-        public override void Activate()
+    public override void Activate()
+    {
+        base.Activate();
+        if (scoreManager != null)
         {
-            // Logic to be handled by a central PowerUpController
+            scoreManager.SetScoreMultiplier(2);
         }
+    }
 
-        public override void Deactivate()
+    public override void Deactivate()
+    {
+        base.Deactivate();
+        if (scoreManager != null)
         {
-            // Logic to be handled by a central PowerUpController
+            scoreManager.SetScoreMultiplier(1); // Reset to default
         }
     }
 }

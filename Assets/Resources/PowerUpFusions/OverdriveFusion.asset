@@ -1,0 +1,4 @@
+public PowerUpType powerUp1 = PowerUpType.SpeedBoost;
+public PowerUpType powerUp2 = PowerUpType.ScoreMultiplier;
+public PowerUpType fusedPowerUp = PowerUpType.Overdrive;
+public float fusedDuration = 12f;

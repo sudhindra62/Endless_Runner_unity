@@ -1,50 +1,42 @@
-
 using System;
 using UnityEngine;
 
 /// <summary>
-/// Authoritative singleton for managing all player currency (Coins and Gems).
-/// It provides atomic transaction methods to ensure currency operations are safe and reliable.
-/// Listens for game events to award currency and persists all changes to PlayerPrefs.
+/// Manages player currency, including coins and gems, and supports a coin multiplier for power-ups.
+/// It registers itself with the ServiceLocator to be accessible from other systems.
 /// </summary>
-public class CurrencyManager : Singleton<CurrencyManager>
+public class CurrencyManager : MonoBehaviour
 {
     public static event Action<int> OnCoinsChanged;
     public static event Action<int> OnGemsChanged;
 
+    [Header("Initial Values")]
     [SerializeField] private int startingCoins = 100;
     [SerializeField] private int startingGems = 20;
 
     public int Coins { get; private set; }
     public int Gems { get; private set; }
 
+    private int coinMultiplier = 1;
     private const string CoinsSaveKey = "PlayerCoins";
     private const string GemsSaveKey = "PlayerGems";
 
-    protected override void Awake()
+    private void Awake()
     {
-        base.Awake();
+        ServiceLocator.Register(this);
         LoadCurrency();
     }
 
-    private void OnEnable()
+    private void OnDestroy()
     {
-        // Example of listening to an event to award currency
-        // You would have events like OnCoinCollected, OnGemsAwarded, etc.
-        // For this example, let's assume a simple event listener.
-    }
-
-    private void OnDisable()
-    {
-        // Unsubscribe from events
+        ServiceLocator.Unregister<CurrencyManager>();
     }
 
     private void LoadCurrency()
     {
         Coins = PlayerPrefs.GetInt(CoinsSaveKey, startingCoins);
         Gems = PlayerPrefs.GetInt(GemsSaveKey, startingGems);
-        
-        // First-time setup
+
         if (!PlayerPrefs.HasKey(CoinsSaveKey)) PlayerPrefs.SetInt(CoinsSaveKey, startingCoins);
         if (!PlayerPrefs.HasKey(GemsSaveKey)) PlayerPrefs.SetInt(GemsSaveKey, startingGems);
     }
@@ -56,83 +48,48 @@ public class CurrencyManager : Singleton<CurrencyManager>
         PlayerPrefs.Save();
     }
 
-    #region Atomic Transactions
-
-    public bool HasEnoughCoins(int amount)
-    {
-        return Coins >= amount;
-    }
-
-    public bool HasEnoughGems(int amount)
-    {
-        return Gems >= amount;
-    }
-
     /// <summary>
-    /// Atomically adds coins to the player's balance.
+    /// Sets the coin multiplier. A value of 1 is the default.
     /// </summary>
-    public void AddCoins(int amount)
+    public void SetCoinMultiplier(int multiplier)
     {
-        if (amount <= 0) return;
-        Coins += amount;
+        coinMultiplier = Mathf.Max(1, multiplier); // Prevent multipliers less than 1
+    }
+
+    public void AddCoins(int baseAmount)
+    {
+        if (baseAmount <= 0) return;
+        int amountToAdd = baseAmount * coinMultiplier;
+        Coins += amountToAdd;
         OnCoinsChanged?.Invoke(Coins);
         SaveCurrency();
-        Debug.Log($"Added {amount} coins. New balance: {Coins}");
     }
 
-    /// <summary>
-    /// Atomically spends coins from the player's balance.
-    /// </summary>
-    /// <returns>True if the transaction was successful, false otherwise.</returns>
     public bool SpendCoins(int amount)
     {
-        if (amount <= 0) return false;
-        if (!HasEnoughCoins(amount))
-        {
-            Debug.LogWarning("Not enough coins to spend.");
-            return false;
-        }
-
+        if (amount <= 0 || Coins < amount) return false;
         Coins -= amount;
         OnCoinsChanged?.Invoke(Coins);
         SaveCurrency();
-        Debug.Log($"Spent {amount} coins. New balance: {Coins}");
         return true;
     }
 
-    /// <summary>
-    /// Atomically adds gems to the player's balance.
-    /// </summary>
     public void AddGems(int amount)
     {
         if (amount <= 0) return;
         Gems += amount;
         OnGemsChanged?.Invoke(Gems);
         SaveCurrency();
-        Debug.Log($"Added {amount} gems. New balance: {Gems}");
     }
 
-    /// <summary>
-    /// Atomically spends gems from the player's balance.
-    /// </summary>
-    /// <returns>True if the transaction was successful, false otherwise.</returns>
     public bool SpendGems(int amount)
     {
-        if (amount <= 0) return false;
-        if (!HasEnoughGems(amount))
-        {
-            Debug.LogWarning("Not enough gems to spend.");
-            return false;
-        }
-
+        if (amount <= 0 || Gems < amount) return false;
         Gems -= amount;
         OnGemsChanged?.Invoke(Gems);
         SaveCurrency();
-        Debug.Log($"Spent {amount} gems. New balance: {Gems}");
         return true;
     }
-
-    #endregion
 
     [ContextMenu("Reset Currency")]
     public void ResetCurrency()
@@ -143,6 +100,5 @@ public class CurrencyManager : Singleton<CurrencyManager>
         Gems = startingGems;
         OnCoinsChanged?.Invoke(Coins);
         OnGemsChanged?.Invoke(Gems);
-        Debug.Log("Currency has been reset to default values.");
     }
 }

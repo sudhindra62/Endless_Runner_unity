@@ -1,4 +1,5 @@
 
+using System;
 using UnityEngine;
 
 public enum GameState
@@ -10,36 +11,58 @@ public enum GameState
     EndOfRun
 }
 
-public class GameManager : MonoBehaviour
+public class GameManager : Singleton<GameManager>
 {
-    public static GameManager Instance { get; private set; }
+    public static event Action<GameState> OnGameStateChanged;
 
-    public static event System.Action<GameState> OnGameStateChanged;
+    public GameState CurrentState { get; private set; }
 
-    private GameState currentState;
-    public GameState CurrentState
+    private void Start()
     {
-        get => currentState;
-        set
+        // Initial state
+        UpdateState(GameState.Menu);
+    }
+
+    public void UpdateState(GameState newState)
+    {
+        if (newState == CurrentState) return;
+
+        CurrentState = newState;
+        OnGameStateChanged?.Invoke(newState);
+
+        // Handle state-specific logic
+        switch (newState)
         {
-            if (currentState != value)
-            {
-                currentState = value;
-                OnGameStateChanged?.Invoke(currentState);
-            }
+            case GameState.Menu:
+                Time.timeScale = 1f;
+                break;
+            case GameState.Playing:
+                Time.timeScale = 1f;
+                break;
+            case GameState.Paused:
+                Time.timeScale = 0f;
+                break;
+            case GameState.Dead:
+                // Specific logic for Dead state can be added here
+                break;
+            case GameState.EndOfRun:
+                // Logic for what happens at the end of a run
+                break;
         }
     }
 
-    private void Awake()
+    public void StartGame()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        UpdateState(GameState.Playing);
+    }
+
+    public void PlayerDied()
+    {
+        UpdateState(GameState.Dead);
+    }
+
+    public void EndRun()
+    {
+        UpdateState(GameState.EndOfRun);
     }
 }

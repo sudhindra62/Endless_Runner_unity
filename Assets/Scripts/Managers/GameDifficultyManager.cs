@@ -1,27 +1,13 @@
-
 using UnityEngine;
 using System.Collections.Generic;
 
-/// <summary>
-/// Manages the dynamic difficulty of the game.
-/// It adjusts player speed, obstacle frequency, and obstacle complexity over time.
-/// </summary>
 public class GameDifficultyManager : MonoBehaviour
 {
-    [Header("Difficulty Settings")]
-    [Tooltip("The ScriptableObject that defines the difficulty curve.")]
-    [SerializeField] private DifficultyProfile difficultyProfile;
+    private readonly Dictionary<string, float> difficultyMultipliers = new Dictionary<string, float>();
 
-    private float timeAlive;
-    private int currentDifficultyStep;
-
-    public float CurrentPlayerSpeed { get; private set; }
-    public float CurrentObstacleFrequency { get; private set; }
-
-    private void Start()
+    private void Awake()
     {
-        ServiceLocator.Register<GameDifficultyManager>(this);
-        ResetDifficulty();
+        ServiceLocator.Register(this);
     }
 
     private void OnDestroy()
@@ -29,66 +15,28 @@ public class GameDifficultyManager : MonoBehaviour
         ServiceLocator.Unregister<GameDifficultyManager>();
     }
 
-    private void Update()
+    public void ApplyDifficultyMultiplier(string sourceId, float multiplier)
     {
-        timeAlive += Time.deltaTime;
-        UpdateDifficulty();
+        difficultyMultipliers[sourceId] = multiplier;
     }
 
-    private void UpdateDifficulty()
+    public void RemoveDifficultyMultiplier(string sourceId)
     {
-        // Find the current difficulty step
-        while (currentDifficultyStep < difficultyProfile.difficultySteps.Count - 1 &&
-               timeAlive > difficultyProfile.difficultySteps[currentDifficultyStep + 1].timeThreshold)
+        difficultyMultipliers.Remove(sourceId);
+    }
+
+    public float GetDifficultyMultiplier()
+    {
+        float totalMultiplier = 1f;
+        foreach (var multiplier in difficultyMultipliers.Values)
         {
-            currentDifficultyStep++;
+            totalMultiplier *= multiplier;
         }
-
-        // Interpolate between the current and next difficulty steps
-        if (currentDifficultyStep < difficultyProfile.difficultySteps.Count - 1)
-        {
-            DifficultyStep currentStep = difficultyProfile.difficultySteps[currentDifficultyStep];
-            DifficultyStep nextStep = difficultyProfile.difficultySteps[currentDifficultyStep + 1];
-
-            float t = (timeAlive - currentStep.timeThreshold) / (nextStep.timeThreshold - currentStep.timeThreshold);
-
-            CurrentPlayerSpeed = Mathf.Lerp(currentStep.playerSpeed, nextStep.playerSpeed, t);
-            CurrentObstacleFrequency = Mathf.Lerp(currentStep.obstacleFrequency, nextStep.obstacleFrequency, t);
-        }
-        else // Max difficulty
-        {
-            DifficultyStep maxStep = difficultyProfile.difficultySteps[currentDifficultyStep];
-            CurrentPlayerSpeed = maxStep.playerSpeed;
-            CurrentObstacleFrequency = maxStep.obstacleFrequency;
-        }
+        return totalMultiplier;
     }
 
-    public List<ObstacleData> GetObstaclesForCurrentDifficulty()
+    public void ResetState()
     {
-        List<ObstacleData> possibleObstacles = new List<ObstacleData>();
-        // This logic will need to be implemented based on the ObstacleData's min/max difficulty levels
-        return possibleObstacles;
+        difficultyMultipliers.Clear();
     }
-
-    public void ResetDifficulty()
-    {
-        timeAlive = 0;
-        currentDifficultyStep = 0;
-        CurrentPlayerSpeed = difficultyProfile.difficultySteps[0].playerSpeed;
-        CurrentObstacleFrequency = difficultyProfile.difficultySteps[0].obstacleFrequency;
-    }
-}
-
-[System.Serializable]
-public class DifficultyStep
-{
-    public float timeThreshold;
-    public float playerSpeed;
-    public float obstacleFrequency;
-}
-
-[CreateAssetMenu(fileName = "DifficultyProfile", menuName = "Endless Runner/Difficulty Profile")]
-public class DifficultyProfile : ScriptableObject
-{
-    public List<DifficultyStep> difficultySteps;
 }

@@ -3,25 +3,25 @@ using UnityEngine;
 
 /// <summary>
 /// This power-up increases the player's forward speed for a short duration.
-/// It directly modifies a value on the PlayerMotor, showcasing a direct stat manipulation.
+/// It interacts with the GameDifficultyManager to apply a speed boost.
 /// </summary>
 public class SpeedBoostPowerUp : PowerUpEffect
 {
     private readonly float speedMultiplier;
+    private GameDifficultyManager difficultyManager;
 
     public SpeedBoostPowerUp(float duration, float multiplier) : base(duration)
     {
         this.speedMultiplier = multiplier;
+        this.difficultyManager = ServiceLocator.Get<GameDifficultyManager>();
     }
 
     public override void Activate()
     {
         base.Activate();
-
-        PlayerController player = ServiceLocator.Get<PlayerController>();
-        if (player != null)
+        if (difficultyManager != null)
         {
-            player.PlayerMotor.SetSpeedModifier(speedMultiplier);
+            difficultyManager.SetSpeedBoostMultiplier(speedMultiplier);
             Debug.Log($"Speed Boost Activated! Multiplier: {speedMultiplier}");
         }
     }
@@ -29,12 +29,9 @@ public class SpeedBoostPowerUp : PowerUpEffect
     public override void Deactivate()
     {
         base.Deactivate();
-
-        PlayerController player = ServiceLocator.Get<PlayerController>();
-        if (player != null)
+        if (difficultyManager != null)
         {
-            // Revert the speed modifier back to its default value.
-            player.PlayerMotor.SetSpeedModifier(1.0f);
+            difficultyManager.SetSpeedBoostMultiplier(1.0f); // Reset to default
             Debug.Log("Speed Boost Deactivated!");
         }
     }

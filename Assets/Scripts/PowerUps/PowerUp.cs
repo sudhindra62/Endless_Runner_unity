@@ -1,26 +1,16 @@
-
 using UnityEngine;
 
-namespace PowerUps
+/// <summary>
+/// ScriptableObject that defines the configuration for a power-up.
+/// This allows for easy tweaking of power-up properties in the Unity Inspector.
+/// </summary>
+[CreateAssetMenu(fileName = "NewPowerUp", menuName = "PowerUps/PowerUp Config")]
+public class PowerUp : ScriptableObject
 {
-    public enum PowerUpType
-    {
-        CoinDoubler,
-        Magnet,
-        ScoreMultiplier,
-        Shield,
-    }
+    [Header("Configuration")]
+    [SerializeField] private PowerUpType type;
+    [SerializeField] private float duration = 10f;
 
-    public abstract class PowerUp : ScriptableObject
-    {
-        [Header("Configuration")]
-        [SerializeField] private float duration;
-
-        public float Duration => duration;
-
-        public abstract PowerUpType Type { get; }
-
-        public abstract void Activate();
-        public abstract void Deactivate();
-    }
+    public PowerUpType Type => type;
+    public float Duration => duration;
 }

@@ -2,11 +2,6 @@
 using System;
 using UnityEngine;
 
-/// <summary>
-/// Authoritative singleton for managing all player XP and level progression.
-/// It is the sole authority for adding XP and triggering level-up events.
-/// It persists all XP data and prevents duplicate XP addition and level-up exploits.
-/// </summary>
 public class XPManager : Singleton<XPManager>
 {
     public static event Action<int> OnLevelUp;
@@ -31,7 +26,6 @@ public class XPManager : Singleton<XPManager>
     {
         CurrentLevel = PlayerPrefs.GetInt(CurrentLevelKey, 1);
         CurrentXP = PlayerPrefs.GetInt(CurrentXPKey, 0);
-        // Reset last run XP to prevent re-adding on startup
         PlayerPrefs.DeleteKey(LastRunXpKey);
     }
 
@@ -42,14 +36,10 @@ public class XPManager : Singleton<XPManager>
         PlayerPrefs.Save();
     }
 
-    /// <summary>
-    /// The primary method for adding XP to the player's profile. This is the only place where XP should be added.
-    /// </summary>
     public void AddXP(int amount, string source)
     {
         if (amount <= 0) return;
 
-        // Prevent duplicate XP addition from the same run
         if (source == "RunComplete")
         {
             if (PlayerPrefs.HasKey(LastRunXpKey))
@@ -70,13 +60,21 @@ public class XPManager : Singleton<XPManager>
     private void CheckForLevelUp()
     {
         int xpForNextLevel = GetXPForNextLevel();
-        while (CurrentXP >= xpForNextLevel && xpForNextLevel > 0) // xpForNextLevel > 0 prevents infinite loops if the curve is flat
+        while (CurrentXP >= xpForNextLevel && xpForNextLevel > 0)
         {
             CurrentLevel++;
             CurrentXP -= xpForNextLevel;
+            
+            // Grant Skill Point
+            if (SkillTreeManager.Instance != null)
+            {
+                SkillTreeManager.Instance.AddSkillPoints(1);
+            }
+
             OnLevelUp?.Invoke(CurrentLevel);
             RewardManager.Instance.GrantLevelUpReward(CurrentLevel);
-            Debug.Log($"Leveled up to level {CurrentLevel}!");
+            Debug.Log($"Leveled up to level {CurrentLevel}! Gained 1 Skill Point.");
+            
             xpForNextLevel = GetXPForNextLevel();
         }
     }

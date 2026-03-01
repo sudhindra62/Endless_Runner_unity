@@ -37,6 +37,7 @@ public class NewCollectibleSpawner : MonoBehaviour
     [SerializeField] private float obstacleSafeGap = 5f;
 
     private ObjectPooler objectPooler;
+    private float spawnChanceMultiplier = 1f;
 
     private void Start()
     {
@@ -47,13 +48,18 @@ public class NewCollectibleSpawner : MonoBehaviour
         }
     }
 
+    public void SetSpawnChanceMultiplier(float multiplier)
+    {
+        spawnChanceMultiplier = multiplier;
+    }
+
     public void SpawnCollectibles(Transform tileTransform)
     {
         if (objectPooler == null) return;
 
         foreach (var group in collectibleGroups)
         {
-            if (Random.value < group.spawnChance)
+            if (Random.value < group.spawnChance * spawnChanceMultiplier)
             {
                 int lane = Random.Range(0, 3);
                 int groupSize = Random.Range(group.minGroupSize, group.maxGroupSize + 1);

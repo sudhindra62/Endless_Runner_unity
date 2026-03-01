@@ -3,10 +3,11 @@ using TMPro;
 using UnityEngine;
 using System.Text;
 using UnityEngine.UI;
+using System.Collections;
 
 /// <summary>
-/// Manages the Heads-Up Display for in-game stats. It subscribes to manager events to update its values,
-/// ensuring it acts as a passive view with high performance and no garbage allocation in its update loops.
+/// Manages the Heads-Up Display for all in-game stats, including score, combos, and Fever Mode.
+/// It subscribes to manager events to update its values, acting as a passive view with high performance.
 /// </summary>
 public class GameHUDController : MonoBehaviour
 {
@@ -16,25 +17,35 @@ public class GameHUDController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private TextMeshProUGUI coinText;
     [SerializeField] private TextMeshProUGUI gemText;
+    [SerializeField] private TextMeshProUGUI comboText; // For Flow Combo
+    [SerializeField] private TextMeshProUGUI feverCountdownText; // For Fever Countdown
 
-    [Header("Buttons")]
+    [Header("UI Elements")]
     [SerializeField] private Button pauseButton;
+    [SerializeField] private Image feverGaugeBar; // For Fever Gauge
+    [SerializeField] private GameObject feverActiveOverlay; // For Fever Visual Effect
+
+    [Header("Animations")]
+    [SerializeField] private Animator multiplierAnimator;
+    private readonly int multiplierIncreaseTrigger = Animator.StringToHash("MultiplierUp");
 
     [Header("Sub-Controllers")]
     [SerializeField] private PowerUpHUDController powerUpHUDController;
 
-    // Caching for performance to avoid allocations.
+    // Caching for performance
     private readonly StringBuilder scoreBuilder = new StringBuilder(16);
     private readonly StringBuilder timeBuilder = new StringBuilder(8);
     private readonly StringBuilder multiplierBuilder = new StringBuilder(4);
     private readonly StringBuilder currencyBuilder = new StringBuilder(10);
-    
+    private readonly StringBuilder comboBuilder = new StringBuilder(12);
+
     private ScoreManager scoreManager;
     private CurrencyManager currencyManager;
     private GameFlowController gameFlowController;
-
+    
     private bool isPaused = false;
     private float runTime = 0f;
+    private Coroutine feverCountdownCoroutine;
 
     private void Start()
     {
@@ -43,35 +54,46 @@ public class GameHUDController : MonoBehaviour
         currencyManager = ServiceLocator.Get<CurrencyManager>();
         gameFlowController = ServiceLocator.Get<GameFlowController>();
 
-        // Initialize display with current values
-        UpdateScoreText(scoreManager.CurrentScore);
-        UpdateMultiplierText(scoreManager.CurrentMultiplier);
-        UpdateCoinText(currencyManager.Coins);
-        UpdateGemText(currencyManager.Gems);
-        
+        // Initial state setup
         ResetHUD();
     }
 
     private void OnEnable()
     {
+        // Subscribe to all relevant events
+        GameManager.OnGameStateChanged += HandleGameStateChanged;
         ScoreManager.OnScoreChanged += UpdateScoreText;
-        ScoreManager.OnMultiplierChanged += UpdateMultiplierText;
         CurrencyManager.OnCoinsChanged += UpdateCoinText;
         CurrencyManager.OnGemsChanged += UpdateGemText;
-        if (pauseButton != null) pauseButton.onClick.AddListener(OnPauseClicked);
 
-        GameFlowController.OnGameStateChanged += HandleGameStateChanged;
+        FlowComboManager.OnComboChanged += UpdateComboText;
+        FlowComboManager.OnMultiplierChanged += UpdateMultiplierText;
+        FlowComboManager.OnComboBroken += OnComboBroken;
+
+        FeverModeManager.OnFeverGaugeChanged += UpdateFeverGauge;
+        FeverModeManager.OnFeverStart += OnFeverStart;
+        FeverModeManager.OnFeverEnd += OnFeverEnd;
+
+        if (pauseButton != null) pauseButton.onClick.AddListener(OnPauseClicked);
     }
 
     private void OnDisable()
     {
+        // Unsubscribe from all events
+        GameManager.OnGameStateChanged -= HandleGameStateChanged;
         ScoreManager.OnScoreChanged -= UpdateScoreText;
-        ScoreManager.OnMultiplierChanged -= UpdateMultiplierText;
         CurrencyManager.OnCoinsChanged -= UpdateCoinText;
         CurrencyManager.OnGemsChanged -= UpdateGemText;
-        if (pauseButton != null) pauseButton.onClick.RemoveListener(OnPauseClicked);
 
-        GameFlowController.OnGameStateChanged -= HandleGameStateChanged;
+        FlowComboManager.OnComboChanged -= UpdateComboText;
+        FlowComboManager.OnMultiplierChanged -= UpdateMultiplierText;
+        FlowComboManager.OnComboBroken -= OnComboBroken;
+        
+        FeverModeManager.OnFeverGaugeChanged -= UpdateFeverGauge;
+        FeverModeManager.OnFeverStart -= OnFeverStart;
+        FeverModeManager.OnFeverEnd -= OnFeverEnd;
+
+        if (pauseButton != null) pauseButton.onClick.RemoveListener(OnPauseClicked);
     }
 
     private void Update()
@@ -86,8 +108,7 @@ public class GameHUDController : MonoBehaviour
     private void HandleGameStateChanged(GameState newState)
     {
         isPaused = (newState == GameState.Paused);
-
-        if (newState == GameState.Menu)
+        if (newState == GameState.Menu || newState == GameState.EndOfRun)
         {
             ResetHUD();
         }
@@ -95,11 +116,10 @@ public class GameHUDController : MonoBehaviour
 
     private void OnPauseClicked()
     {
-        // Use the centralized GameFlowController to pause the game.
         gameFlowController?.PauseGame();
     }
 
-    private void UpdateScoreText(long newScore)
+    private void UpdateScoreText(int newScore)
     {
         scoreBuilder.Clear();
         scoreBuilder.Append(newScore);
@@ -111,6 +131,67 @@ public class GameHUDController : MonoBehaviour
         multiplierBuilder.Clear();
         multiplierBuilder.Append("x").Append(newMultiplier);
         multiplierText.SetText(multiplierBuilder);
+        
+        if (newMultiplier > 1 && multiplierAnimator != null)
+        {
+            multiplierAnimator.SetTrigger(multiplierIncreaseTrigger);
+        }
+    }
+
+    private void UpdateComboText(int comboCount)
+    {
+        if (comboCount > 1)
+        {
+            comboBuilder.Clear();
+            comboBuilder.Append("COMBO ").Append(comboCount);
+            comboText.SetText(comboBuilder);
+            comboText.enabled = true;
+        }
+        else
+        {
+            comboText.enabled = false;
+        }
+    }
+
+    private void OnComboBroken()
+    {
+        comboText.enabled = false;
+        // Future: Play combo break particle effect or animation here
+    }
+
+    private void UpdateFeverGauge(float progress)
+    {
+        if (feverGaugeBar != null) feverGaugeBar.fillAmount = progress;
+    }
+
+    private void OnFeverStart(float duration)
+    {
+        if (feverActiveOverlay != null) feverActiveOverlay.SetActive(true);
+        if (feverCountdownText != null) feverCountdownText.enabled = true;
+        if (feverCountdownCoroutine != null) StopCoroutine(feverCountdownCoroutine);
+        feverCountdownCoroutine = StartCoroutine(FeverCountdownRoutine(duration));
+    }
+
+    private void OnFeverEnd()
+    {
+        if (feverActiveOverlay != null) feverActiveOverlay.SetActive(false);
+        if (feverCountdownText != null) feverCountdownText.enabled = false;
+        if (feverCountdownCoroutine != null)
+        {
+            StopCoroutine(feverCountdownCoroutine);
+            feverCountdownCoroutine = null;
+        }
+    }
+
+    private IEnumerator FeverCountdownRoutine(float duration)
+    {
+        float timer = duration;
+        while (timer > 0)
+        {
+            timer -= Time.deltaTime;
+            feverCountdownText.SetText(Mathf.CeilToInt(timer).ToString());
+            yield return null;
+        }
     }
 
     private void UpdateCoinText(int amount)
@@ -151,16 +232,20 @@ public class GameHUDController : MonoBehaviour
         gameObject.SetActive(false);
         if (powerUpHUDController != null) powerUpHUDController.HideAll();
     }
-    
+
     public void ResetHUD()
     {
         runTime = 0f;
         UpdateTimerText(0);
-        if (scoreManager != null)
-        {
-            UpdateScoreText(0);
-            UpdateMultiplierText(1);
-        }
+        if (scoreManager != null) UpdateScoreText(0);
+        UpdateMultiplierText(1);
+        UpdateComboText(0);
+
+        if (feverGaugeBar != null) feverGaugeBar.fillAmount = 0;
+        if (feverActiveOverlay != null) feverActiveOverlay.SetActive(false);
+        if (feverCountdownText != null) feverCountdownText.enabled = false;
+        if (feverCountdownCoroutine != null) StopCoroutine(feverCountdownCoroutine);
+
         powerUpHUDController?.ResetIcons();
     }
 }

@@ -1,33 +1,22 @@
 
 using UnityEngine;
 
-public class UIManager : MonoBehaviour
+public class UIManager : Singleton<UIManager>
 {
-    public static UIManager Instance { get; private set; }
-
     [Header("UI Panels")]
     [SerializeField] private GameObject menuPanel;
     [SerializeField] private GameObject gameplayPanel;
     [SerializeField] private GameObject pausePanel;
     [SerializeField] private GameObject revivePanel;
     [SerializeField] private GameObject runSummaryPanel;
+    [SerializeField] private FusionUI fusionUIPrefab; // Assign in Inspector
 
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
+    private FusionUI fusionUIInstance;
 
     private void Start()
     {
         GameManager.OnGameStateChanged += HandleGameStateChange;
+        CreateFusionUI();
     }
 
     private void OnDestroy()
@@ -42,6 +31,25 @@ public class UIManager : MonoBehaviour
         pausePanel.SetActive(newState == GameState.Paused);
         revivePanel.SetActive(newState == GameState.Dead);
         runSummaryPanel.SetActive(newState == GameState.EndOfRun);
+    }
+
+    private void CreateFusionUI()
+    {
+        if (fusionUIPrefab != null)
+        {
+            fusionUIInstance = Instantiate(fusionUIPrefab, transform);
+            fusionUIInstance.gameObject.SetActive(false);
+        }
+    }
+
+    public void ShowFusionUI(FusionType fusionType, float duration)
+    {
+        if (fusionUIInstance != null) fusionUIInstance.Show(fusionType, duration);
+    }
+
+    public void HideFusionUI()
+    {
+        if (fusionUIInstance != null) fusionUIInstance.Hide();
     }
 
     public void ShowRevivePopup()

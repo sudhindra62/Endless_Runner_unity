@@ -4,25 +4,11 @@ using UnityEngine;
 /// <summary>
 /// A centralized manager for handling all audio playback, including music, SFX, and UI sounds.
 /// </summary>
-public class AudioManager : MonoBehaviour
+public class AudioManager : Singleton<AudioManager>
 {
-    public static AudioManager Instance { get; private set; }
-
     [Header("Audio Sources")]
     [SerializeField] private AudioSource musicSource;
     [SerializeField] private AudioSource sfxSource;
-
-    private void Awake()
-    {
-        // Standard Singleton pattern
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-    }
 
     /// <summary>
     /// Plays a music track. If a track is already playing, it will be stopped and replaced.

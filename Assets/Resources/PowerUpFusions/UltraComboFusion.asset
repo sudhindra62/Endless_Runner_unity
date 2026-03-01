@@ -1,0 +1,4 @@
+public PowerUpType powerUp1 = PowerUpType.ScoreMultiplier;
+public PowerUpType powerUp2 = PowerUpType.FeverMode;
+public PowerUpType fusedPowerUp = PowerUpType.UltraCombo;
+public float fusedDuration = 10f;

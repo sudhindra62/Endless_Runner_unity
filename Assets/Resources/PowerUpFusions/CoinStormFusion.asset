@@ -1,0 +1,4 @@
+public PowerUpType powerUp1 = PowerUpType.CoinDoubler;
+public PowerUpType powerUp2 = PowerUpType.Magnet;
+public PowerUpType fusedPowerUp = PowerUpType.CoinStorm;
+public float fusedDuration = 15f;

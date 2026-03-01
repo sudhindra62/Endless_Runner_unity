@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using System;
 using System.Collections;
@@ -9,6 +8,7 @@ public class PlayerController : MonoBehaviour
     // Movement
     [Header("Movement")]
     [SerializeField] private float initialSpeed = 10f;
+    [SerializeField] private float maxSpeed = 30f; // Safety cap for speed
     [SerializeField] private float laneWidth = 4f;
     [SerializeField] private int maxLaneOffset = 1;
     [SerializeField] private float laneChangeSpeed = 15f;
@@ -25,6 +25,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float reviveImmunityDuration = 2.0f;
     [SerializeField] private LayerMask groundMask;
     [SerializeField] private float groundCheckDistance = 0.2f;
+
+    [Header("Coin Collection")]
+    [SerializeField] private int coinStreakThreshold = 10;
+    [SerializeField] private int coinStreakComboBonus = 2;
+    [SerializeField] private float coinStreakFeverBonus = 10f;
 
     // Animation
     [Header("Animation")]
@@ -49,12 +54,19 @@ public class PlayerController : MonoBehaviour
     private Vector3 startPosition;
 
     private bool isDead = false;
-    private bool isImmune = false;
+    private bool isPostReviveImmune = false;
     private bool isPaused = false;
+    private float momentumSpeedBonus = 0f;
+    private bool isFeverActive = false;
+    private int coinStreak = 0;
+    private bool isShieldActive = false;
 
     // Dependencies
     private GameDifficultyManager difficultyManager;
     private PowerUpManager powerUpManager;
+    private FeverModeManager feverModeManager;
+    private CurrencyManager currencyManager;
+    private FlowComboManager flowComboManager;
 
     private void Awake()
     {
@@ -68,8 +80,14 @@ public class PlayerController : MonoBehaviour
     {
         difficultyManager = ServiceLocator.Get<GameDifficultyManager>();
         powerUpManager = ServiceLocator.Get<PowerUpManager>();
+        feverModeManager = ServiceLocator.Get<FeverModeManager>();
+        currencyManager = ServiceLocator.Get<CurrencyManager>();
+        flowComboManager = ServiceLocator.Get<FlowComboManager>();
 
         GameManager.OnGameStateChanged += OnGameStateChanged;
+        FlowComboManager.OnMomentumChanged += OnMomentumChanged;
+        FeverModeManager.OnFeverStart += OnFeverStart;
+        FeverModeManager.OnFeverEnd += OnFeverEnd;
 
         currentSpeed = initialSpeed;
         transform.position = startPosition;
@@ -78,21 +96,21 @@ public class PlayerController : MonoBehaviour
     private void OnDestroy()
     {
         GameManager.OnGameStateChanged -= OnGameStateChanged;
+        FlowComboManager.OnMomentumChanged -= OnMomentumChanged;
+        FeverModeManager.OnFeverStart -= OnFeverStart;
+        FeverModeManager.OnFeverEnd -= OnFeverEnd;
         ServiceLocator.Unregister<PlayerController>();
     }
 
     private void Update()
     {
         if (isPaused) return;
-        
+
         bool isPlaying = GameManager.Instance.CurrentState == GameState.Playing;
         animator.SetBool(isRunningHash, isPlaying && isGrounded && !isDead);
 
-        if (!isPlaying || isDead)
-        {
-            return;
-        }
-        
+        if (!isPlaying || isDead) return;
+
         HandleForwardMovement();
         HandleLaneChanging();
         HandleGravity();
@@ -101,10 +119,17 @@ public class PlayerController : MonoBehaviour
 
     private void HandleForwardMovement()
     {
+        float baseSpeed = initialSpeed;
         if (difficultyManager != null)
         {
-            currentSpeed = difficultyManager.GetCurrentPlayerSpeed();
+            baseSpeed = difficultyManager.GetCurrentPlayerSpeed();
         }
+
+        float feverSpeedBoost = isFeverActive && feverModeManager != null ? feverModeManager.GetFeverSpeedBoost() : 0f;
+
+        currentSpeed = baseSpeed + momentumSpeedBonus + feverSpeedBoost;
+        currentSpeed = Mathf.Min(currentSpeed, maxSpeed);
+
         controller.Move(transform.forward * currentSpeed * Time.deltaTime);
     }
 
@@ -135,7 +160,6 @@ public class PlayerController : MonoBehaviour
 
     private void HandleGroundDetection()
     {
-        // Use non-allocating raycast for performance
         isGrounded = Physics.Raycast(transform.position, Vector3.down, out _, groundCheckDistance, groundMask);
     }
 
@@ -143,22 +167,10 @@ public class PlayerController : MonoBehaviour
     {
         if (GameManager.Instance.CurrentState != GameState.Playing || isDead) return;
 
-        if (direction == Vector2.left && currentLane > -maxLaneOffset)
-        {
-            currentLane--;
-        }
-        else if (direction == Vector2.right && currentLane < maxLaneOffset)
-        {
-            currentLane++;
-        }
-        else if (direction == Vector2.up && isGrounded)
-        {
-            Jump();
-        }
-        else if (direction == Vector2.down && !isSliding)
-        {
-            StartCoroutine(Slide());
-        }
+        if (direction == Vector2.left && currentLane > -maxLaneOffset) currentLane--;
+        else if (direction == Vector2.right && currentLane < maxLaneOffset) currentLane++;
+        else if (direction == Vector2.up && isGrounded) Jump();
+        else if (direction == Vector2.down && !isSliding) StartCoroutine(Slide());
     }
 
     private void Jump()
@@ -184,43 +196,76 @@ public class PlayerController : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        if (isDead || isImmune || !hit.gameObject.CompareTag("Obstacle")) return;
-
-        if (powerUpManager != null && powerUpManager.IsPowerUpActive(PowerUpType.Shield))
+        if (hit.gameObject.CompareTag("Coin"))
         {
-            powerUpManager.DeactivatePowerUp(PowerUpType.Shield);
+            CollectCoin(hit.gameObject);
+            return;
+        }
+
+        if (isDead || !hit.gameObject.CompareTag("Obstacle")) return;
+
+        if (isFeverActive)
+        {
             hit.gameObject.SetActive(false);
             return;
         }
 
+        if (isPostReviveImmune) return;
+
+        if (isShieldActive)
+        {
+            powerUpManager?.DeactivatePowerUp(PowerUpType.Shield);
+            hit.gameObject.SetActive(false);
+            return;
+        }
+
+        flowComboManager?.BreakCombo();
+        coinStreak = 0; // Reset coin streak on hit
         Die();
+    }
+
+    private void CollectCoin(GameObject coinObject)
+    {
+        currencyManager?.AddCoins(1);
+        coinObject.SetActive(false);
+
+        coinStreak++;
+        if (coinStreak >= coinStreakThreshold)
+        {
+            flowComboManager?.AddCombo(coinStreakComboBonus);
+            feverModeManager?.AddFeverPoints(coinStreakFeverBonus);
+            coinStreak = 0; // Reset streak after getting the bonus
+        }
     }
 
     public void Die()
     {
         if (isDead) return;
         isDead = true;
-
         animator.SetTrigger(dieHash);
         OnDeath?.Invoke();
     }
-    
+
     public void Revive()
     {
         isDead = false;
         animator.Rebind();
         animator.Update(0f);
-        StartCoroutine(ActivateImmunity());
+        StartCoroutine(ActivatePostReviveImmunity());
     }
 
     public void ResetPlayer()
     {
         isDead = false;
         isPaused = false;
-        isImmune = false;
+        isPostReviveImmune = false;
+        isFeverActive = false;
+        isShieldActive = false;
+        momentumSpeedBonus = 0f;
         currentSpeed = initialSpeed;
         velocity = Vector3.zero;
         currentLane = 0;
+        coinStreak = 0;
 
         controller.enabled = false;
         transform.position = startPosition;
@@ -230,25 +275,42 @@ public class PlayerController : MonoBehaviour
         animator.Update(0f);
     }
 
-    private IEnumerator ActivateImmunity()
+    private IEnumerator ActivatePostReviveImmunity()
     {
-        isImmune = true;
+        isPostReviveImmune = true;
         yield return new WaitForSeconds(reviveImmunityDuration);
-        isImmune = false;
+        isPostReviveImmune = false;
     }
-    
+
     private void OnGameStateChanged(GameState newState)
     {
+        isPaused = newState == GameState.Paused;
         if (newState == GameState.Menu || newState == GameState.EndOfRun)
         {
             ResetPlayer();
-        } else if (newState == GameState.Paused)
-        {
-            isPaused = true;
-        } else if (newState == GameState.Playing)
-        {
-            isPaused = false;
         }
+    }
+
+    private void OnMomentumChanged(float speedBonus)
+    {
+        momentumSpeedBonus = speedBonus;
+    }
+
+    private void OnFeverStart(float duration)
+    {
+        isFeverActive = true;
+    }
+
+    private void OnFeverEnd()
+    {
+        isFeverActive = false;
+    }
+
+    public bool IsSliding() => isSliding;
+    
+    public void SetShield(bool isActive)
+    {
+        isShieldActive = isActive;
     }
 
     public void Stop()
@@ -259,10 +321,5 @@ public class PlayerController : MonoBehaviour
     public void ResetVelocity()
     {
         velocity = Vector3.zero;
-    }
-
-    public void SetImmune(bool immune)
-    {
-        isImmune = immune;
     }
 }
