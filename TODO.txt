@@ -1,0 +1,1 @@
+ScoreManager does not properly calculate the total score multiplier. I need to fix this by creating a new `CalculateTotalMultiplier` method that takes all multipliers into account. I also need to make sure that the `BossChaseManager` can safely apply and remove its own multiplier without interfering with other multipliers.

@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System;
 using System.Collections;
@@ -26,17 +27,18 @@ public class FeverModeManager : MonoBehaviour
 
     private void Awake()
     {
+        // Assumes a ServiceLocator is in the scene
         ServiceLocator.Register(this);
     }
 
     private void Start()
     {
-        GameManager.OnGameStateChanged += OnGameStateChanged;
+        GameStateManager.OnGameStateChanged += OnGameStateChanged;
     }
 
     private void OnDestroy()
     {
-        GameManager.OnGameStateChanged -= OnGameStateChanged;
+        GameStateManager.OnGameStateChanged -= OnGameStateChanged;
     }
 
     public void AddFeverPoints(float amount)
@@ -74,6 +76,7 @@ public class FeverModeManager : MonoBehaviour
 
     private void OnGameStateChanged(GameState newState)
     {
+        // Reset on new run start or returning to menu
         if (newState == GameState.Playing || newState == GameState.Menu || newState == GameState.EndOfRun)
         {
             ResetFeverState();
@@ -87,10 +90,15 @@ public class FeverModeManager : MonoBehaviour
             StopCoroutine(feverCoroutine);
             feverCoroutine = null;
         }
-        isFeverActive = false;
+        
+        if (isFeverActive)
+        {
+            OnFeverEnd?.Invoke();
+            isFeverActive = false;
+        }
+        
         currentFeverGauge = 0;
         OnFeverGaugeChanged?.Invoke(0f);
-        if(OnFeverEnd != null) OnFeverEnd();
     }
 
     public bool IsFeverActive() => isFeverActive;
@@ -101,7 +109,7 @@ public class FeverModeManager : MonoBehaviour
 
     public void ApplyChargeMultiplier(string sourceId, float multiplier)
     {
-        chargeMultipliers[sourceId] = multiplier;
+        chargeMultipliers[sourceId] = Mathf.Max(0.01f, multiplier); // Prevent non-positive multipliers
     }
 
     public void RemoveChargeMultiplier(string sourceId)
@@ -111,12 +119,17 @@ public class FeverModeManager : MonoBehaviour
 
     private float CalculateChargeMultiplier()
     {
-        float total = 1f;
+        if (chargeMultipliers.Count == 0)
+        {
+            return 1f;
+        }
+
+        float logSum = 0.0f;
         foreach (var multiplier in chargeMultipliers.Values)
         {
-            total *= multiplier;
+            logSum += Mathf.Log(multiplier);
         }
-        return total;
+        return Mathf.Exp(logSum);
     }
     
     public void ResetState()

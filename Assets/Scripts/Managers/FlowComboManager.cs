@@ -1,144 +1,120 @@
 
 using UnityEngine;
 using System;
-using System.Collections;
 
-public class FlowComboManager : MonoBehaviour
+/// <summary>
+/// Manages the player's "flow" combo, which builds with skillful play
+/// and provides a score multiplier bonus.
+/// This system is event-driven and does not directly modify other systems.
+/// </summary>
+public class FlowComboManager : Singleton<FlowComboManager>
 {
-    // Events
-    public static event Action<int> OnComboChanged;
-    public static event Action<int> OnMultiplierChanged;
-    public static event Action<float> OnMomentumChanged;
+    // --- Events ---
+    public static event Action<int> OnComboChanged; // Sends the current combo count
+    public static event Action<float> OnComboMultiplierChanged; // Sends the new multiplier
     public static event Action OnComboBroken;
+    public static event Action<float> OnTierIncreased; // Sends the new multiplier when a tier is crossed
 
-    // Configuration
-    [Header("Combo Settings")]
-    [SerializeField] private int comboPointsPerMultiplierTier = 5;
-    [SerializeField] private int maxMultiplier = 10;
-    [SerializeField] private float comboTimeout = 4f;
+    // --- State ---
+    public int ComboCount { get; private set; }
+    public float CurrentMultiplier { get; private set; }
 
-    [Header("Momentum Settings")]
-    [SerializeField] private float speedBoostPerTier = 0.5f;
-    [SerializeField] private float maxSpeedBoost = 3f;
+    // --- Configuration ---
+    [Header("Settings")]
+    [SerializeField] private float comboDecayTime = 3.0f;
 
-    // State
-    private int currentCombo;
-    private int currentMultiplier;
-    private float currentMomentumBonus;
-    private Coroutine comboTimeoutCoroutine;
-
-    private void Awake()
-    {
-        ServiceLocator.Register(this);
-    }
+    // --- Private Fields ---
+    private float lastComboEventTime;
+    private float previousMultiplier;
 
     private void Start()
     {
-        GameManager.OnGameStateChanged += OnGameStateChanged;
-        // Subscribe to events that build combo
-        // e.g., PerfectDodgeDetector.OnPerfectDodge += () => AddCombo(1);
-        // e.g., PlayerCollision.OnHitObstacle += BreakCombo;
-        ResetCombo();
+        Initialize();
+        // Subscribe to game events that should break the combo.
+        // These subscriptions are examples and should be implemented in the target classes.
+        // PlayerCollisionHandler.OnPlayerHit += BreakCombo;
+        // GameFlowController.OnRunEnd += BreakCombo;
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
-        GameManager.OnGameStateChanged -= OnGameStateChanged;
+        // Unsubscribe to prevent memory leaks.
+        // PlayerCollisionHandler.OnPlayerHit -= BreakCombo;
+        // GameFlowController.OnRunEnd -= BreakCombo;
     }
 
-    public void AddCombo(int points)
+    private void Update()
     {
-        if (points <= 0) return;
-
-        currentCombo += points;
-        OnComboChanged?.Invoke(currentCombo);
-
-        UpdateMultiplier();
-        UpdateMomentum();
-
-        if (comboTimeoutCoroutine != null)
+        // If the combo is active, check if the decay timer has expired.
+        if (ComboCount > 0 && Time.unscaledTime > lastComboEventTime + comboDecayTime)
         {
-            StopCoroutine(comboTimeoutCoroutine);
+            Debug.Log("Combo timed out.");
+            BreakCombo();
         }
-        comboTimeoutCoroutine = StartCoroutine(ComboTimeoutRoutine());
     }
 
+    private void Initialize()
+    {
+        ComboCount = 0;
+        CurrentMultiplier = 1f;
+        previousMultiplier = 1f;
+        lastComboEventTime = 0f; // Use 0 to indicate no active combo
+    }
+
+    /// <summary>
+    /// Adds a specified amount to the current combo count.
+    /// Called by external systems (e.g., PerfectDodgeDetector).
+    /// </summary>
+    public void AddToCombo(int amount = 1)
+    {
+        if (amount <= 0) return;
+
+        ComboCount += amount;
+        lastComboEventTime = Time.unscaledTime; // Reset decay timer
+
+        OnComboChanged?.Invoke(ComboCount);
+        UpdateMultiplier(true);
+    }
+
+    /// <summary>
+    /// Resets the combo count and multiplier to their initial states.
+    /// Called by external systems (e.g., when the player gets hit).
+    /// </summary>
     public void BreakCombo()
     {
-        if (currentCombo == 0) return;
+        if (ComboCount == 0) return; // Already broken
 
-        currentCombo = 0;
-        currentMultiplier = 1;
-        currentMomentumBonus = 0f;
+        Initialize();
 
-        OnComboChanged?.Invoke(currentCombo);
-        OnMultiplierChanged?.Invoke(currentMultiplier);
-        OnMomentumChanged?.Invoke(currentMomentumBonus);
+        // Notify listeners that the combo has been broken
         OnComboBroken?.Invoke();
-
-        if (comboTimeoutCoroutine != null)
-        {
-            StopCoroutine(comboTimeoutCoroutine);
-            comboTimeoutCoroutine = null;
-        }
+        OnComboChanged?.Invoke(ComboCount);
+        UpdateMultiplier(false);
     }
 
-    private void UpdateMultiplier()
+    /// <summary>
+    /// Calculates the multiplier based on the current combo count and notifies listeners if it changes.
+    /// </summary>
+    private void UpdateMultiplier(bool justIncreased)
     {
-        int newMultiplier = 1 + (currentCombo / comboPointsPerMultiplierTier);
-        newMultiplier = Mathf.Min(newMultiplier, maxMultiplier);
+        if (ComboCount >= 50) CurrentMultiplier = 4f;
+        else if (ComboCount >= 31) CurrentMultiplier = 3f;
+        else if (ComboCount >= 16) CurrentMultiplier = 2f;
+        else if (ComboCount >= 6) CurrentMultiplier = 1.5f;
+        else CurrentMultiplier = 1f;
 
-        if (newMultiplier != currentMultiplier)
+        // Check if the multiplier value has changed since the last update
+        if (Math.Abs(CurrentMultiplier - previousMultiplier) > 0.01f)
         {
-            currentMultiplier = newMultiplier;
-            OnMultiplierChanged?.Invoke(currentMultiplier);
-        }
-    }
+            OnComboMultiplierChanged?.Invoke(CurrentMultiplier);
+            
+            // If the combo was just increased and crossed a tier, fire the tier-up event
+            if (justIncreased && CurrentMultiplier > previousMultiplier)
+            {
+                OnTierIncreased?.Invoke(CurrentMultiplier);
+            }
 
-    private void UpdateMomentum()
-    {
-        int comboTier = currentCombo / comboPointsPerMultiplierTier;
-        float newMomentumBonus = Mathf.Min(comboTier * speedBoostPerTier, maxSpeedBoost);
-
-        if (Math.Abs(newMomentumBonus - currentMomentumBonus) > 0.01f)
-        {
-            currentMomentumBonus = newMomentumBonus;
-            OnMomentumChanged?.Invoke(currentMomentumBonus);
-        }
-    }
-
-    private IEnumerator ComboTimeoutRoutine()
-    {
-        yield return new WaitForSeconds(comboTimeout);
-        BreakCombo();
-    }
-
-    private void ResetCombo()
-    {
-        currentCombo = 0;
-        currentMultiplier = 1;
-        currentMomentumBonus = 0f;
-
-        OnComboChanged?.Invoke(currentCombo);
-        OnMultiplierChanged?.Invoke(currentMultiplier);
-        OnMomentumChanged?.Invoke(currentMomentumBonus);
-
-        if (comboTimeoutCoroutine != null)
-        {
-            StopCoroutine(comboTimeoutCoroutine);
-            comboTimeoutCoroutine = null;
-        }
-    }
-
-    private void OnGameStateChanged(GameState newState)
-    {
-        if (newState == GameState.Playing)
-        {
-            ResetCombo();
-        }
-        else if (newState == GameState.EndOfRun || newState == GameState.Menu || newState == GameState.Paused)
-        {
-            BreakCombo();
+            previousMultiplier = CurrentMultiplier;
         }
     }
 }

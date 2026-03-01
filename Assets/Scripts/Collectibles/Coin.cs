@@ -16,12 +16,10 @@ public class Coin : Collectible
 
     private bool hasBeenCollected = false;
     private bool isAttracted = false;
-    private CurrencyManager currencyManager;
 
     protected override void Start()
     {
         base.Start();
-        currencyManager = ServiceLocator.Get<CurrencyManager>();
         poolTag = "Coin";
     }
 
@@ -42,10 +40,7 @@ public class Coin : Collectible
 
         hasBeenCollected = true;
 
-        if (currencyManager != null)
-        {
-            currencyManager.AddCoins(value);
-        }
+        DataManager.Instance.AddCoins(value);
 
         if (collectionParticles != null)
         {

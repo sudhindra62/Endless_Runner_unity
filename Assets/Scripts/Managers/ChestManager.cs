@@ -27,15 +27,31 @@ public class Chest
     public int XpReward;
 }
 
-/// <summary>
-/// Authoritative singleton for managing all chests, their states, and unlock timers.
-/// It persists chest data and ensures that chest rewards are granted correctly and without exploits.
-/// It relies on the server-validated time to prevent time manipulation.
-/// </summary>
 public class ChestManager : Singleton<ChestManager>
 {
     [SerializeField] private Chest[] availableChests;
     private const string ChestStateKeyPrefix = "ChestState_";
+
+    public void GrantChest(string chestId)
+    {
+        PlayerChestState chestState = GetChestState(chestId);
+        if (chestState.State != Chest.ChestState.Locked)
+        {
+            Debug.LogWarning($"Attempted to grant chest {chestId}, but a chest with this ID already exists and is not in the default state.");
+            return;
+        }
+
+        SaveChestState(chestState);
+        Debug.Log($"Chest {chestId} has been granted to the player.");
+    }
+
+    public void GrantRandomChest()
+    {
+        if (availableChests.Length == 0) return;
+        
+        Chest randomChest = availableChests[UnityEngine.Random.Range(0, availableChests.Length)];
+        GrantChest(randomChest.ChestId);
+    }
 
     public void StartUnlockingChest(string chestId)
     {
@@ -61,7 +77,6 @@ public class ChestManager : Singleton<ChestManager>
         {
             if(chestState.State == Chest.ChestState.Unlocking && DateTime.UtcNow >= chestState.UnlockTime)
             {
-                 // transition state to ready to open and then open
                  chestState.State = Chest.ChestState.ReadyToOpen;
             }
             else
@@ -71,7 +86,9 @@ public class ChestManager : Singleton<ChestManager>
             }
         }
 
-        RewardManager.Instance.GrantChestReward(chestId, chest.CoinReward, chest.GemReward, chest.XpReward);
+        RewardManager.Instance.GrantReward(new Reward("Chest Reward", RewardType.Coins, chest.CoinReward));
+        RewardManager.Instance.GrantReward(new Reward("Chest Reward", RewardType.Gems, chest.GemReward));
+        RewardManager.Instance.GrantReward(new Reward("Chest Reward", RewardType.XP, chest.XpReward));
         chestState.State = Chest.ChestState.Opened;
         SaveChestState(chestState);
         Debug.Log($"Chest {chestId} has been opened.");

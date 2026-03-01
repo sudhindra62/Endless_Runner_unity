@@ -2,22 +2,39 @@
 using UnityEngine;
 
 /// <summary>
-/// A generic Singleton base class to ensure only one instance of a manager exists.
+/// A generic singleton base class for creating managers that should only have one instance.
 /// </summary>
-public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
+public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
-    public static T Instance { get; private set; }
+    private static T _instance;
+
+    public static T Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindObjectOfType<T>();
+                if (_instance == null)
+                {
+                    GameObject singletonObject = new GameObject(typeof(T).Name);
+                    _instance = singletonObject.AddComponent<T>();
+                }
+            }
+            return _instance;
+        }
+    }
 
     protected virtual void Awake()
     {
-        if (Instance == null)
+        if (_instance != null && _instance != this)
         {
-            Instance = this as T;
-            DontDestroyOnLoad(gameObject);
+            Destroy(this.gameObject);
         }
         else
         {
-            Destroy(gameObject);
+            _instance = this as T;
+            DontDestroyOnLoad(this.gameObject);
         }
     }
 }

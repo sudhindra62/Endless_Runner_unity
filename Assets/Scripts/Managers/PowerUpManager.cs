@@ -1,42 +1,45 @@
+
 using UnityEngine;
-using System.Collections.Generic;
 
 public class PowerUpManager : MonoBehaviour
 {
-    private readonly Dictionary<string, float> durationMultipliers = new Dictionary<string, float>();
+    public static PowerUpManager Instance { get; private set; }
+
+    private bool arePowerUpsDisabled = false;
 
     private void Awake()
     {
-        ServiceLocator.Register(this);
-    }
-
-    private void OnDestroy()
-    {
-        ServiceLocator.Unregister<PowerUpManager>();
-    }
-
-    public void ApplyDurationMultiplier(string sourceId, float multiplier)
-    {
-        durationMultipliers[sourceId] = multiplier;
-    }
-
-    public void RemoveDurationMultiplier(string sourceId)
-    {
-        durationMultipliers.Remove(sourceId);
-    }
-
-    public float GetDurationMultiplier()
-    {
-        float totalMultiplier = 1f;
-        foreach (var multiplier in durationMultipliers.Values)
+        if (Instance == null)
         {
-            totalMultiplier *= multiplier;
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
-        return totalMultiplier;
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
-    public void ResetState()
+    public void SetPowerUpsDisabled(bool isDisabled)
     {
-        durationMultipliers.Clear();
+        arePowerUpsDisabled = isDisabled;
+        Debug.Log(isDisabled ? "Power-ups are now DISABLED." : "Power-ups are now ENABLED.");
+    }
+
+    public bool ArePowerUpsDisabled()
+    {
+        return arePowerUpsDisabled;
+    }
+
+    // Example method that would be called before spawning a power-up
+    public bool CanSpawnPowerUp()
+    {
+        if (arePowerUpsDisabled)
+        {
+            Debug.Log("Power-up spawn blocked by NoPowerUpsChallenge.");
+            return false;
+        }
+        // Other logic for spawning power-ups would go here
+        return true;
     }
 }

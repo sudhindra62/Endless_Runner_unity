@@ -1,7 +1,7 @@
 
 using UnityEngine;
 
-public class GameFlowController : MonoBehaviour
+public class GameFlowController : Singleton<GameFlowController>
 {
     [Header("Component References")]
     [SerializeField] private PlayerController playerController;
@@ -15,19 +15,13 @@ public class GameFlowController : MonoBehaviour
     private GameDifficultyManager difficultyManager;
     private ReviveManager reviveManager;
     private PlayerDataManager playerDataManager;
+    private BossChaseManager bossChaseManager;
 
     private float runStartTime;
 
-    private void Awake()
+    protected override void Awake()
     {
-        var instances = FindObjectsByType<GameFlowController>(FindObjectsSortMode.None);
-        if (instances.Length > 1)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        DontDestroyOnLoad(gameObject);
-
+        base.Awake();
         runSessionData = new RunSessionData();
     }
 
@@ -40,6 +34,7 @@ public class GameFlowController : MonoBehaviour
         difficultyManager = ServiceLocator.Get<GameDifficultyManager>();
         reviveManager = ServiceLocator.Get<ReviveManager>();
         playerDataManager = ServiceLocator.Get<PlayerDataManager>();
+        bossChaseManager = BossChaseManager.Instance;
 
         playerController.OnDeath += PlayerDied;
     }
@@ -69,6 +64,10 @@ public class GameFlowController : MonoBehaviour
     private void PlayerDied()
     {
         runSessionData.time = Time.time - runStartTime;
+        if (bossChaseManager != null) 
+        {
+            bossChaseManager.OnPlayerDied();
+        }
         GameStateManager.CurrentState = GameState.Dead;
     }
 

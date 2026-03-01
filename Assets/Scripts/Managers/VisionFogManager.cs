@@ -1,32 +1,35 @@
+
 using UnityEngine;
 
 public class VisionFogManager : MonoBehaviour
 {
-    // This would typically control a post-processing effect or a shader.
-    // For this example, we'll just log the state.
+    public static VisionFogManager Instance { get; private set; }
 
-    private bool isFogActive = false;
+    // Example: Could be a reference to a post-processing volume or a shader property
+    [SerializeField] private float defaultFogIntensity = 0.2f;
 
     private void Awake()
     {
-        ServiceLocator.Register(this);
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
-    private void OnDestroy()
+    public void ActivateDarkVision(float intensity)
     {
-        ServiceLocator.Unregister<VisionFogManager>();
+        // Logic to increase fog density, reduce light intensity, etc.
+        Debug.Log($"Dark Vision activated. Fog intensity set to: {intensity}");
     }
 
-    public void SetFogState(bool isActive)
+    public void DeactivateDarkVision()
     {
-        isFogActive = isActive;
-        Debug.Log($"Vision Fog is now {(isActive ? "ON" : "OFF")}");
-        // In a real implementation, you would enable/disable a fog volume
-        // or set a shader parameter here.
-    }
-
-    public void ResetState()
-    {
-        SetFogState(false);
+        // Revert to default lighting and fog settings
+        Debug.Log($"Dark Vision deactivated. Fog intensity reset to: {defaultFogIntensity}");
     }
 }

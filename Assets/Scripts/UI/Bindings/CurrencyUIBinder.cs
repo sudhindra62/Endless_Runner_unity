@@ -5,7 +5,7 @@ namespace EndlessRunner.UI.Bindings
 {
     /// <summary>
     /// Display-only binder for coins & gems UI.
-    /// Reacts to CurrencyManager static events.
+    /// Reacts to DataManager static events.
     /// </summary>
     public class CurrencyUIBinder : MonoBehaviour
     {
@@ -15,21 +15,21 @@ namespace EndlessRunner.UI.Bindings
 
         private void OnEnable()
         {
-            CurrencyManager.OnCoinsChanged += UpdateCoins;
-            CurrencyManager.OnGemsChanged += UpdateGems;
+            DataManager.OnCoinsChanged += UpdateCoins;
+            DataManager.OnGemsChanged += UpdateGems;
 
             // Initial sync (important on scene load)
-            if (CurrencyManager.Instance != null)
+            if (DataManager.Instance != null)
             {
-                UpdateCoins(CurrencyManager.Instance.Coins);
-                UpdateGems(CurrencyManager.Instance.Gems);
+                UpdateCoins(DataManager.Instance.Coins);
+                UpdateGems(DataManager.Instance.Gems);
             }
         }
 
         private void OnDisable()
         {
-            CurrencyManager.OnCoinsChanged -= UpdateCoins;
-            CurrencyManager.OnGemsChanged -= UpdateGems;
+            DataManager.OnCoinsChanged -= UpdateCoins;
+            DataManager.OnGemsChanged -= UpdateGems;
         }
 
         private void UpdateCoins(int value)

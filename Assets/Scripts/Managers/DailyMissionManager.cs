@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -29,13 +30,18 @@ public class DailyMissionManager : Singleton<DailyMissionManager>
 
     private void RefreshMissions()
     {
-        // Clear existing daily missions from the MissionManager
+        List<Mission> missionsToRemove = new List<Mission>();
         foreach (Mission mission in MissionManager.Instance.ActiveMissions)
         {
             if(mission.MissionId.StartsWith("Daily_"))
             {
-                MissionManager.Instance.ActiveMissions.Remove(mission);
+                missionsToRemove.Add(mission);
             }
+        }
+
+        foreach(Mission mission in missionsToRemove)
+        {
+            MissionManager.Instance.ActiveMissions.Remove(mission);
         }
         
         // In a real game, you would have a more sophisticated system for selecting daily missions.

@@ -1,70 +1,32 @@
+
 using UnityEngine;
-using System.Collections.Generic;
-using System.Linq;
+using System;
 
-public class ReviveManager : MonoBehaviour
+public class ReviveManager : Singleton<ReviveManager>
 {
-    public static ReviveManager Instance { get; private set; }
+    public static event Action<int> OnReviveUsed;
+    public const int MAX_REVIVES_PER_RUN = 2;
 
-    private int reviveUsedThisRun = 0;
-    private readonly Dictionary<string, int> externalRevives = new Dictionary<string, int>();
+    private int revivesUsedThisRun = 0;
 
-    private void Awake()
+    public void AttemptRevive()
     {
-        if (Instance == null)
+        if (revivesUsedThisRun < MAX_REVIVES_PER_RUN)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            // In a real game, this would check for cost (e.g., gems or ad watch)
+            revivesUsedThisRun++;
+            Debug.Log($"Player revived. This was revive number {revivesUsedThisRun} in this run.");
+            OnReviveUsed?.Invoke(revivesUsedThisRun);
+            // Grant revive, resume gameplay etc.
         }
         else
         {
-            Destroy(gameObject);
+            Debug.Log("Revive attempt failed: Max revives used.");
         }
     }
 
-    public void OnEnable()
+    public void ResetReviveCount()
     {
-        GameManager.OnGameStateChanged += OnGameStateChanged;
-    }
-
-    public void OnDisable()
-    {
-        GameManager.OnGameStateChanged -= OnGameStateChanged;
-    }
-
-    public bool CanRevive()
-    {
-        int totalExtraRevives = externalRevives.Values.Sum();
-        return reviveUsedThisRun < totalExtraRevives;
-    }
-
-    public void UseRevive()
-    {
-        if (CanRevive())
-        {
-            reviveUsedThisRun++;
-        }
-    }
-
-    public void ApplyExtraRevives(string sourceId, int count)
-    {
-        externalRevives[sourceId] = count;
-    }
-
-    public void RemoveExtraRevives(string sourceId)
-    {
-        externalRevives.Remove(sourceId);
-    }
-
-    private void OnGameStateChanged(GameState newState)
-    {
-        if (newState == GameState.Playing)
-        {
-            reviveUsedThisRun = 0; // Reset on a new run
-        }
-        else if (newState == GameState.Menu || newState == GameState.EndOfRun)
-        {
-            externalRevives.Clear();
-        }
+        revivesUsedThisRun = 0;
     }
 }

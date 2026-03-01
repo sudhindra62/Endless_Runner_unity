@@ -1,0 +1,1 @@
+The `CanRevive` method in `ReviveManager.cs` does not properly calculate the total number of revives available to the player. I need to fix this by creating a new `CalculateTotalRevives` method that takes all revive sources into account. I also need to make sure that the `BossChaseManager` does not interfere with the player's ability to revive.

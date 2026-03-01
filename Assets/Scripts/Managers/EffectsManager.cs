@@ -1,36 +1,11 @@
 
 using UnityEngine;
 
-public class EffectsManager : MonoBehaviour
+public class EffectsManager : Singleton<EffectsManager>
 {
-    public static EffectsManager Instance { get; private set; }
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            ServiceLocator.Register<EffectsManager>(this);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (Instance == this)
-        {
-            ServiceLocator.Unregister<EffectsManager>();
-            Instance = null;
-        }
-    }
-
     public void ConvertAllObstaclesToCoins()
     {
-        GameObject[] obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
+        Obstacle[] obstacles = FindObjectsByType<Obstacle>(FindObjectsSortMode.None);
         ObjectPooler objectPooler = ServiceLocator.Get<ObjectPooler>();
 
         if (objectPooler == null)
@@ -39,16 +14,16 @@ public class EffectsManager : MonoBehaviour
             return;
         }
 
-        foreach (GameObject obstacle in obstacles)
+        foreach (Obstacle obstacle in obstacles)
         {
-            if (obstacle != null && obstacle.activeInHierarchy)
+            if (obstacle != null && obstacle.gameObject.activeInHierarchy)
             {
                 GameObject coin = objectPooler.GetFromPool("Coin", obstacle.transform.position, obstacle.transform.rotation);
                 if (coin != null)
                 {
                     coin.SetActive(true);
                 }
-                obstacle.SetActive(false);
+                obstacle.gameObject.SetActive(false);
             }
         }
 

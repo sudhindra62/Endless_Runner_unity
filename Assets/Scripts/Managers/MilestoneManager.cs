@@ -1,89 +1,73 @@
 
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
-/// <summary>
-/// Authoritative singleton for tracking and completing all long-term milestones.
-/// It subscribes to game events and persists all milestone data to prevent exploits.
-/// </summary>
-public class MilestoneManager : Singleton<MilestoneManager>
+public class MilestoneManager : MonoBehaviour
 {
-    [SerializeField] private MilestoneDatabase milestoneDatabase;
+    public static MilestoneManager Instance { get; private set; }
+    public static event Action<int> OnMilestoneReached;
 
-    private const string CompletedMilestonesKey = "CompletedMilestones";
-    private HashSet<string> _completedMilestones = new HashSet<string>();
+    [SerializeField] private int milestoneInterval = 1000;
 
-    protected override void Awake()
+    private float distanceTraveled = 0f;
+    private int nextMilestone = 0;
+    private bool isTracking = false;
+
+    private void Awake()
     {
-        base.Awake();
-        LoadMilestoneData();
-    }
-
-    private void OnEnable()
-    {
-        // Subscribe to relevant game events
-        XPManager.OnLevelUp += HandleLevelUp;
-        // Example: ScoreManager.OnScoreIncreased += HandleScoreIncreased;
-    }
-
-    private void OnDisable()
-    {
-        XPManager.OnLevelUp -= HandleLevelUp;
-        // Example: ScoreManager.OnScoreIncreased -= HandleScoreIncreased;
-    }
-
-    private void LoadMilestoneData()
-    {
-        string completedMilestonesString = PlayerPrefs.GetString(CompletedMilestonesKey, string.Empty);
-        if (!string.IsNullOrEmpty(completedMilestonesString))
+        if (Instance == null)
         {
-            _completedMilestones = new HashSet<string>(completedMilestonesString.Split(','));
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
         }
     }
 
-    private void SaveMilestoneData()
+    private void Start()
     {
-        PlayerPrefs.SetString(CompletedMilestonesKey, string.Join(",", _completedMilestones));
-        PlayerPrefs.Save();
+        GameManager.OnGameStateChanged += OnGameStateChanged;
+        nextMilestone = milestoneInterval;
     }
 
-    private void HandleLevelUp(int newLevel)
+    private void OnDestroy()
     {
-        List<Milestone> levelMilestones = milestoneDatabase.GetMilestonesByType("Level");
-        foreach (Milestone milestone in levelMilestones)
+        GameManager.OnGameStateChanged -= OnGameStateChanged;
+    }
+
+    private void Update()
+    {
+        if (isTracking)
         {
-            if (newLevel >= milestone.RequiredAmount)
+            // Assuming PlayerMovement has a GetSpeed() method or similar
+            // In a real project, this would be driven by the player's actual movement
+            distanceTraveled += Time.deltaTime * 10f; // Placeholder speed
+
+            if (distanceTraveled >= nextMilestone)
             {
-                CompleteMilestone(milestone);
+                OnMilestoneReached?.Invoke(nextMilestone);
+                nextMilestone += milestoneInterval;
             }
         }
     }
 
-    // Example handler for a score-based milestone
-    // private void HandleScoreIncreased(int newScore)
-    // {
-    //     List<Milestone> scoreMilestones = milestoneDatabase.GetMilestonesByType("Score");
-    //     foreach (Milestone milestone in scoreMilestones)
-    //     {
-    //         if (newScore >= milestone.RequiredAmount)
-    //         {
-    //             CompleteMilestone(milestone);
-    //         }
-    //     }
-    // }
-
-    private void CompleteMilestone(Milestone milestone)
+    private void OnGameStateChanged(GameState newState)
     {
-        if (IsMilestoneCompleted(milestone.MilestoneId)) return;
-
-        _completedMilestones.Add(milestone.MilestoneId);
-        RewardManager.Instance.GrantMissionReward(milestone.MilestoneId, milestone.CoinReward, milestone.GemReward, milestone.XpReward);
-        SaveMilestoneData();
-        Debug.Log($"Milestone {milestone.MilestoneId} completed!");
-    }
-
-    public bool IsMilestoneCompleted(string milestoneId)
-    {
-        return _completedMilestones.Contains(milestoneId);
+        if (newState == GameState.Playing)
+        {
+            isTracking = true;
+        }
+        else if (newState == GameState.RunStart || newState == GameState.Menu)
+        {
+            isTracking = false;
+            distanceTraveled = 0f;
+            nextMilestone = milestoneInterval;
+        }
+        else
+        {
+            isTracking = false;
+        }
     }
 }

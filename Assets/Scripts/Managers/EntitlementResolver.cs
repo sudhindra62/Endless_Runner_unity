@@ -37,11 +37,11 @@ public class EntitlementResolver : Singleton<EntitlementResolver>
                 success = true;
                 break;
             case "com.gamestudio.gem_pack_1":
-                CurrencyManager.Instance.AddGems(100);
+                DataManager.Instance.AddGems(100);
                 success = true;
                 break;
             case "com.gamestudio.coin_pack_1":
-                CurrencyManager.Instance.AddCoins(5000);
+                DataManager.Instance.AddCoins(5000);
                 success = true;
                 break;
             case "com.gamestudio.premium_subscription":

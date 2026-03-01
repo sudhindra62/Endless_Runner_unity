@@ -1,24 +1,57 @@
+
 using UnityEngine;
+using System;
+using System.Collections.Generic;
 
-public class SkillTreeManager : MonoBehaviour
+public class SkillTreeManager : Singleton<SkillTreeManager>
 {
-    private void Awake()
+    public static event Action OnSkillTreeChanged;
+
+    public int SkillPoints { get; private set; }
+    public Dictionary<string, int> SkillNodeLevels { get; } = new Dictionary<string, int>();
+
+    private const int MAX_SKILL_LEVEL = 5;
+
+    public void AddSkillPoints(int amount)
     {
-        ServiceLocator.Register(this);
+        if (amount < 0) return;
+        SkillPoints += amount;
+        OnSkillTreeChanged?.Invoke();
     }
 
-    private void OnDestroy()
+    public bool UnlockSkillNode(string skillId)
     {
-        ServiceLocator.Unregister<SkillTreeManager>();
+        if (SkillPoints <= 0)
+        {
+            Debug.LogWarning("Cannot unlock skill: Not enough skill points.");
+            return false;
+        }
+
+        if (!SkillNodeLevels.ContainsKey(skillId))
+        {
+            SkillNodeLevels[skillId] = 0;
+        }
+
+        if (SkillNodeLevels[skillId] >= MAX_SKILL_LEVEL)
+        {
+            Debug.LogWarning($"Cannot unlock skill: {skillId} is already at max level.");
+            return false;
+        }
+
+        // In a real game, you would check for incompatible nodes here.
+
+        SkillPoints--;
+        SkillNodeLevels[skillId]++;
+        OnSkillTreeChanged?.Invoke();
+        
+        Debug.Log($"Unlocked skill {skillId}. New level: {SkillNodeLevels[skillId]}");
+        return true;
     }
 
-    public void RecalculatePassives()
+    // This would be called when a player levels up.
+    public void GrantPointsForLevel(int level)
     {
-        // In a real implementation, this would read from the player's saved data
-        // and apply any permanent bonuses they have unlocked.
-        Debug.Log("Recalculating passives from the skill tree.");
-
-        // Example: Apply a permanent speed boost from the skill tree
-        // ServiceLocator.Get<PlayerMovement>()?.ApplySpeedMultiplier("SkillTree_SpeedBoost", 1.1f);
+        // Example: 1 point per level
+        AddSkillPoints(1);
     }
 }

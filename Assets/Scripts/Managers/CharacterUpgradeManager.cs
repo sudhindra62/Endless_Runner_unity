@@ -1,25 +1,15 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class CharacterUpgradeManager : MonoBehaviour
+public class CharacterUpgradeManager : Singleton<CharacterUpgradeManager>
 {
-    public static CharacterUpgradeManager Instance { get; private set; }
-
     [SerializeField] private List<CharacterData> allCharacters = new List<CharacterData>();
     private const string SelectedCharacterKey = "SelectedCharacterId";
     
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            LoadAllCharacterLevels();
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        base.Awake();
+        LoadAllCharacterLevels();
     }
 
     public void UpgradeCharacter(CharacterData character)
@@ -39,12 +29,15 @@ public class CharacterUpgradeManager : MonoBehaviour
 
     public void SelectCharacter(CharacterData character)
     {
+        if(character == null) return;
         PlayerPrefs.SetString(SelectedCharacterKey, character.characterId);
-        CharacterPassiveManager.Instance.SetCharacter(character);
+        ServiceLocator.Get<CharacterPassiveManager>()?.SetCharacter(character);
     }
 
     public CharacterData GetSelectedCharacter()
     {
+        if (allCharacters.Count == 0) return null;
+
         string selectedId = PlayerPrefs.GetString(SelectedCharacterKey, allCharacters[0].characterId);
         return allCharacters.Find(c => c.characterId == selectedId);
     }
