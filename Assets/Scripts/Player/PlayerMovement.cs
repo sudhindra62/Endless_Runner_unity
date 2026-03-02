@@ -13,9 +13,6 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float maxSpeed = 25f;
     [SerializeField] private float minSpeed = 5f;
 
-    [Header("Components")]
-    [SerializeField] private CharacterController controller;
-
     // Multiplier Dictionaries
     private readonly Dictionary<string, float> speedMultipliers = new Dictionary<string, float>();
     private readonly Dictionary<string, float> gravityMultipliers = new Dictionary<string, float>();
@@ -24,9 +21,6 @@ public class PlayerMovement : MonoBehaviour
     // State Dictionaries (to handle multiple sources)
     private readonly Dictionary<string, bool> jumpDisabledSources = new Dictionary<string, bool>();
     private readonly Dictionary<string, bool> reverseInputSources = new Dictionary<string, bool>();
-
-    private Vector3 playerVelocity;
-    private bool isGrounded;
 
     private void Awake()
     {
@@ -38,36 +32,11 @@ public class PlayerMovement : MonoBehaviour
         ServiceLocator.Unregister<PlayerMovement>();
     }
 
-    private void Update()
-    {
-        isGrounded = controller.isGrounded;
-        if (isGrounded && playerVelocity.y < 0)
-        {
-            playerVelocity.y = -2f; // Keep the player grounded
-        }
-
-        // Calculate current stats
-        float currentSpeed = CalculateValue(baseSpeed, speedMultipliers, minSpeed, maxSpeed);
-        float currentJumpForce = CalculateValue(baseJumpForce, jumpForceMultipliers);
-        bool isJumpDisabled = jumpDisabledSources.Any(s => s.Value);
-        bool isInputReversed = reverseInputSources.Any(s => s.Value);
-
-        // --- Movement --- //
-        float horizontalInput = Input.GetAxis("Horizontal") * (isInputReversed ? -1 : 1);
-        Vector3 moveDirection = transform.forward * currentSpeed + transform.right * horizontalInput;
-        controller.Move(moveDirection * Time.deltaTime);
-
-        // --- Jumping --- //
-        if (Input.GetButtonDown("Jump") && isGrounded && !isJumpDisabled)
-        {
-            playerVelocity.y = currentJumpForce;
-        }
-
-        // --- Gravity --- //
-        float currentGravity = CalculateValue(baseGravity, gravityMultipliers);
-        playerVelocity.y += currentGravity * Time.deltaTime;
-        controller.Move(playerVelocity * Time.deltaTime);
-    }
+    public float GetCurrentSpeed() => CalculateValue(baseSpeed, speedMultipliers, minSpeed, maxSpeed);
+    public float GetCurrentGravity() => CalculateValue(baseGravity, gravityMultipliers);
+    public float GetCurrentJumpForce() => CalculateValue(baseJumpForce, jumpForceMultipliers);
+    public bool IsJumpDisabled() => jumpDisabledSources.Any(s => s.Value);
+    public bool IsInputReversed() => reverseInputSources.Any(s => s.Value);
 
     private float CalculateValue(float baseValue, Dictionary<string, float> multipliers, float min = 0, float max = float.MaxValue)
     {
@@ -86,6 +55,9 @@ public class PlayerMovement : MonoBehaviour
 
     public void ApplyGravityMultiplier(string sourceId, float multiplier) => gravityMultipliers[sourceId] = multiplier;
     public void RemoveGravityMultiplier(string sourceId) => gravityMultipliers.Remove(sourceId);
+    
+    public void ApplyJumpForceMultiplier(string sourceId, float multiplier) => jumpForceMultipliers[sourceId] = multiplier;
+    public void RemoveJumpForceMultiplier(string sourceId) => jumpForceMultipliers.Remove(sourceId);
 
     public void SetJumpDisabled(string sourceId, bool isDisabled) => jumpDisabledSources[sourceId] = isDisabled;
     public void RemoveJumpDisabled(string sourceId) => jumpDisabledSources.Remove(sourceId);

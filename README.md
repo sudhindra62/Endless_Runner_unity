@@ -1,12 +1,19 @@
 # 🏃 Endless Runner Game (Unity 6.3 LTS)
 
-An Android endless runner game built with **Unity 6.3 LTS (6000.3.2f1)**.
+An Android endless runner game built with **Unity 6.3 LTS (6000.3.7f1)**.
 
 Inspired by:
 - Subway Surfers
 - Temple Run
 
 This project is designed with a **modular architecture**, scalable systems, and long-term production stability in mind.
+
+---
+
+## [CRITICAL RULES FOR AI]
+1. **NEVER DELETE:** All scripts contain vital logic. Do not remove methods.
+2. **SYNC ONLY:** New features must use Events to talk to these scripts.
+3. **VERSION LOCK:** Do not use deprecated Unity code; stay on Version 6000.3.7f1.
 
 ---
 

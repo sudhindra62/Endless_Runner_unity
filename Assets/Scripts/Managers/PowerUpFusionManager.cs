@@ -1,169 +1,138 @@
+
 using UnityEngine;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 
-public class PowerUpFusionManager : MonoBehaviour
+public enum FusionType
 {
-    public static event Action<FusionType, float> OnFusionStart;
-    public static event Action<FusionType> OnFusionEnd;
+    None,
+    CoinStorm,
+    InvincibleDash,
+    FeverFrenzy
+}
 
-    [Header("Fusion Configuration")]
-    [SerializeField] private float coinStormDuration = 15f;
-    [SerializeField] private float invincibleDashDuration = 10f;
-    [SerializeField] private float ultraComboDuration = 12f;
+public struct FusionModifierData
+{
+    public FusionType Type;
+    public float Duration;
+}
 
-    private readonly HashSet<PowerUpType> activePowerUps = new HashSet<PowerUpType>();
-    private FusionType activeFusion = FusionType.None;
-    private Coroutine activeFusionCoroutine;
+public class PowerUpFusionManager : Singleton<PowerUpFusionManager>
+{
+    public static event Action<FusionModifierData> OnFusionActivated;
+    public static event Action<FusionType> OnFusionDeactivated;
 
-    // Dependencies
+    private readonly Dictionary<FusionType, float> activeFusions = new Dictionary<FusionType, float>();
+    private readonly List<FusionType> recentlyTriggeredFusions = new List<FusionType>();
+
     private PowerUpManager powerUpManager;
-    private UIManager uiManager;
-
-    private void Awake()
-    {
-        ServiceLocator.Register(this);
-    }
+    private FlowComboManager flowComboManager;
 
     private void Start()
     {
-        powerUpManager = ServiceLocator.Get<PowerUpManager>();
-        if (powerUpManager != null)
-        {
-            powerUpManager.OnPowerUpActivated += OnPowerUpActivated;
-            powerUpManager.OnPowerUpDeactivated += OnPowerUpDeactivated;
-        }
-
-        uiManager = ServiceLocator.Get<UIManager>();
-
-        GameManager.OnGameStateChanged += OnGameStateChanged;
+        powerUpManager = PowerUpManager.Instance;
+        flowComboManager = FlowComboManager.Instance;
+        
+        PowerUpManager.OnPowerUpActivated += HandlePowerUpActivation;
+        PowerUpManager.OnPowerUpDeactivated += HandlePowerUpDeactivation;
     }
 
     private void OnDestroy()
     {
-        if (powerUpManager != null)
-        {
-            powerUpManager.OnPowerUpActivated -= OnPowerUpActivated;
-            powerUpManager.OnPowerUpDeactivated -= OnPowerUpDeactivated;
-        }
-
-        GameManager.OnGameStateChanged -= OnGameStateChanged;
-        ServiceLocator.Unregister<PowerUpFusionManager>();
+        if (PowerUpManager.Instance != null) PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivation;
+        if (PowerUpManager.Instance != null) PowerUpManager.OnPowerUpDeactivated -= HandlePowerUpDeactivation;
     }
 
-    private void OnPowerUpActivated(PowerUpType newPowerUp)
+    private void Update()
     {
-        activePowerUps.Add(newPowerUp);
-        CheckForFusions();
+        if (activeFusions.Count == 0) return;
+
+        var expiredFusions = new List<FusionType>();
+        var fusionKeys = new List<FusionType>(activeFusions.Keys);
+
+        foreach (var fusionType in fusionKeys)
+        {
+            activeFusions[fusionType] -= Time.deltaTime;
+            if (activeFusions[fusionType] <= 0)
+            {
+                expiredFusions.Add(fusionType);
+            }
+        }
+
+        foreach (var expiredFusion in expiredFusions)
+        {
+            DeactivateFusion(expiredFusion);
+        }
     }
 
-    private void OnPowerUpDeactivated(PowerUpType expiredPowerUp)
+    private void HandlePowerUpActivation(PowerUpType type, float duration)
     {
-        activePowerUps.Remove(expiredPowerUp);
-        // No need to check for fusions here, as deactivation shouldn't trigger a new fusion.
+        CheckForFusion(type, duration);
+    }
+    
+    private void HandlePowerUpDeactivation(PowerUpType type)
+    {
+        ClearRecentFusionOnComponentDeactivation(type);
     }
 
-    private void CheckForFusions()
+    private void CheckForFusion(PowerUpType newPowerUp, float duration)
     {
-        if (activeFusion != FusionType.None) return; // Only one fusion at a time
+        if (powerUpManager == null) return;
 
-        // Check for Coin Storm (Magnet + Coin Doubler)
-        if (activePowerUps.Contains(PowerUpType.Magnet) && activePowerUps.Contains(PowerUpType.CoinDoubler))
+        // Coin Storm: Magnet + CoinDoubler
+        if ((newPowerUp == PowerUpType.Magnet && powerUpManager.IsPowerUpActive(PowerUpType.CoinDoubler)) ||
+            (newPowerUp == PowerUpType.CoinDoubler && powerUpManager.IsPowerUpActive(PowerUpType.Magnet)))
         {
-            ActivateFusion(FusionType.CoinStorm, coinStormDuration);
+            ActivateFusion(FusionType.CoinStorm, duration);
         }
-        // Check for Invincible Dash (Shield + Speed Boost)
-        else if (activePowerUps.Contains(PowerUpType.Shield) && activePowerUps.Contains(PowerUpType.SpeedBoost))
+
+        // Invincible Dash: Shield + Speed Boost
+        if ((newPowerUp == PowerUpType.Shield && powerUpManager.IsPowerUpActive(PowerUpType.SpeedBoost)) ||
+            (newPowerUp == PowerUpType.SpeedBoost && powerUpManager.IsPowerUpActive(PowerUpType.Shield)))
         {
-            ActivateFusion(FusionType.InvincibleDash, invincibleDashDuration);
+            ActivateFusion(FusionType.InvincibleDash, duration);
         }
-        // Check for Ultra Combo (Score Multiplier + Fever Mode)
-        else if (activePowerUps.Contains(PowerUpType.ScoreMultiplier) && activePowerUps.Contains(PowerUpType.FeverMode))
+
+        // Fever Frenzy: Multiplier + FlowCombo Tier 3+
+        if (newPowerUp == PowerUpType.ScoreMultiplier && flowComboManager != null && flowComboManager.GetCurrentTier() >= 3)
         {
-            ActivateFusion(FusionType.UltraCombo, ultraComboDuration);
+            ActivateFusion(FusionType.FeverFrenzy, duration);
         }
     }
 
     private void ActivateFusion(FusionType fusionType, float duration)
     {
-        if (activeFusion != FusionType.None) return;
+        if (recentlyTriggeredFusions.Contains(fusionType)) return;
 
-        activeFusion = fusionType;
-
-        // Pause the timers of the base power-ups that created the fusion
-        PauseTimersForFusion(fusionType, true);
-
-        // Start the fusion coroutine
-        activeFusionCoroutine = StartCoroutine(FusionRoutine(fusionType, duration));
-    }
-
-    private IEnumerator FusionRoutine(FusionType fusionType, float duration)
-    {
-        OnFusionStart?.Invoke(fusionType, duration);
-        if (uiManager != null) uiManager.ShowFusionUI(fusionType, duration);
+        activeFusions[fusionType] = duration;
+        recentlyTriggeredFusions.Add(fusionType);
         
-        yield return new WaitForSeconds(duration);
-
-        EndFusion(fusionType);
+        OnFusionActivated?.Invoke(new FusionModifierData { Type = fusionType, Duration = duration });
     }
 
-    private void EndFusion(FusionType fusionType)
+    private void DeactivateFusion(FusionType fusionType)
     {
-        if (activeFusion != fusionType) return;
-        
-        OnFusionEnd?.Invoke(fusionType);
-        if (uiManager != null) uiManager.HideFusionUI();
-        activeFusion = FusionType.None;
-        activeFusionCoroutine = null;
+        if (!activeFusions.ContainsKey(fusionType)) return;
 
-        // Resume the timers of the base power-ups
-        PauseTimersForFusion(fusionType, false);
-
-        // Re-check for any other possible fusions, though unlikely
-        CheckForFusions();
-    }
-
-    private void PauseTimersForFusion(FusionType fusionType, bool pause)
-    {
-        if (powerUpManager == null) return;
-
-        switch (fusionType)
-        {
-            case FusionType.CoinStorm:
-                powerUpManager.PausePowerUpTimer(PowerUpType.Magnet, pause);
-                powerUpManager.PausePowerUpTimer(PowerUpType.CoinDoubler, pause);
-                break;
-            case FusionType.InvincibleDash:
-                powerUpManager.PausePowerUpTimer(PowerUpType.Shield, pause);
-                powerUpManager.PausePowerUpTimer(PowerUpType.SpeedBoost, pause);
-                break;
-            case FusionType.UltraCombo:
-                powerUpManager.PausePowerUpTimer(PowerUpType.ScoreMultiplier, pause);
-                powerUpManager.PausePowerUpTimer(PowerUpType.FeverMode, pause);
-                break;
-        }
+        activeFusions.Remove(fusionType);
+        OnFusionDeactivated?.Invoke(fusionType);
     }
     
-    private void OnGameStateChanged(GameState newState)
+    private void ClearRecentFusionOnComponentDeactivation(PowerUpType componentType)
     {
-        // Reset on new run or returning to menu
-        if (newState == GameState.Menu || newState == GameState.EndOfRun)
+        switch (componentType)
         {
-            if (activeFusionCoroutine != null)
-            {
-                StopCoroutine(activeFusionCoroutine);
-                activeFusionCoroutine = null;
-            }
-            if (activeFusion != FusionType.None)
-            {
-                OnFusionEnd?.Invoke(activeFusion);
-                 if (uiManager != null) uiManager.HideFusionUI();
-            }
-            activeFusion = FusionType.None;
-            activePowerUps.Clear();
+            case PowerUpType.Magnet:
+            case PowerUpType.CoinDoubler:
+                recentlyTriggeredFusions.Remove(FusionType.CoinStorm);
+                break;
+            case PowerUpType.Shield:
+            case PowerUpType.SpeedBoost:
+                recentlyTriggeredFusions.Remove(FusionType.InvincibleDash);
+                break;
+            case PowerUpType.ScoreMultiplier:
+                recentlyTriggeredFusions.Remove(FusionType.FeverFrenzy);
+                break;
         }
     }
-
-    public FusionType GetActiveFusion() => activeFusion;
 }

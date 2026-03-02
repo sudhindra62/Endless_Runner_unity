@@ -4,23 +4,22 @@ using PowerUps;
 
 public class PowerUpController : MonoBehaviour
 {
-    [Header("Player Components")]
-    [SerializeField] private Magnet magnet;
-    [SerializeField] private GameObject shieldVisual;
-
+    private PlayerController playerController;
+    private PlayerMovement playerMovement;
     private ScoreManager scoreManager;
     private CurrencyManager currencyManager;
 
     private void Start()
     {
+        // Resolve dependencies from the ServiceLocator
+        playerController = ServiceLocator.Get<PlayerController>();
+        playerMovement = ServiceLocator.Get<PlayerMovement>();
         scoreManager = ServiceLocator.Get<ScoreManager>();
         currencyManager = ServiceLocator.Get<CurrencyManager>();
         
+        // Subscribe to power-up events
         PowerUpManager.Instance.OnPowerUpActivated += OnPowerUpActivated;
         PowerUpManager.Instance.OnPowerUpExpired += OnPowerUpExpired;
-
-        if (magnet) magnet.enabled = false;
-        if (shieldVisual) shieldVisual.SetActive(false);
     }
 
     private void OnDestroy()
@@ -36,18 +35,19 @@ public class PowerUpController : MonoBehaviour
     {
         switch (powerUp.Type)
         {
-            case PowerUpType.Magnet:
-                if (magnet) magnet.enabled = true;
-                break;
             case PowerUpType.Shield:
-                if (shieldVisual) shieldVisual.SetActive(true);
+                playerController.SetShield(true);
                 break;
             case PowerUpType.CoinDoubler:
-                if (currencyManager) currencyManager.SetCoinMultiplier(2);
+                currencyManager?.ActivateCoinDoubler(true);
                 break;
             case PowerUpType.ScoreMultiplier:
-                if (scoreManager) scoreManager.SetScoreMultiplier(2);
+                scoreManager?.SetScoreMultiplier(2);
                 break;
+            case PowerUpType.SpeedBoost:
+                playerMovement?.ApplySpeedMultiplier("SpeedBoost", 1.5f);
+                break;
+            // Magnet functionality will be handled separately as it's not a direct player stat
         }
     }
 
@@ -55,17 +55,17 @@ public class PowerUpController : MonoBehaviour
     {
         switch (powerUp.Type)
         {
-            case PowerUpType.Magnet:
-                if (magnet) magnet.enabled = false;
-                break;
             case PowerUpType.Shield:
-                if (shieldVisual) shieldVisual.SetActive(false);
+                playerController.SetShield(false);
                 break;
             case PowerUpType.CoinDoubler:
-                if (currencyManager) currencyManager.SetCoinMultiplier(1);
+                currencyManager?.ActivateCoinDoubler(false);
                 break;
             case PowerUpType.ScoreMultiplier:
-                if (scoreManager) scoreManager.SetScoreMultiplier(1);
+                scoreManager?.SetScoreMultiplier(1);
+                break;
+            case PowerUpType.SpeedBoost:
+                playerMovement?.RemoveSpeedMultiplier("SpeedBoost");
                 break;
         }
     }

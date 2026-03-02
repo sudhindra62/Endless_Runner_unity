@@ -25,16 +25,16 @@ public class PowerUpFusionManager : MonoBehaviour
         }
 
         LoadFusionDefinitions();
-        powerUpManager.OnPowerUpActivated += CheckFusions;
-        powerUpManager.OnPowerUpDeactivated += CheckFusions;
+        powerUpManager.OnPowerUpActivated += HandlePowerUpActivated;
+        powerUpManager.OnPowerUpDeactivated += HandlePowerUpDeactivated;
     }
 
     private void OnDestroy()
     {
         if (powerUpManager != null)
         {
-            powerUpManager.OnPowerUpActivated -= CheckFusions;
-            powerUpManager.OnPowerUpDeactivated -= CheckFusions;
+            powerUpManager.OnPowerUpActivated -= HandlePowerUpActivated;
+            powerUpManager.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
         }
     }
 
@@ -50,10 +50,22 @@ public class PowerUpFusionManager : MonoBehaviour
         }
     }
 
+    // Correctly handles the OnPowerUpActivated event
+    private void HandlePowerUpActivated(PowerUpType type, float duration)
+    {
+        CheckFusions();
+    }
+
+    // Correctly handles the OnPowerUpDeactivated event
+    private void HandlePowerUpDeactivated(PowerUpType type)
+    {
+        CheckFusions();
+    }
+
     /// <summary>
     /// Checks the currently active power-ups against all known fusion definitions.
     /// </summary>
-    private void CheckFusions(PowerUpType changedType)
+    private void CheckFusions()
     {
         HashSet<PowerUpType> activePowerUps = powerUpManager.GetActivePowerUpTypes();
 

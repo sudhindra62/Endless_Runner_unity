@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System;
 using System.Collections;
@@ -7,16 +8,12 @@ public class PlayerController : MonoBehaviour
 {
     // Movement
     [Header("Movement")]
-    [SerializeField] private float initialSpeed = 10f;
-    [SerializeField] private float maxSpeed = 30f; // Safety cap for speed
     [SerializeField] private float laneWidth = 4f;
     [SerializeField] private int maxLaneOffset = 1;
     [SerializeField] private float laneChangeSpeed = 15f;
 
     // Jumping & Sliding
     [Header("Jumping & Sliding")]
-    [SerializeField] private float jumpForce = 8f;
-    [SerializeField] private float gravityScale = 2f;
     [SerializeField] private float slideDuration = 0.8f;
     [SerializeField] private float slideColliderHeight = 0.5f;
 
@@ -26,10 +23,17 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask groundMask;
     [SerializeField] private float groundCheckDistance = 0.2f;
 
-    [Header("Coin Collection")]
-    [SerializeField] private int coinStreakThreshold = 10;
-    [SerializeField] private int coinStreakComboBonus = 2;
-    [SerializeField] private float coinStreakFeverBonus = 10f;
+    // --- Flow Combo ---
+    [Header("Flow Combo")]
+    [SerializeField] private int jumpStreakThreshold = 2;
+    [SerializeField] private float slowSpeedThreshold = 5f;
+    [SerializeField] private float slowSpeedDuration = 2f;
+    [SerializeField] private float idleThreshold = 3f;
+    [SerializeField] private LayerMask obstacleLayer;
+    
+    // --- Power-Up Fusions ---
+    [Header("Power-Up Fusions")]
+    [SerializeField] private float invincibleDashSpeedBonus = 1.5f;
 
     // Animation
     [Header("Animation")]
@@ -44,10 +48,10 @@ public class PlayerController : MonoBehaviour
 
     // State
     private CharacterController controller;
+    private PlayerMovement playerMovement;
     private Vector3 velocity;
     private int currentLane = 0;
     private float targetHorizontalPosition;
-    private float currentSpeed;
     private bool isSliding = false;
     private bool isGrounded;
     private float originalColliderHeight;
@@ -56,50 +60,39 @@ public class PlayerController : MonoBehaviour
     private bool isDead = false;
     private bool isPostReviveImmune = false;
     private bool isPaused = false;
-    private float momentumSpeedBonus = 0f;
     private bool isFeverActive = false;
-    private int coinStreak = 0;
     private bool isShieldActive = false;
 
-    // Dependencies
-    private GameDifficultyManager difficultyManager;
-    private PowerUpManager powerUpManager;
-    private FeverModeManager feverModeManager;
-    private CurrencyManager currencyManager;
-    private FlowComboManager flowComboManager;
+    // Flow Combo State
+    private int jumpStreak = 0;
+    private float lastInputTime;
+    private float slowSpeedTimer;
+    private Transform lastJumpObstacle;
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
         originalColliderHeight = controller.height;
         startPosition = transform.position;
-        ServiceLocator.Register(this);
     }
 
     private void Start()
     {
-        difficultyManager = ServiceLocator.Get<GameDifficultyManager>();
-        powerUpManager = ServiceLocator.Get<PowerUpManager>();
-        feverModeManager = ServiceLocator.Get<FeverModeManager>();
-        currencyManager = ServiceLocator.Get<CurrencyManager>();
-        flowComboManager = ServiceLocator.Get<FlowComboManager>();
+        playerMovement = ServiceLocator.Get<PlayerMovement>();
 
         GameManager.OnGameStateChanged += OnGameStateChanged;
-        FlowComboManager.OnMomentumChanged += OnMomentumChanged;
-        FeverModeManager.OnFeverStart += OnFeverStart;
-        FeverModeManager.OnFeverEnd += OnFeverEnd;
-
-        currentSpeed = initialSpeed;
+        PowerUpFusionManager.OnFusionActivated += HandleFusionActivation;
+        PowerUpFusionManager.OnFusionDeactivated += HandleFusionDeactivation;
+        
         transform.position = startPosition;
+        lastInputTime = Time.time;
     }
 
     private void OnDestroy()
     {
         GameManager.OnGameStateChanged -= OnGameStateChanged;
-        FlowComboManager.OnMomentumChanged -= OnMomentumChanged;
-        FeverModeManager.OnFeverStart -= OnFeverStart;
-        FeverModeManager.OnFeverEnd -= OnFeverEnd;
-        ServiceLocator.Unregister<PlayerController>();
+        PowerUpFusionManager.OnFusionActivated -= HandleFusionActivation;
+        PowerUpFusionManager.OnFusionDeactivated -= HandleFusionDeactivation;
     }
 
     private void Update()
@@ -115,21 +108,12 @@ public class PlayerController : MonoBehaviour
         HandleLaneChanging();
         HandleGravity();
         HandleGroundDetection();
+        CheckComboBreakConditions();
     }
 
     private void HandleForwardMovement()
     {
-        float baseSpeed = initialSpeed;
-        if (difficultyManager != null)
-        {
-            baseSpeed = difficultyManager.GetCurrentPlayerSpeed();
-        }
-
-        float feverSpeedBoost = isFeverActive && feverModeManager != null ? feverModeManager.GetFeverSpeedBoost() : 0f;
-
-        currentSpeed = baseSpeed + momentumSpeedBonus + feverSpeedBoost;
-        currentSpeed = Mathf.Min(currentSpeed, maxSpeed);
-
+        float currentSpeed = playerMovement.GetCurrentSpeed();
         controller.Move(transform.forward * currentSpeed * Time.deltaTime);
     }
 
@@ -149,7 +133,7 @@ public class PlayerController : MonoBehaviour
     {
         if (!isGrounded)
         {
-            velocity.y += Physics.gravity.y * gravityScale * Time.deltaTime;
+            velocity.y += playerMovement.GetCurrentGravity() * Time.deltaTime;
         }
         else if (velocity.y < 0)
         {
@@ -161,11 +145,23 @@ public class PlayerController : MonoBehaviour
     private void HandleGroundDetection()
     {
         isGrounded = Physics.Raycast(transform.position, Vector3.down, out _, groundCheckDistance, groundMask);
+        if (isGrounded)
+        {
+            jumpStreak = 0;
+            lastJumpObstacle = null;
+        }
     }
 
     public void OnSwipe(Vector2 direction)
     {
         if (GameManager.Instance.CurrentState != GameState.Playing || isDead) return;
+        lastInputTime = Time.time;
+
+        bool isInputReversed = playerMovement.IsInputReversed();
+        if (isInputReversed)
+        {
+            direction.x *= -1;
+        }
 
         if (direction == Vector2.left && currentLane > -maxLaneOffset) currentLane--;
         else if (direction == Vector2.right && currentLane < maxLaneOffset) currentLane++;
@@ -175,8 +171,8 @@ public class PlayerController : MonoBehaviour
 
     private void Jump()
     {
-        if (!isGrounded) return;
-        velocity.y = Mathf.Sqrt(jumpForce * -2f * Physics.gravity.y * gravityScale);
+        if (!isGrounded || playerMovement.IsJumpDisabled()) return;
+        velocity.y = Mathf.Sqrt(playerMovement.GetCurrentJumpForce() * -2f * playerMovement.GetCurrentGravity());
         animator.SetTrigger(jumpHash);
     }
 
@@ -187,7 +183,7 @@ public class PlayerController : MonoBehaviour
         controller.center = new Vector3(0, slideColliderHeight / 2, 0);
         animator.SetTrigger(slideHash);
 
-        yield return new WaitForSeconds(slideDuration);
+        yield return StartCoroutine(CheckSlideUnderObstacle());
 
         controller.height = originalColliderHeight;
         controller.center = new Vector3(0, originalColliderHeight / 2, 0);
@@ -196,45 +192,77 @@ public class PlayerController : MonoBehaviour
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        if (hit.gameObject.CompareTag("Coin"))
+        if (isDead) return;
+
+        bool isInvincibleDashActive = playerMovement.IsInvincibleDashActive();
+
+        if ((obstacleLayer.value & (1 << hit.gameObject.layer)) > 0)
         {
-            CollectCoin(hit.gameObject);
-            return;
+            if (isInvincibleDashActive || isFeverActive)
+            {
+                hit.gameObject.SetActive(false); 
+                return;
+            }
+
+            if (isPostReviveImmune) return;
+
+            if (isShieldActive)
+            {
+                isShieldActive = false;
+                hit.gameObject.SetActive(false);
+                return;
+            }
+
+            if (!isGrounded && hit.point.y < transform.position.y && lastJumpObstacle != hit.transform)
+            {
+                lastJumpObstacle = hit.transform;
+                jumpStreak++;
+                if (jumpStreak >= jumpStreakThreshold)
+                {
+                    FlowComboManager.Instance.AddToCombo();
+                    jumpStreak = 0;
+                }
+            }
+            else
+            {
+                Die();
+            }
         }
-
-        if (isDead || !hit.gameObject.CompareTag("Obstacle")) return;
-
-        if (isFeverActive)
-        {
-            hit.gameObject.SetActive(false);
-            return;
-        }
-
-        if (isPostReviveImmune) return;
-
-        if (isShieldActive)
-        {
-            powerUpManager?.DeactivatePowerUp(PowerUpType.Shield);
-            hit.gameObject.SetActive(false);
-            return;
-        }
-
-        flowComboManager?.BreakCombo();
-        coinStreak = 0; // Reset coin streak on hit
-        Die();
     }
 
-    private void CollectCoin(GameObject coinObject)
+    private IEnumerator CheckSlideUnderObstacle()
     {
-        currencyManager?.AddCoins(1);
-        coinObject.SetActive(false);
-
-        coinStreak++;
-        if (coinStreak >= coinStreakThreshold)
+        float slideEndTime = Time.time + slideDuration;
+        bool obstacleSlidUnder = false;
+        while (Time.time < slideEndTime && !obstacleSlidUnder)
         {
-            flowComboManager?.AddCombo(coinStreakComboBonus);
-            feverModeManager?.AddFeverPoints(coinStreakFeverBonus);
-            coinStreak = 0; // Reset streak after getting the bonus
+            if (Physics.CheckBox(transform.position + Vector3.up * originalColliderHeight, new Vector3(controller.radius, 0.1f, 0.5f), transform.rotation, obstacleLayer))
+            {
+                FlowComboManager.Instance.AddToCombo();
+                obstacleSlidUnder = true;
+            }
+            yield return null;
+        }
+    }
+
+    private void CheckComboBreakConditions()
+    {
+        if (Time.time - lastInputTime > idleThreshold)
+        {
+            FlowComboManager.Instance.BreakCombo();
+        }
+
+        if (playerMovement.GetCurrentSpeed() < slowSpeedThreshold)
+        {
+            slowSpeedTimer += Time.deltaTime;
+            if (slowSpeedTimer >= slowSpeedDuration)
+            {
+                FlowComboManager.Instance.BreakCombo();
+            }
+        }
+        else
+        {
+            slowSpeedTimer = 0;
         }
     }
 
@@ -242,8 +270,13 @@ public class PlayerController : MonoBehaviour
     {
         if (isDead) return;
         isDead = true;
+        FlowComboManager.Instance.BreakCombo();
+        DataManager.Instance.ResetCoinStreak();
         animator.SetTrigger(dieHash);
         OnDeath?.Invoke();
+
+        // The critical end-to-end link, now consolidated.
+        GameManager.Instance.PlayerDied();
     }
 
     public void Revive()
@@ -261,11 +294,14 @@ public class PlayerController : MonoBehaviour
         isPostReviveImmune = false;
         isFeverActive = false;
         isShieldActive = false;
-        momentumSpeedBonus = 0f;
-        currentSpeed = initialSpeed;
+        
+        playerMovement.ResetState();
+        
         velocity = Vector3.zero;
         currentLane = 0;
-        coinStreak = 0;
+        jumpStreak = 0;
+        slowSpeedTimer = 0;
+        lastInputTime = Time.time;
 
         controller.enabled = false;
         transform.position = startPosition;
@@ -290,36 +326,26 @@ public class PlayerController : MonoBehaviour
             ResetPlayer();
         }
     }
-
-    private void OnMomentumChanged(float speedBonus)
-    {
-        momentumSpeedBonus = speedBonus;
-    }
-
-    private void OnFeverStart(float duration)
-    {
-        isFeverActive = true;
-    }
-
-    private void OnFeverEnd()
-    {
-        isFeverActive = false;
-    }
-
-    public bool IsSliding() => isSliding;
     
-    public void SetShield(bool isActive)
+    // --- Fusion Handlers ---
+    private void HandleFusionActivation(FusionModifierData data)
     {
-        isShieldActive = isActive;
+        if (data.Type == FusionType.InvincibleDash)
+        {
+            playerMovement.ApplySpeedMultiplier("InvincibleDash", invincibleDashSpeedBonus);
+        }
     }
 
-    public void Stop()
+    private void HandleFusionDeactivation(FusionType type)
     {
-        isPaused = true;
+        if (type == FusionType.InvincibleDash)
+        {
+            playerMovement.RemoveSpeedMultiplier("InvincibleDash");
+        }
     }
 
-    public void ResetVelocity()
-    {
-        velocity = Vector3.zero;
-    }
+    // Public state for other systems
+    public bool IsSliding() => isSliding;
+    public void SetFeverMode(bool isActive) => isFeverActive = isActive;
+    public void SetShield(bool isActive) => isShieldActive = isActive;
 }

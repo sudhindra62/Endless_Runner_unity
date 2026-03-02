@@ -27,18 +27,19 @@ public class FeverModeManager : MonoBehaviour
 
     private void Awake()
     {
-        // Assumes a ServiceLocator is in the scene
         ServiceLocator.Register(this);
     }
 
     private void Start()
     {
         GameStateManager.OnGameStateChanged += OnGameStateChanged;
+        PowerUpFusionManager.OnFusionActivated += HandleFusionActivation; // Subscribe to fusion events
     }
 
     private void OnDestroy()
     {
         GameStateManager.OnGameStateChanged -= OnGameStateChanged;
+        PowerUpFusionManager.OnFusionActivated -= HandleFusionActivation; // Unsubscribe from fusion events
     }
 
     public void AddFeverPoints(float amount)
@@ -76,10 +77,23 @@ public class FeverModeManager : MonoBehaviour
 
     private void OnGameStateChanged(GameState newState)
     {
-        // Reset on new run start or returning to menu
         if (newState == GameState.Playing || newState == GameState.Menu || newState == GameState.EndOfRun)
         {
             ResetFeverState();
+        }
+    }
+    
+    // --- Fusion Integration ---
+    private void HandleFusionActivation(FusionModifierData data)
+    {
+        if (data.Type == FusionType.FeverFrenzy)
+        {
+            Debug.Log("Fever Frenzy Fusion detected! Forcing Fever Mode.");
+            if (isFeverActive && feverCoroutine != null)
+            {
+                StopCoroutine(feverCoroutine); // Stop existing fever to restart it
+            }
+            ActivateFever();
         }
     }
 
@@ -109,7 +123,7 @@ public class FeverModeManager : MonoBehaviour
 
     public void ApplyChargeMultiplier(string sourceId, float multiplier)
     {
-        chargeMultipliers[sourceId] = Mathf.Max(0.01f, multiplier); // Prevent non-positive multipliers
+        chargeMultipliers[sourceId] = Mathf.Max(0.01f, multiplier);
     }
 
     public void RemoveChargeMultiplier(string sourceId)
