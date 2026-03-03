@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System;
 
@@ -5,15 +6,21 @@ public class ScoreManager : Singleton<ScoreManager>
 {
     public static event Action<int> OnScoreChanged;
 
+    [Header("Scoring Bonuses")]
+    [SerializeField] private int nearMissScoreBonus = 50; // EVOLUTION: Added for Near-Miss System
+
     public int Score { get; private set; }
     private float comboMultiplier = 1f;
-    private float scoreMultiplier = 1f; // for power-ups
+    private float powerUpMultiplier = 1f;
+    private float momentumMultiplier = 1f;
 
     private void OnEnable()
     {
-        // Subscribe to game and combo events
+        // Subscribe to game, combo, and momentum events
         GameManager.OnRunEnd += ResetScore;
         FlowComboManager.OnComboMultiplierChanged += HandleComboMultiplierChanged;
+        MomentumManager.OnScoreMultiplierChanged += HandleMomentumMultiplierChanged;
+        NearMissManager.OnNearMiss += HandleNearMiss; // EVOLUTION: Subscribe to Near-Miss
     }
 
     private void OnDisable()
@@ -21,43 +28,46 @@ public class ScoreManager : Singleton<ScoreManager>
         // Unsubscribe to prevent memory leaks
         GameManager.OnRunEnd -= ResetScore;
         FlowComboManager.OnComboMultiplierChanged -= HandleComboMultiplierChanged;
+        MomentumManager.OnScoreMultiplierChanged -= HandleMomentumMultiplierChanged;
+        NearMissManager.OnNearMiss -= HandleNearMiss; // EVOLUTION: Unsubscribe from Near-Miss
     }
 
-    /// <summary>
-    /// Updates the internal combo multiplier when the combo state changes.
-    /// </summary>
     private void HandleComboMultiplierChanged(float newMultiplier)
     {
         comboMultiplier = newMultiplier;
     }
 
-    /// <summary>
-    /// Sets the score multiplier from a power-up.
-    /// </summary>
-    public void SetScoreMultiplier(float multiplier)
+    private void HandleMomentumMultiplierChanged(float newMultiplier)
     {
-        scoreMultiplier = multiplier;
+        momentumMultiplier = newMultiplier;
+    }
+    
+    // EVOLUTION: Handles the score bonus from the NearMissManager.
+    private void HandleNearMiss()
+    {
+        AddScore(nearMissScoreBonus);
+        FlowComboManager.Instance.AddToCombo(1); // BONUS RULE: Increase FlowCombo slightly
     }
 
-    /// <summary>
-    /// Adds score, factoring in all multipliers.
-    /// </summary>
+    public void SetPowerUpScoreMultiplier(float multiplier)
+    {
+        powerUpMultiplier = multiplier;
+    }
+
     public void AddScore(int amount)
     {
-        // Apply all multipliers to the base score gain.
-        float finalAmount = amount * comboMultiplier * scoreMultiplier;
+        // All original logic is preserved. Near-miss bonus is routed through this method.
+        float finalAmount = amount * comboMultiplier * powerUpMultiplier * momentumMultiplier;
         Score += (int)finalAmount;
         OnScoreChanged?.Invoke(Score);
     }
 
-    /// <summary>
-    /// Resets the score and all multipliers at the end of a run.
-    /// </summary>
     private void ResetScore()
     {
         Score = 0;
         comboMultiplier = 1f;
-        scoreMultiplier = 1f;
+        powerUpMultiplier = 1f;
+        momentumMultiplier = 1f;
         OnScoreChanged?.Invoke(Score);
         Debug.Log("Score has been reset for the new run.");
     }

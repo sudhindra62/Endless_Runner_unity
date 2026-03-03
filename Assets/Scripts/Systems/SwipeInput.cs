@@ -7,6 +7,9 @@ public class SwipeInput : MonoBehaviour
     public delegate void Swipe(Vector2 direction);
     public event Swipe OnSwipe;
 
+    public delegate void Tap();
+    public event Tap OnTap;
+
     [SerializeField] private float minSwipeDistance = 20f;
     [SerializeField] private float maxSwipeTime = 1f;
     [SerializeField] private float inputBufferTime = 0.2f;
@@ -35,6 +38,7 @@ public class SwipeInput : MonoBehaviour
         if (playerController != null)
         {
             OnSwipe += playerController.OnSwipe;
+            OnTap += playerController.OnTap;
         }
     }
 
@@ -62,7 +66,11 @@ public class SwipeInput : MonoBehaviour
         Vector2 endPosition = touchPositionAction.ReadValue<Vector2>();
         float swipeDistance = Vector2.Distance(startPosition, endPosition);
 
-        if (swipeTime < maxSwipeTime && swipeDistance > minSwipeDistance)
+        if (swipeDistance < minSwipeDistance && swipeTime < maxSwipeTime)
+        {
+            OnTap?.Invoke();
+        }
+        else if (swipeTime < maxSwipeTime && swipeDistance > minSwipeDistance)
         {
             Vector2 direction = endPosition - startPosition;
             Vector2 swipeDirection = GetSwipeDirection(direction);
@@ -106,6 +114,10 @@ public class SwipeInput : MonoBehaviour
         else if (Keyboard.current.downArrowKey.wasPressedThisFrame)
         {
             OnSwipe?.Invoke(Vector2.down);
+        }
+        else if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            OnTap?.Invoke();
         }
     }
 }

@@ -1,28 +1,51 @@
 
 using UnityEngine;
 
-/// <summary>
-/// Detects when the player performs a "perfect dodge" by narrowly avoiding an obstacle.
-/// When a successful dodge is detected, it notifies the FlowComboManager.
-/// </summary>
-[RequireComponent(typeof(Collider))]
 public class PerfectDodgeDetector : MonoBehaviour
 {
-    [Tooltip("The layer that contains the obstacles to be dodged.")]
+    [Tooltip("The layer containing obstacles to check for a perfect dodge.")]
     [SerializeField] private LayerMask obstacleLayer;
 
-    public static event System.Action OnPerfectDodge;
+    [Tooltip("The cooldown in seconds before another perfect dodge can be registered.")]
+    [SerializeField] private float perfectDodgeCooldown = 1f;
+
+    private float lastDodgeTime;
+    private bool isObstacleInRange;
+
+    /// <summary>
+    /// Called by the PlayerController when a dodge input is received.
+    /// Checks if an obstacle is in range to award a perfect dodge.
+    /// </summary>
+    public void CheckForPerfectDodge()
+    {
+        if (isObstacleInRange && Time.time > lastDodgeTime + perfectDodgeCooldown)
+        {
+            lastDodgeTime = Time.time;
+            FlowComboManager.Instance.AddToCombo(2); // Award 2 style points for a perfect dodge.
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Check if the object we collided with is on the obstacle layer.
         if ((obstacleLayer.value & (1 << other.gameObject.layer)) > 0)
         {
-            // Notify the FlowComboManager that a perfect dodge occurred.
-            FlowComboManager.Instance.AddToCombo();
-            Debug.Log("Perfect Dodge! Combo increased.");
-
-            OnPerfectDodge?.Invoke();
+            isObstacleInRange = true;
         }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if ((obstacleLayer.value & (1 << other.gameObject.layer)) > 0)
+        {
+            isObstacleInRange = false;
+        }
+    }
+
+    /// <summary>
+    /// Resets the detector's state, typically called when the player resets.
+    /// </summary>
+    public void ResetDetector()
+    {
+        isObstacleInRange = false;
     }
 }

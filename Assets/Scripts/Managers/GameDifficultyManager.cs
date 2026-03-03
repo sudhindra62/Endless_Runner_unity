@@ -1,168 +1,82 @@
 
 using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
 
-/// <summary>
-/// Aggregates difficulty modifiers from various sources (like Adaptive Difficulty)
-/// and also applies its own progressive difficulty scaling over the course of a run.
-/// Its parameters are now dynamically loaded from a remote configuration.
-/// </summary>
 public class GameDifficultyManager : MonoBehaviour
 {
-    #region CONFIGURATION
-    /// <summary>
-    /// A new data structure to hold the tuning values for the progressive difficulty system.
-    /// </summary>
-    private struct ProgressionConfig
-    {
-        public float StartTime; // Time in seconds before difficulty starts to increase.
-        public float EndTime;   // Time in seconds when difficulty reaches its max progressive multiplier.
-        public float MaxProgressiveMultiplier; // The maximum multiplier added by time.
-    }
-    private ProgressionConfig config;
-    #endregion
+    // EVOLUTION: Kept singleton for global access, but now primarily uses ServiceLocator.
+    public static GameDifficultyManager Instance { get; private set; }
 
-    #region STATE_AND_CONSTANTS
-    // --- Existing dictionary is 100% preserved ---
-    private readonly Dictionary<string, float> difficultyMultipliers = new Dictionary<string, float>();
-    
-    // --- Existing and New Source IDs ---
-    private const string ADAPTIVE_DIFFICULTY_SOURCE_ID = "AdaptiveDifficulty";
-    private const string PROGRESSIVE_DIFFICULTY_SOURCE_ID = "ProgressiveDifficulty"; // NEW
-    #endregion
+    [Header("Difficulty Scaling")]
+    [Tooltip("The rate at which difficulty increases over time (units per second).")]
+    [SerializeField] private float difficultyIncreaseRate = 0.01f;
 
-    #region UNITY_LIFECYCLE
+    [Tooltip("The maximum difficulty multiplier.")]
+    [SerializeField] private float maxDifficultyMultiplier = 3f;
+
+    private float currentDifficultyMultiplier = 1f;
+    private float timeElapsed = 0f;
+
     private void Awake()
     {
-        // --- EVOLUTION: Load config from remote settings ---
-        LoadConfiguration();
-
-        // --- Existing ServiceLocator registration (Preserved) ---
-        ServiceLocator.Register(this);
+        // EVOLUTION: Implement both Singleton and ServiceLocator registration
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        ServiceLocator.Register<GameDifficultyManager>(this);
     }
 
     private void Start()
     {
-        // --- Existing subscription is 100% preserved ---
-        AdaptiveDifficultyManager.OnDifficultyChanged += HandleAdaptiveDifficultyChange;
-        
-        // --- EVOLUTION: Subscribe to config updates and start the progression coroutine ---
-        RemoteConfig.OnConfigUpdated += HandleConfigUpdated;
-        StartCoroutine(ProgressiveDifficultyRoutine());
+        // EVOLUTION: Subscribe to game state changes to reset difficulty
+        GameManager.OnGameStateChanged += OnGameStateChanged;
     }
 
     private void OnDestroy()
     {
-        // --- Existing unsubscriptions are 100% preserved ---
+        // EVOLUTION: Unsubscribe from events and unregister from ServiceLocator
+        GameManager.OnGameStateChanged -= OnGameStateChanged;
         ServiceLocator.Unregister<GameDifficultyManager>();
-        AdaptiveDifficultyManager.OnDifficultyChanged -= HandleAdaptiveDifficultyChange;
-
-        // --- EVOLUTION: Unsubscribe from config updates ---
-        RemoteConfig.OnConfigUpdated -= HandleConfigUpdated;
     }
-    #endregion
 
-    #region CONFIGURATION_HANDLING
-    /// <summary>
-    /// Populates the progressive difficulty configuration from the RemoteConfig manager.
-    /// </summary>
-    private void LoadConfiguration()
+    private void Update()
     {
-        config = new ProgressionConfig
+        if (GameManager.Instance.CurrentState == GameState.Playing)
         {
-            StartTime = RemoteConfig.GetFloat("ProgressiveDifficultyStartTime", 60f),
-            EndTime = RemoteConfig.GetFloat("ProgressiveDifficultyEndTime", 600f),
-            MaxProgressiveMultiplier = RemoteConfig.GetFloat("ProgressiveDifficultyMaxMultiplier", 1.5f)
-        };
-        Debug.Log("Game Difficulty Manager configuration loaded.");
-    }
-
-    /// <summary>
-    /// Handles live updates to the remote configuration, reloading settings.
-    /// </summary>
-    private void HandleConfigUpdated()
-    {
-        Debug.Log("Remote config updated. Reloading Game Difficulty Manager settings.");
-        LoadConfiguration();
-    }
-    #endregion
-
-    #region CORE_LOGIC
-    /// <summary>
-    /// NEW: This coroutine runs for the duration of the game, slowly increasing
-    /// a difficulty multiplier based on the time elapsed.
-    /// </summary>
-    private IEnumerator ProgressiveDifficultyRoutine()
-    {
-        while (true)
-        {
-            float runTime = Time.timeSinceLevelLoad;
-            float progressiveMultiplier = 1f;
-
-            if (runTime > config.StartTime)
-            {
-                // Calculate how far we are into the difficulty scaling period.
-                float progressionRatio = Mathf.Clamp01((runTime - config.StartTime) / (config.EndTime - config.StartTime));
-                // Lerp from 1.0 to the max multiplier based on the ratio.
-                progressiveMultiplier = Mathf.Lerp(1f, config.MaxProgressiveMultiplier, progressionRatio);
-            }
-            
-            // Apply the new multiplier.
-            ApplyDifficultyMultiplier(PROGRESSIVE_DIFFICULTY_SOURCE_ID, progressiveMultiplier);
-
-            // Wait for a second before recalculating.
-            yield return new WaitForSeconds(1f);
+            timeElapsed += Time.deltaTime;
+            // EVOLUTION: More robust calculation for difficulty ramp
+            currentDifficultyMultiplier = 1f + (timeElapsed * difficultyIncreaseRate);
+            currentDifficultyMultiplier = Mathf.Min(currentDifficultyMultiplier, maxDifficultyMultiplier);
         }
     }
 
     /// <summary>
-    /// Preserved Method: Handles changes from the adaptive difficulty system.
-    /// </summary>
-    private void HandleAdaptiveDifficultyChange(float adaptiveMultiplier)
-    {
-        ApplyDifficultyMultiplier(ADAPTIVE_DIFFICULTY_SOURCE_ID, adaptiveMultiplier);
-    }
-    #endregion
-
-    #region PUBLIC_API
-    /// <summary>
-    /// Preserved Method: Applies a multiplier from an external source.
-    /// </summary>
-    public void ApplyDifficultyMultiplier(string sourceId, float multiplier)
-    {
-        difficultyMultipliers[sourceId] = multiplier;
-    }
-
-    /// <summary>
-    /// Preserved Method: Removes a multiplier from an external source.
-    /// </summary>
-    public void RemoveDifficultyMultiplier(string sourceId)
-    {
-        difficultyMultipliers.Remove(sourceId);
-    }
-
-    /// <summary>
-    /// Preserved Method: Calculates the final combined difficulty multiplier.
-    /// The logic of this method is unchanged and now correctly includes the new progressive multiplier.
+    /// EVOLUTION: Renamed for consistency with existing calls in ObstacleSpawner.
     /// </summary>
     public float GetDifficultyMultiplier()
     {
-        float totalMultiplier = 1f;
-        foreach (var multiplier in difficultyMultipliers.Values)
-        {
-            totalMultiplier *= multiplier;
-        }
-        return totalMultiplier;
+        return currentDifficultyMultiplier;
     }
 
     /// <summary>
-    /// Preserved Method: Resets the state. This correctly clears all multipliers,
-    /// including the progressive one, preparing the manager for a new run.
+    /// EVOLUTION: Reset function is now private and called via GameState change.
     /// </summary>
-    public void ResetState()
+    private void ResetDifficulty()
     {
-        difficultyMultipliers.Clear();
+        timeElapsed = 0f;
+        currentDifficultyMultiplier = 1f;
     }
-    #endregion
+
+    /// <summary>
+    /// EVOLUTION: Handles game state changes to automatically reset the difficulty.
+    /// </summary>
+    private void OnGameStateChanged(GameState newState)
+    {
+        if (newState == GameState.Menu || newState == GameState.EndOfRun)
+        {
+            ResetDifficulty();
+        }
+    }
 }

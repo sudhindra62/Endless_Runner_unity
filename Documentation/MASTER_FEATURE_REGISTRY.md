@@ -4,7 +4,7 @@
 
 ---
 
-### **CORE GAMEPLAY (8 Features)**
+### **CORE GAMEPLAY (9 Features)**
 
 1.  **FEATURE: Player Core Mechanics**
     -   **STATUS:** [PARTIAL]
@@ -22,26 +22,31 @@
     -   **GAPS:** Fusion logic is implemented but lacks unique visual effects for each combination.
 
 4.  **FEATURE: Score & Combo System**
-    -   **STATUS:** [PARTIAL]
+    -   **STATUS:** [COMPLETE]
     -   **DESCRIPTION:** Tracks player score, combo multipliers, and style points.
-    -   **GAPS:** `OnScoreChanged` event is implemented, but style point triggers are not defined.
+    -   **GAPS:** None.
 
-5.  **FEATURE: Enemy & Obstacle System**
+5.  **FEATURE: Momentum System**
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** Rewards uninterrupted gameplay (`flow`) by granting escalating tiers of speed and score multipliers, resetting upon mistakes.
+    -   **GAPS:** None.
+
+6.  **FEATURE: Enemy & Obstacle System**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Defines behaviors for various enemy types and dynamic obstacles.
     -   **GAPS:** Basic obstacles exist, but no enemies with AI behaviors have been created.
 
-6.  **FEATURE: Boss Battle System**
+7.  **FEATURE: Boss Battle System**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Manages unique, multi-phase boss encounters with special mechanics.
     -   **GAPS:** Entirely conceptual.
 
-7.  **FEATURE: Revive & Checkpoint System**
+8.  **FEATURE: Revive & Checkpoint System**
     -   **STATUS:** [PARTIAL]
     -   **DESCRIPTION:** Allows the player to revive mid-run using currency or ads.
     -   **GAPS:** UI is present, but the ad-based revive logic is not linked to an Ad Manager.
 
-8.  **FEATURE: Risk-Reward Lane System**
+9.  **FEATURE: Risk-Reward Lane System**
     -   **STATUS:** [COMPLETE]
     -   **DESCRIPTION:** A dynamic system that periodically designates a single lane as high-risk, high-reward by increasing both obstacle and coin density. The system is event-driven and its parameters are controlled by remote config.
     -   **GAPS:** None.
@@ -50,42 +55,42 @@
 
 ### **METAGAME & ECONOMY (8 Features)**
 
-9.  **FEATURE: Currency Management**
+10.  **FEATURE: Currency Management**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Manages all player currencies (Coins, Gems, Event Tokens).
     -   **GAPS:** No central `CurrencyManager` script exists to unify transactions.
 
-10. **FEATURE: In-App Purchase (IAP) System**
+11. **FEATURE: In-App Purchase (IAP) System**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Handles real-money transactions for purchasing currencies and items via platform stores.
     -   **GAPS:** IAP SDK is not integrated.
 
-11. **FEATURE: Ad Monetization System**
+12. **FEATURE: Ad Monetization System**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Manages rewarded video ads, interstitials, and banners.
     -   **GAPS:** Ad SDK is not integrated.
 
-12. **FEATURE: In-Game Shop**
+13. **FEATURE: In-Game Shop**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** UI and logic for players to spend currency on items, skins, and boosts.
     -   **GAPS:** Shop UI and product database are not created.
 
-13. **FEATURE: Mission & Quest System**
+14. **FEATURE: Mission & Quest System**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Manages daily, weekly, and storyline quests with rewards.
     -   **GAPS:** `MissionManager` and quest database are conceptual.
 
-14. **FEATURE: Character & Skin System**
+15. **FEATURE: Character & Skin System**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Allows players to unlock and equip different character skins with potential passive bonuses.
     -   **GAPS:** No skin selection UI or data structure exists.
 
-15. **FEATURE: Skill Tree & Progression**
+16. **FEATURE: Skill Tree & Progression**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Permanent player upgrades purchased with a specific currency.
     -   **GAPS:** Entirely conceptual.
 
-16. **FEATURE: Daily Rewards & Login Bonus**
+17. **FEATURE: Daily Rewards & Login Bonus**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Manages rewards for consecutive daily logins.
     -   **GAPS:** Entirely conceptual.
@@ -94,47 +99,47 @@
 
 ### **TECHNICAL & UI (9 Features)**
 
-17. **FEATURE: UI Management System**
+18. **FEATURE: UI Management System**
     -   **STATUS:** [PARTIAL]
     -   **DESCRIPTION:** Controls all UI panels, popups, and HUD elements.
     -   **GAPS:** Score and Fusion UI are working, but currency, active power-ups, and mission status are not displayed.
 
-18. **FEATURE: Game State Management**
+19. **FEATURE: Game State Management**
     -   **STATUS:** [COMPLETE]
     -   **DESCRIPTION:** Manages core game states (`Menu`, `Playing`, `Paused`, `EndOfRun`). A foundational, stable system.
     -   **GAPS:** None.
 
-19. **FEATURE: Data Persistence (Save/Load)**
+20. **FEATURE: Data Persistence (Save/Load)**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Saves and loads player progress, currency, and settings locally.
     -   **GAPS:** No `SaveManager` is implemented.
 
-20. **FEATURE: Audio Management**
+21. **FEATURE: Audio Management**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Controls background music, sound effects, and UI sounds with volume controls.
     -   **GAPS:** No central `AudioManager` exists.
 
-21. **FEATURE: Input Management**
+22. **FEATURE: Input Management**
     -   **STATUS:** [COMPLETE]
     -   **DESCRIPTION:** Uses Unity's Input System to handle swipe and touch controls. Foundational and stable.
     -   **GAPS:** None.
 
-22. **FEATURE: Analytics & Remote Config**
+23. **FEATURE: Analytics & Remote Config**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Integrates with Firebase to send analytics events and fetch remote configurations.
     -   **GAPS:** Firebase SDK is not integrated.
 
-23. **FEATURE: Notification System**
-    -   **STATUS:** [PLANNED]
+24. **FEATURE: Notification System**
+    -   **STATUS:** [PLANNE D]
     -   **DESCRIPTION:** Manages local and push notifications to re-engage players.
     -   **GAPS:** Entirely conceptual.
 
-24. **FEATURE: Error Handling & Logging**
+25. **FEATURE: Error Handling & Logging**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Implements a robust system for catching, logging, and reporting errors.
     -   **GAPS:** Lacks a centralized error logging service.
 
-25. **FEATURE: Tutorial System**
+26. **FEATURE: Tutorial System**
     -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Guides new players through core mechanics in a scripted sequence.
     -   **GAPS:** Entirely conceptual.

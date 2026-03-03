@@ -10,6 +10,7 @@
 -   [X] Dynamic Level Generation (Partial)
 -   [X] Power-Up System (Partial)
 -   [X] Score & Combo System (Partial)
+-   [X] Momentum System (Complete)
 -   [ ] Enemy & Obstacle System (Planned)
 -   [ ] Boss Battle System (Planned)
 -   [X] Revive & Checkpoint System (Partial)

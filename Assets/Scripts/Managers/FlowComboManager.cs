@@ -1,27 +1,25 @@
+
 using UnityEngine;
 using System;
 
 public class FlowComboManager : Singleton<FlowComboManager>
 {
-    // Events to notify other systems of changes
+    // Events
     public static event Action<int> OnComboChanged;
     public static event Action<float> OnComboMultiplierChanged;
+    public static event Action OnComboBroken; // EVOLUTION: Added for MomentumManager
 
-    // Public properties for read-only access
+    // Properties
     public int Combo { get; private set; }
     public float ComboMultiplier { get; private set; } = 1f;
 
     // Configuration
     [Header("Multiplier Settings")]
-    [Tooltip("The amount the multiplier increases for each combo point.")]
     [SerializeField] private float multiplierIncrement = 0.1f;
 
     private void Start()
     {
-        // Subscribe to its own event to manage the multiplier internally
         OnComboChanged += HandleComboChanged;
-        
-        // Ensure initial state is broadcast
         OnComboChanged?.Invoke(Combo);
         OnComboMultiplierChanged?.Invoke(ComboMultiplier);
     }
@@ -31,27 +29,38 @@ public class FlowComboManager : Singleton<FlowComboManager>
         OnComboChanged -= HandleComboChanged;
     }
 
+    // EVOLUTION: Overloaded method to allow for specific combo additions (e.g., from near-misses).
     /// <summary>
-    /// Increments the combo by one.
+    /// Adds a specified amount to the current combo.
+    /// </summary>
+    public void AddToCombo(int amount)
+    {
+        if (amount <= 0) return;
+        Combo += amount;
+        OnComboChanged?.Invoke(Combo);
+    }
+    
+    /// <summary>
+    /// Increments the combo by one. Original logic preserved.
     /// </summary>
     public void AddToCombo()
     {
-        Combo++;
-        OnComboChanged?.Invoke(Combo);
+        AddToCombo(1);
     }
 
     /// <summary>
-    /// Resets the combo to zero.
+    /// Resets the combo to zero and invokes the combo broken event.
     /// </summary>
     public void BreakCombo()
     {
-        if (Combo == 0) return; // No need to break if already at 0
+        if (Combo == 0) return;
         Combo = 0;
         OnComboChanged?.Invoke(Combo);
+        OnComboBroken?.Invoke(); // EVOLUTION: Notify listeners that the combo has broken.
     }
 
     /// <summary>
-    /// Recalculates and updates the combo multiplier whenever the combo count changes.
+    /// Recalculates and updates the combo multiplier.
     /// </summary>
     private void HandleComboChanged(int newCombo)
     {

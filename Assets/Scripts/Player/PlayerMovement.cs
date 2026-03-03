@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +28,16 @@ public class PlayerMovement : MonoBehaviour
         ServiceLocator.Register(this);
     }
 
+    private void OnEnable()
+    {
+        MomentumManager.OnSpeedModifierChanged += HandleMomentumSpeedChange;
+    }
+
+    private void OnDisable()
+    {
+        MomentumManager.OnSpeedModifierChanged -= HandleMomentumSpeedChange;
+    }
+
     private void OnDestroy()
     {
         ServiceLocator.Unregister<PlayerMovement>();
@@ -46,6 +57,13 @@ public class PlayerMovement : MonoBehaviour
             finalValue *= multiplier;
         }
         return Mathf.Clamp(finalValue, min, max);
+    }
+
+    // --- Event Handlers --- //
+
+    private void HandleMomentumSpeedChange(float newMultiplier)
+    {
+        ApplySpeedMultiplier("Momentum", newMultiplier);
     }
 
     // --- Public Methods for Modifiers --- //
