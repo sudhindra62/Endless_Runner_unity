@@ -1,30 +1,25 @@
-# GAME_DASHBOARD.md: Project Health & Next Steps
+# GAME_DASHBOARD.md: The Bridge
 
-**AI GUARDIAN STATUS:** `Awaiting developer command.`
-**PROJECT HEALTH:** [STABLE]
-**LAST SYNC:** {current_date_time}
-
----
-
-### **RECENT ACTIVITY**
-
--   **[COMPLETE]** **Risk-Reward Lane System:** Successfully integrated a high-risk, high-reward lane feature. The system is event-driven, remotely configurable, and includes visual indicators. The `RiskLaneManager`, `CoinSpawner`, `ObstacleSpawner`, and `EffectsManager` were all verified and are working in concert.
--   **[ANALYSIS]** **Code Optimization:** Identified opportunities to improve performance and readability in the new system by caching service locator calls and using more descriptive data structures.
+**ROLE:** Central command for all gameplay balance variables.
+**AUTO-UPDATING LOGIC:** AI Guardian will read this file to inform code-level decisions and update it to reflect the latest state of the project.
 
 ---
 
-### **TOP 3 DEVELOPMENT PRIORITIES**
-
-1.  **[METAGAME] Implement Currency Management:** Establish a central `CurrencyManager` to handle all in-game currency transactions. This is a foundational step for all other economy features.
-2.  **[TECHNICAL] Implement Data Persistence:** Create the `SaveManager` to save and load player progress. This is critical for player retention.
-3.  **[GAMEPLAY] Enhance Enemy & Obstacle System:** Move the feature from `[PLANNED]` to `[PARTIAL]` by creating the first enemy type with basic AI behavior.
-
----
-
-### **GOOGLE PLAY STORE READINESS**
-
--   **[CRITICAL]** **Privacy Policy:** No privacy policy URL has been provided.
--   **[CRITICAL]** **Data Safety Section:** The Google Play Console's Data Safety form is incomplete.
--   **[CRITICAL]** **Content Rating:** The official content rating questionnaire must be completed.
--   **[ACTION NEEDED]** **Monetization Declaration:** You must declare if the app uses Ads or IAP.
-
+| Variable                           | Value                                |
+| ---------------------------------- | ------------------------------------ |
+| **Player Speed (Initial)**         | 10                                   |
+| **Player Speed (Max)**             | 30                                   |
+| **Coin Value**                     | 1                                    |
+| **Powerup Duration**               | 10s                                  |
+| **Run Seed (Current)**             | `DYNAMIC (from RunSessionData)`      |
+| **Max Regeneration Attempts**      | 20                                   |
+| **Max Reaction Time (ms)**         | 1200ms                               |
+| **Min Reaction Time (ms)**         | 200ms                                |
+| **Min Obstacle Density**           | 0.1                                  |
+| **Max Obstacle Density**           | 0.85                                 |
+| **Min Safe Path Width (m)**        | 1.5m                                 |
+| **Assumed Player Jump Height (m)** | 2.0m                                 |
+| **Boss Mode Reaction Reduction**   | 50ms                                 |
+| **Density Increase on Dodge**      | 0.005                                |
+| **Maximum Unfairness Cap**         | 0.95                                 |
+| **Global Difficulty Curve**        | `Linear (0,0 to 1,1)`                |

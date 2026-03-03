@@ -6,6 +6,7 @@ using System;
 /// <summary>
 /// Manages a high-risk, high-reward lane. Its parameters are now dynamically loaded
 /// from the RemoteConfig system, adhering to project standards.
+/// --- EVOLUTION: Now compatible with DecisionPathManager ---
 /// </summary>
 public class RiskLaneManager : MonoBehaviour
 {
@@ -14,7 +15,6 @@ public class RiskLaneManager : MonoBehaviour
     #endregion
 
     #region CONFIGURATION
-    // --- EVOLUTION: Configuration is no longer serialized, it's loaded from RemoteConfig ---
     private float riskDuration;
     private float cooldownDuration;
     private float riskCoinMultiplier;
@@ -26,22 +26,26 @@ public class RiskLaneManager : MonoBehaviour
     private Coroutine riskCycleCoroutine;
     private int currentRiskLaneIndex = -99;
     private bool isGloballyIncompatibleEventActive = false;
+    private bool isDecisionPathActive = false; // --- NEW: Flag to pause logic during decision paths ---
     #endregion
 
     #region UNITY_LIFECYCLE
     private void Awake()
     {
         ServiceLocator.Register(this);
-        // --- EVOLUTION: Load configuration on awake ---
         LoadConfiguration();
     }
 
     private void Start()
     {
+        // --- PRESERVED: Original event subscriptions ---
         EnvironmentEventManager.OnWorldEvent += HandleWorldEvent;
         GameStateManager.OnGameStateChanged += HandleGameStateChanged;
-        // --- EVOLUTION: Subscribe to config updates ---
         RemoteConfig.OnConfigUpdated += HandleConfigUpdated;
+
+        // --- INTEGRATION: Subscribe to DecisionPathManager events for compatibility ---
+        DecisionPathManager.OnPathSplit += HandlePathSplit;
+        DecisionPathManager.OnPathMerge += HandlePathMerge;
 
         if (GameStateManager.Instance.CurrentState == GameState.Playing)
         {
@@ -51,18 +55,21 @@ public class RiskLaneManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        // --- PRESERVED: Original event unsubscriptions ---
         EnvironmentEventManager.OnWorldEvent -= HandleWorldEvent;
         GameStateManager.OnGameStateChanged -= HandleGameStateChanged;
-        // --- EVOLUTION: Unsubscribe from config updates ---
         RemoteConfig.OnConfigUpdated -= HandleConfigUpdated;
+        
+        // --- INTEGRATION: Unsubscribe from DecisionPathManager events ---
+        DecisionPathManager.OnPathSplit -= HandlePathSplit;
+        DecisionPathManager.OnPathMerge -= HandlePathMerge;
+
         ServiceLocator.Unregister<RiskLaneManager>();
     }
     #endregion
 
     #region CONFIGURATION_HANDLING
-    /// <summary>
-    /// NEW: Populates the configuration from the RemoteConfig manager.
-    /// </summary>
+    // --- PRESERVED: All original configuration logic is unchanged ---
     private void LoadConfiguration()
     {
         riskDuration = RemoteConfig.GetFloat("RiskLaneDuration", 15f);
@@ -70,24 +77,32 @@ public class RiskLaneManager : MonoBehaviour
         riskCoinMultiplier = RemoteConfig.GetFloat("RiskLaneCoinMultiplier", 2.0f);
         riskObstacleMultiplier = RemoteConfig.GetFloat("RiskLaneObstacleMultiplier", 1.5f);
         totalLanes = RemoteConfig.GetInt("TotalLanes", 3);
-        Debug.Log("RiskLaneManager configuration loaded from RemoteConfig.");
     }
 
-    /// <summary>
-    /// NEW: Handles live updates to the remote configuration.
-    /// </summary>
     private void HandleConfigUpdated()
     {
-        Debug.Log("Remote config updated. Reloading RiskLaneManager settings.");
         LoadConfiguration();
     }
     #endregion
     
     #region EVENT_HANDLERS
-    // --- PRESERVED: All event handlers are unchanged ---
+    // --- INTEGRATION: Event handlers to pause/resume logic for DecisionPathManager compatibility ---
+    private void HandlePathSplit(int minLane, int maxLane)
+    {
+        isDecisionPathActive = true;
+        StopRiskCycle(); // Pause risk lane logic immediately
+    }
+
+    private void HandlePathMerge()
+    {
+        isDecisionPathActive = false;
+        StartRiskCycle(); // Resume risk lane logic
+    }
+
+    // --- PRESERVED & ADAPTED: Now checks for the new compatibility flag ---
     private void HandleGameStateChanged(GameState newState)
     {
-        if (newState == GameState.Playing)
+        if (newState == GameState.Playing && !isDecisionPathActive)
         {
             StartRiskCycle();
         }
@@ -99,7 +114,7 @@ public class RiskLaneManager : MonoBehaviour
 
     private void HandleWorldEvent(WorldEventData eventData)
     {
-        if (eventData.IsLaneBased == false)
+        if (!eventData.IsLaneBased)
         {
             isGloballyIncompatibleEventActive = eventData.IsActive;
             if (isGloballyIncompatibleEventActive && currentRiskLaneIndex != -99)
@@ -111,10 +126,11 @@ public class RiskLaneManager : MonoBehaviour
     #endregion
 
     #region CORE_LOGIC
-    // --- PRESERVED: All core logic is unchanged ---
+    // --- PRESERVED & ADAPTED: Core logic now respects the isDecisionPathActive flag ---
     private void StartRiskCycle()
     {
-        if (riskCycleCoroutine == null)
+        // Only start if not already running AND Decision Path is not active to prevent conflicts
+        if (riskCycleCoroutine == null && !isDecisionPathActive)
         {
             riskCycleCoroutine = StartCoroutine(RiskLaneCycle());
         }
@@ -135,17 +151,23 @@ public class RiskLaneManager : MonoBehaviour
         yield return new WaitForSeconds(cooldownDuration);
         while (true)
         {
-            yield return new WaitUntil(() => !isGloballyIncompatibleEventActive);
+            // --- ADAPTED: Wait until no incompatible events are active (including Decision Path) ---
+            yield return new WaitUntil(() => !isGloballyIncompatibleEventActive && !isDecisionPathActive);
+            
             int newLaneIndex = SelectNewRiskLane();
             ActivateRiskLane(newLaneIndex);
+            
             yield return new WaitForSeconds(riskDuration);
+            
             RevertCurrentRiskLane();
+            
             yield return new WaitForSeconds(cooldownDuration);
         }
     }
 
     private int SelectNewRiskLane()
     {
+        // --- PRESERVED: Original lane selection logic is unchanged ---
         int newIndex;
         int laneZeroBased = totalLanes - 1;
         int midLaneOffset = laneZeroBased / 2;
@@ -159,6 +181,7 @@ public class RiskLaneManager : MonoBehaviour
 
     private void ActivateRiskLane(int laneIndex)
     {
+        // --- PRESERVED: Original activation logic is unchanged ---
         if (laneIndex == currentRiskLaneIndex) return;
         currentRiskLaneIndex = laneIndex;
         OnRiskLaneChanged?.Invoke(currentRiskLaneIndex, true, riskCoinMultiplier, riskObstacleMultiplier);
@@ -166,6 +189,7 @@ public class RiskLaneManager : MonoBehaviour
 
     private void RevertCurrentRiskLane()
     {
+        // --- PRESERVED: Original revert logic is unchanged ---
         if (currentRiskLaneIndex != -99)
         {
             int laneToRevert = currentRiskLaneIndex;

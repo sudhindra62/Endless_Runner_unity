@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro; // Added for TextMeshPro integration
 
 public class UIManager : Singleton<UIManager>
@@ -13,6 +14,10 @@ public class UIManager : Singleton<UIManager>
 
     [Header("Gameplay UI Elements")]
     [SerializeField] private TextMeshProUGUI scoreText; // Assign the gameplay score text element in the Inspector
+    [SerializeField] private TextMeshProUGUI bestScoreText;
+
+    [Header("Ghost Run UI")]
+    [SerializeField] private Toggle ghostToggle;
 
     [Header("Fusion UI")]
     [SerializeField] private FusionUI fusionUIPrefab; // Assign in Inspector
@@ -26,6 +31,7 @@ public class UIManager : Singleton<UIManager>
         ScoreManager.OnScoreChanged += UpdateScoreUI;
         PowerUpFusionManager.OnFusionActivated += HandleFusionActivation; // Subscribe to fusion activation
         PowerUpFusionManager.OnFusionDeactivated += HandleFusionDeactivation; // Subscribe to fusion deactivation
+        ghostToggle.onValueChanged.AddListener(OnGhostToggleChanged);
 
         CreateFusionUI();
         
@@ -59,6 +65,21 @@ public class UIManager : Singleton<UIManager>
         {
             scoreText.text = newScore.ToString("D8"); 
         }
+    }
+
+    public void UpdateBestScoreUI(int bestScore)
+    {
+        if (bestScoreText != null)
+        {
+            bestScoreText.text = "Best: " + bestScore.ToString("D8");
+        }
+    }
+
+    private void OnGhostToggleChanged(bool isOn)
+    {
+        if (GhostRunManager.Instance != null && GhostRunManager.Instance.playback != null) {
+            GhostRunManager.Instance.playback.gameObject.SetActive(isOn);
+        } 
     }
 
     private void CreateFusionUI()

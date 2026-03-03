@@ -1,17 +1,27 @@
-
 using UnityEngine;
 
 public class SaveManager : Singleton<SaveManager>
 {
-    public void SaveGame()
+    private const string SaveKey = "GameSaveData";
+
+    public void SaveBestScore(int bestScore)
     {
-        // Placeholder for saving game data
-        Debug.Log("Game saved!");
+        SaveData data = new SaveData { bestScore = bestScore };
+        string json = JsonUtility.ToJson(data);
+        PlayerPrefs.SetString(SaveKey, json);
+        PlayerPrefs.Save();
+        Debug.Log("Best score saved: " + bestScore);
     }
 
-    public void LoadGame()
+    public int LoadBestScore()
     {
-        // Placeholder for loading game data
-        Debug.Log("Game loaded!");
+        if (PlayerPrefs.HasKey(SaveKey))
+        {
+            string json = PlayerPrefs.GetString(SaveKey);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            Debug.Log("Best score loaded: " + data.bestScore);
+            return data.bestScore;
+        }
+        return 0; // Default value if no save data is found
     }
 }

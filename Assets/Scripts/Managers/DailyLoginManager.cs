@@ -64,6 +64,12 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
             // Grant reward
             GrantStreakReward(streak);
 
+            // Reset daily spins
+            if (SpinWheelManager.Instance != null)
+            {
+                SpinWheelManager.Instance.ResetDailySpins();
+            }
+
             // Save state
             PlayerPrefs.SetString(LastLoginKey, currentDate.ToString("o"));
             PlayerPrefs.SetInt(LoginStreakKey, streak);

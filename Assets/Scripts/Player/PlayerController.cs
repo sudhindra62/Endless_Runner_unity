@@ -414,6 +414,7 @@ public class PlayerController : MonoBehaviour
     public bool IsDead() => isDead;
     public bool IsGrounded() => isGrounded;
     public bool IsSliding() => isSliding;
+    public bool IsJumping() => !isGrounded && velocity.y > 0.1f;
     public bool IsPostReviveImmune() => isPostReviveImmune;
     public bool IsFeverActive() => isFeverActive;
     public bool IsInvincibleDashActive() => isInvincibleDashActive;

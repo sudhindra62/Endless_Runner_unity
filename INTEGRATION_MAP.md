@@ -5,56 +5,67 @@
 
 ---
 
-### **[A] Core Gameplay Loop Data Flow**
+### **[A] Core Gameplay Loop & System Events**
 
-This section details the primary, implemented event chain that drives the game.
+This section details the primary event chains that drive the game.
 
-1.  **Game State Control:**
-    -   `[GameManager] --(OnGameStateChanged)--> [UIManager]`
-        -   **Effect:** `UIManager` activates/deactivates UI panels (Menu, Gameplay, Pause, etc.).
-    -   `[GameManager] --(OnGameStateChanged)--> [ScoreManager]`
-        -   **Effect:** `ScoreManager` resets the score when the state changes to `EndOfRun`.
+**1. Game State Control:**
+-   `[GameManager] --(OnGameStateChanged)--> [UIManager]`
+    -   **Effect:** `UIManager` activates/deactivates UI panels (Menu, Gameplay, Pause, etc.).
+-   `[GameManager] --(OnGameStateChanged)--> [ScoreManager]`
+    -   **Effect:** `ScoreManager` resets the score when the state changes to `EndOfRun`.
 
-2.  **Scoring & UI Feedback:**
-    -   `[ScoreManager] --(OnScoreChanged)--> [UIManager]`
-        -   **Effect:** `UIManager` updates the `scoreText` TMP element in the gameplay HUD.
+**2. Tile Spawning & Obstacle Generation**
+-   `[MasterTileSpawner] --(OnTileSpawned)--> [ProceduralPatternEngine]`
+    -   **Effect:** `ProceduralPatternEngine` begins the pattern generation process for the new tile.
+-   `[ProceduralPatternEngine] --(OnGeneratedPatternReady)--> [MasterObstacleSpawner]`
+    -   **Effect:** `MasterObstacleSpawner` physically spawns the generated obstacle pattern.
 
-3.  **Power-Up & Fusion Effects:**
-    -   `[PowerUpFusionManager] --(OnFusionActivated)--> [UIManager]`
-        -   **Effect:** `UIManager` receives `FusionModifierData` and calls `ShowFusionUI()`.
-    -   `[PowerUpFusionManager] --(OnFusionDeactivated)--> [UIManager]`
-        -   **Effect:** `UIManager` calls `HideFusionUI()`.
-    -   `[PowerUpFusionManager] --(Direct Call)--> [PlayerController]`
-        -   **Effect:** Activates/deactivates the player's shield (`SetShield(bool)`) or fever mode.
-    -   `[PowerUpFusionManager] --(Direct Call)--> [ScoreManager]`
-        -   **Effect:** Applies a score multiplier (`SetScoreMultiplier(float)`).
+**3. Player Input & State:**
+-   `[SwipeInput] --(Direct Call)--> [PlayerMovement]`
+    -   **Effect:** Translates player swipes into lane changes, jumps, and slides.
+-   `[PlayerCollision] --(OnPlayerDeath)--> [GameManager]`
+    -   **Effect:** Reports player death, triggering the `EndOfRun` game state.
+-   `[PlayerCollision] --(OnPlayerDeath)--> [AnalyticsManager]`
+    -   **Effect:** Logs the `player_death` event.
+-   `[PlayerCollision] --(OnPlayerDeath)--> [UIManager]`
+    -   **Effect:** Displays the end-of-run screen.
 
-4.  **Player Input & State:**
-    -   `[SwipeInput] --(Direct Call)--> [PlayerMovement]`
-        -   **Effect:** Translates player swipes into lane changes, jumps, and slides.
-    -   `[PlayerController] --(Direct Call)--> [GameManager]`
-        -   **Effect:** Reports player death, triggering the `Dead` game state.
 
-5.  **Currency & UI:**
-    -   `[CurrencyManager] --(OnCurrencyChanged)--> [UIManager]`
-        -   **Effect:** Updates Coin/Gem displays.
+**4. Scoring & UI Feedback:**
+-   `[ScoreManager] --(OnScoreChanged)--> [UIManager]`
+    -   **Effect:** `UIManager` updates the `scoreText` in the gameplay HUD.
 
-6.  **Ad-Based Revive:**
-    -   `[ReviveManager] --(RequestRewardedAd)--> [AdManager]` and `[AdManager] --(OnAdCompleted)--> [ReviveManager]`
+**5. Power-Up & Fusion Effects:**
+-   `[PowerUpCollector] --(OnPowerUpCollected)--> [PowerUpManager]`
+    -   **Effect:** Activates the corresponding power-up.
+-   `[PowerUpFusionManager] --(OnFusionActivated/Deactivated)--> [UIManager]`
+    -   **Effect:** `UIManager` shows/hides the `FusionUI`.
+-   `[PowerUpFusionManager] --(Direct Call)--> [PlayerController]`
+    -   **Effect:** Activates/deactivates player's shield or fever mode.
+-   `[PowerUpFusionManager] --(Direct Call)--> [ScoreManager]`
+    -   **Effect:** Applies a score multiplier.
 
-7.  **Data Persistence:**
-    -   `[SaveManager] --(Load/Save)--> [CurrencyManager, MissionManager, SkinsManager]`
-        -   **Effect:** Persists player data.
+**6. Currency & UI:**
+-   `[CurrencyManager] --(OnCurrencyChanged)--> [UIManager]`
+    -   **Effect:** Updates Coin/Gem displays.
 
-8.  **Mission Progression & UI:**
-    -   `[MissionManager] --(OnMissionProgress)--> [UIManager]`
-        -   **Effect:** Displays quest status pop-ups.
+**7. Ad-Based Revive:**
+-   `[ReviveManager] --(RequestRewardedAd)--> [AdManager]` and `[AdManager] --(OnAdCompleted)--> [ReviveManager]`
+
+**8. Data Persistence:**
+-   `[SaveManager] --(Load/Save)--> [CurrencyManager, MissionManager, SkinsManager]`
+    -   **Effect:** Persists player data.
+
+**9. Mission Progression & UI:**
+-   `[MissionManager] --(OnMissionProgress)--> [UIManager]`
+    -   **Effect:** Displays quest status pop-ups.
 
 ---
 
 ### **[B] System Gaps & Planned Integrations**
 
-This section lists critical connections that are designed but not yet implemented, as per the `MASTER_FEATURE_REGISTRY.md`.
+This section lists critical connections that are designed but not yet implemented.
 
 -   **[PLANNED] Remote Config Balancing:**
     -   **GAP:** `RemoteConfigBridge` is not implemented.

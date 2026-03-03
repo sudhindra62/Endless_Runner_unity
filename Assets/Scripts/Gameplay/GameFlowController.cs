@@ -4,7 +4,8 @@ public class GameFlowController : MonoBehaviour
 {
     public void PlayerDied()
     {
-        // Placeholder for what happens when the player dies
+        // The CinematicFinishManager now handles the death sequence.
+        // This method will be called by the CinematicFinishManager when it's done.
         Debug.Log("Game Over!");
     }
 }

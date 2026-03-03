@@ -1,13 +1,10 @@
-
-using System;
 using UnityEngine;
 
 public class MissionManager : Singleton<MissionManager>
 {
-    public event Action OnMissionProgress;
-
-    void Update()
+    public string GetClosestMission()
     {
-        // Placeholder for mission progress logic
+        // Placeholder
+        return "Just 1 more near-miss to beat record!";
     }
 }

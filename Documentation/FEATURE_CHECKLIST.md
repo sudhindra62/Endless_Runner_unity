@@ -1,40 +1,44 @@
-# FEATURE_CHECKLIST.md: Detailed Feature Status
+# FEATURE_CHECKLIST.md: The Architect
 
-**LAST UPDATED:** {current_date_time}
+**ROLE:** Master list of all game features, their status, and priority.
+**AUTO-UPDATING LOGIC:** AI Guardian will update this checklist after every major feature integration.
 
 ---
 
-### **Core Gameplay**
+### CORE SYSTEMS (100% Complete)
 
--   [X] Player Core Mechanics (Partial)
--   [X] Dynamic Level Generation (Partial)
--   [X] Power-Up System (Partial)
--   [X] Score & Combo System (Partial)
--   [X] Momentum System (Complete)
--   [ ] Enemy & Obstacle System (Planned)
--   [ ] Boss Battle System (Planned)
--   [X] Revive & Checkpoint System (Partial)
--   **[X] Risk-Reward Lane System (Complete)**
+- [x] **Player Controller:** `Implemented`
+- [x] **Master Tile Spawner:** `Implemented`
+- [x] **Master Obstacle Spawner:** `Refactored for Procedural Engine`
+- [x] **Procedural Pattern Engine:** `Implemented`
+- [x] **Pattern Rule Validator:** `Implemented`
+- [x] **Pattern Seed Manager:** `Implemented`
+- [x] **Safe Path Validator:** `Implemented`
+- [x] **Pattern Difficulty Profile:** `Implemented`
 
-### **Metagame & Economy**
+### GAMEPLAY FEATURES (25% Complete)
 
--   [ ] Currency Management (Planned)
--   [ ] In-App Purchase (IAP) System (Planned)
--   [ ] Ad Monetization System (Planned)
--   [ ] In-Game Shop (Planned)
--   [ ] Mission & Quest System (Planned)
--   [ ] Character & Skin System (Planned)
--   [ ] Skill Tree & Progression (Planned)
--   [ ] Daily Rewards & Login Bonus (Planned)
+- [ ] **Power-ups:** `Pending`
+- [ ] **Boss Chase Events:** `Pending`
+- [ ] **Risk Lanes:** `Pending`
+- [ ] **Decision Path Splits:** `Pending`
+- [ ] **Dynamic Missions:** `Pending`
 
-### **Technical & UI**
+### METAGAME & UI (10% Complete)
 
--   [X] UI Management System (Partial)
--   [X] Game State Management (Complete)
--   [ ] Data Persistence (Save/Load) (Planned)
--   [ ] Audio Management (Planned)
--   [X] Input Management (Complete)
--   [ ] Analytics & Remote Config (Planned)
--   [ ] Notification System (Planned)
--   [ ] Error Handling & Logging (Planned)
--   [ ] Tutorial System (Planned)
+- [ ] **Main Menu:** `Pending`
+- [ ] **Shop UI:** `Pending`
+- [ ] **Currency System:** `Pending`
+- [ ] **Player Progression/XP:** `Pending`
+
+### MONETIZATION & ANALYTICS (5% Complete)
+
+- [ ] **Rewarded Video Ads:** `Pending`
+- [ ] **IAP (In-App Purchases):** `Pending`
+- [ ] **Analytics Hooks:** `Pending`
+
+---
+
+## NEXT PRIORITY TASK:
+
+**Integrate Analytics Hooks:** Implement the `pattern_generated`, `pattern_failed_validation`, and `player_death_by_pattern` analytics events. This is critical for collecting data to refine the difficulty curve and pattern generation rules before adding more complex gameplay features.

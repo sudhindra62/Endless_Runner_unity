@@ -12,9 +12,9 @@
     -   **GAPS:** Lacks advanced mechanics like wall-running and combo-based attacks.
 
 2.  **FEATURE: Dynamic Level Generation**
-    -   **STATUS:** [PARTIAL]
-    -   **DESCRIPTION:** Procedurally generates level segments (tiles) for an endless experience.
-    -   **GAPS:** Tile variety is low; no dynamic obstacle placement based on difficulty.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** Procedurally generates an endless experience using a tile-based system. Obstacle placement is now controlled by the `ProceduralPatternEngine`, which creates deterministic, fair, and skill-aware layouts.
+    -   **GAPS:** None.
 
 3.  **FEATURE: Power-Up System**
     -   **STATUS:** [PARTIAL]
@@ -32,9 +32,9 @@
     -   **GAPS:** None.
 
 6.  **FEATURE: Enemy & Obstacle System**
-    -   **STATUS:** [PLANNED]
-    -   **DESCRIPTION:** Defines behaviors for various enemy types and dynamic obstacles.
-    -   **GAPS:** Basic obstacles exist, but no enemies with AI behaviors have been created.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** Defines behaviors for various enemy types and dynamic obstacles. Obstacle placement is now fully managed by the `ProceduralPatternEngine`, ensuring patterns are validated and deterministic.
+    -   **GAPS:** The generation engine is complete, but the library of unique obstacle prefabs and enemy types with advanced AI remains to be expanded.
 
 7.  **FEATURE: Boss Battle System**
     -   **STATUS:** [PLANNED]
@@ -125,19 +125,19 @@
     -   **GAPS:** None.
 
 23. **FEATURE: Analytics & Remote Config**
-    -   **STATUS:** [PLANNED]
-    -   **DESCRIPTION:** Integrates with Firebase to send analytics events and fetch remote configurations.
-    -   **GAPS:** Firebase SDK is not integrated.
+    -   **STATUS:** [PARTIAL]
+    -   **DESCRIPTION:** The `ProceduralPatternEngine` now includes the logic for skill-aware difficulty adaptation based on player performance metrics.
+    -   **GAPS:** Firebase SDK for sending analytics events and fetching remote configurations is not yet integrated.
 
 24. **FEATURE: Notification System**
-    -   **STATUS:** [PLANNE D]
+    -   **STATUS:** [PLANNED]
     -   **DESCRIPTION:** Manages local and push notifications to re-engage players.
     -   **GAPS:** Entirely conceptual.
 
 25. **FEATURE: Error Handling & Logging**
-    -   **STATUS:** [PLANNED]
-    -   **DESCRIPTION:** Implements a robust system for catching, logging, and reporting errors.
-    -   **GAPS:** Lacks a centralized error logging service.
+    -   **STATUS:** [PARTIAL]
+    -   **DESCRIPTION:** Critical systems now include robust dependency checks and error logging to prevent fatal crashes during initialization.
+    -   **GAPS:** Lacks a centralized, cloud-based error logging service.
 
 26. **FEATURE: Tutorial System**
     -   **STATUS:** [PLANNED]

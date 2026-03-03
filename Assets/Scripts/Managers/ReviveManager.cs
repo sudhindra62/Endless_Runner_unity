@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using System;
 
@@ -23,11 +22,9 @@ public class ReviveManager : Singleton<ReviveManager>
     {
         if (revivesUsedThisRun < MAX_REVIVES_PER_RUN)
         {
-            // In a real game, this would check for cost (e.g., gems or ad watch)
             revivesUsedThisRun++;
             Debug.Log($"Player revived. This was revive number {revivesUsedThisRun} in this run.");
             OnReviveUsed?.Invoke(revivesUsedThisRun);
-            // Grant revive, resume gameplay etc.
         }
         else
         {
@@ -38,5 +35,18 @@ public class ReviveManager : Singleton<ReviveManager>
     public void ResetReviveCount()
     {
         revivesUsedThisRun = 0;
+    }
+
+    // Method to be called by an ad-watching confirmation
+    public bool GrantReviveIfAvailable()
+    {
+        if (revivesUsedThisRun < MAX_REVIVES_PER_RUN)
+        {
+            Debug.Log("Revive granted through ad watch.");
+            // This method doesn't increment the counter, 
+            // that should be done in AttemptRevive to keep logic centralized
+            return true;
+        }
+        return false;
     }
 }

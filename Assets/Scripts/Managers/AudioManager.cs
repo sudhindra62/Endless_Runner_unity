@@ -1,8 +1,9 @@
-
 using UnityEngine;
 
 /// <summary>
-/// A centralized manager for handling all audio playback, including music, SFX, and UI sounds.
+/// Manages all audio playback for the game, including music and sound effects.
+/// It is designed as a singleton to be accessible from any script.
+/// This manager is required to fulfill the music-changing aspect of the WorldThemeManager.
 /// </summary>
 public class AudioManager : Singleton<AudioManager>
 {
@@ -10,36 +11,16 @@ public class AudioManager : Singleton<AudioManager>
     [SerializeField] private AudioSource musicSource;
     [SerializeField] private AudioSource sfxSource;
 
-    /// <summary>
-    /// Plays a music track. If a track is already playing, it will be stopped and replaced.
-    /// </summary>
-    /// <param name="musicClip">The music clip to play.</param>
     public void PlayMusic(AudioClip musicClip)
     {
-        if (musicSource == null || musicClip == null) return;
+        if (musicSource.clip == musicClip) return; // Don't restart if it's the same track
 
         musicSource.clip = musicClip;
-        musicSource.loop = true;
         musicSource.Play();
     }
 
-    /// <summary>
-    /// Plays a one-shot sound effect.
-    /// </summary>
-    /// <param name="sfxClip">The sound effect clip to play.</param>
     public void PlaySFX(AudioClip sfxClip)
     {
-        if (sfxSource == null || sfxClip == null) return;
-
         sfxSource.PlayOneShot(sfxClip);
-    }
-
-    /// <summary>
-    /// Sets the master volume for all audio.
-    /// </summary>
-    /// <param name="volume">The volume level (0.0 to 1.0).</param>
-    public void SetMasterVolume(float volume)
-    {
-        AudioListener.volume = Mathf.Clamp01(volume);
     }
 }

@@ -1,6 +1,12 @@
 using UnityEngine;
 
-public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
+/// <summary>
+/// A generic Singleton base class to ensure only one instance of a manager exists.
+/// This pattern simplifies access to managers from anywhere in the code without needing
+/// direct references, while also ensuring their uniqueness.
+/// </summary>
+/// <typeparam name="T">The type of the singleton instance.</typeparam>
+public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T _instance;
 
@@ -11,29 +17,24 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
             if (_instance == null)
             {
                 _instance = FindObjectOfType<T>();
-
                 if (_instance == null)
-                {
-                    GameObject singletonObject = new GameObject();
+                {                    
+                    GameObject singletonObject = new GameObject(typeof(T).Name);
                     _instance = singletonObject.AddComponent<T>();
-                    singletonObject.name = typeof(T).ToString() + " (Singleton)";
                 }
             }
-
             return _instance;
         }
     }
 
     protected virtual void Awake()
     {
-        if (_instance == null)
-        {
-            _instance = this as T;
-            DontDestroyOnLoad(gameObject);
+        if (_instance != null && _instance != this)
+        {            
+            Destroy(this.gameObject);
+            return;
         }
-        else
-        {
-            Destroy(gameObject);
-        }
+        _instance = this as T;
+        DontDestroyOnLoad(this.gameObject); // Persist across scenes
     }
 }

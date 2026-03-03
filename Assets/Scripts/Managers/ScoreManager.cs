@@ -7,29 +7,33 @@ public class ScoreManager : Singleton<ScoreManager>
     public static event Action<int> OnScoreChanged;
 
     [Header("Scoring Bonuses")]
-    [SerializeField] private int nearMissScoreBonus = 50; // EVOLUTION: Added for Near-Miss System
+    [SerializeField] private int nearMissScoreBonus = 50;
 
     public int Score { get; private set; }
+    private int bestScore;
+
+    // Multipliers
     private float comboMultiplier = 1f;
     private float powerUpMultiplier = 1f;
     private float momentumMultiplier = 1f;
 
+    private void Start()
+    {
+        bestScore = SaveManager.Instance.LoadBestScore();
+    }
+
     private void OnEnable()
     {
-        // Subscribe to game, combo, and momentum events
-        GameManager.OnRunEnd += ResetScore;
         FlowComboManager.OnComboMultiplierChanged += HandleComboMultiplierChanged;
         MomentumManager.OnScoreMultiplierChanged += HandleMomentumMultiplierChanged;
-        NearMissManager.OnNearMiss += HandleNearMiss; // EVOLUTION: Subscribe to Near-Miss
+        NearMissManager.OnNearMiss += HandleNearMiss;
     }
 
     private void OnDisable()
     {
-        // Unsubscribe to prevent memory leaks
-        GameManager.OnRunEnd -= ResetScore;
         FlowComboManager.OnComboMultiplierChanged -= HandleComboMultiplierChanged;
         MomentumManager.OnScoreMultiplierChanged -= HandleMomentumMultiplierChanged;
-        NearMissManager.OnNearMiss -= HandleNearMiss; // EVOLUTION: Unsubscribe from Near-Miss
+        NearMissManager.OnNearMiss -= HandleNearMiss;
     }
 
     private void HandleComboMultiplierChanged(float newMultiplier)
@@ -41,12 +45,10 @@ public class ScoreManager : Singleton<ScoreManager>
     {
         momentumMultiplier = newMultiplier;
     }
-    
-    // EVOLUTION: Handles the score bonus from the NearMissManager.
+
     private void HandleNearMiss()
     {
         AddScore(nearMissScoreBonus);
-        FlowComboManager.Instance.AddToCombo(1); // BONUS RULE: Increase FlowCombo slightly
     }
 
     public void SetPowerUpScoreMultiplier(float multiplier)
@@ -56,10 +58,20 @@ public class ScoreManager : Singleton<ScoreManager>
 
     public void AddScore(int amount)
     {
-        // All original logic is preserved. Near-miss bonus is routed through this method.
-        float finalAmount = amount * comboMultiplier * powerUpMultiplier * momentumMultiplier;
+        float totalMultiplier = comboMultiplier * powerUpMultiplier * momentumMultiplier;
+        float finalAmount = amount * totalMultiplier;
         Score += (int)finalAmount;
         OnScoreChanged?.Invoke(Score);
+    }
+
+    private void OnRunEnd()
+    {
+        if (Score > bestScore)
+        {
+            bestScore = Score;
+            SaveManager.Instance.SaveBestScore(bestScore);
+        }
+        ResetScore();
     }
 
     private void ResetScore()
@@ -70,5 +82,10 @@ public class ScoreManager : Singleton<ScoreManager>
         momentumMultiplier = 1f;
         OnScoreChanged?.Invoke(Score);
         Debug.Log("Score has been reset for the new run.");
+    }
+
+    public int GetBestScore()
+    {
+        return bestScore;
     }
 }

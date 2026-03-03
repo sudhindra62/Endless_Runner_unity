@@ -37,3 +37,33 @@
 - **Obstacle Density Increase (On Success):** `15%` (1.15x)
 - **Obstacle Density Decrease (On Fail):** `-15%` (0.85x)
 - **Coin Density Increase (On Fail):** `15%` (1.15x)
+
+---
+
+## Project Health & Next Steps
+
+**AI GUARDIAN STATUS:** `Awaiting developer command.`
+**PROJECT HEALTH:** [STABLE]
+
+### **RECENT ACTIVITY**
+- **[USER]** Requested a new health file to be added to the project.
+- **[AI]** Added a health section to the GAME_DASHBOARD.md file.
+- **[USER]** Reverted some of the recent changes.
+- **[AI]** Reverted the changes as requested.
+
+### **UPCOMING TASKS**
+-   **[HIGH]** **Boss Chase Sequence:** The core logic for the boss chase is in place, but requires final polish.
+    -   VFX for the boss's attacks are missing.
+    -   SFX for the boss's movements and attacks are placeholders.
+-   **[MEDIUM]** **Power-Up VFX:** The visual effects for the Magnet and Shield power-ups are basic and could be improved.
+-   **[LOW]** **Store UI:** The in-game store for purchasing cosmetic items needs a UI refresh.
+
+### **DEPLOYMENT READINESS**
+-   **[OK]** **Android Build:** The project builds successfully for Android.
+-   **[NEEDS ATTENTION]** **iOS Build:** The project has not been tested on an iOS device.
+-   **[ACTION NEEDED]** **Publishing Checklist:**
+    -   **[CRITICAL]** **App Store Screenshots:** New screenshots need to be generated for the App Store and Google Play listings.
+    -   **[CRITICAL]** **Privacy Policy:** The game's privacy policy needs to be finalized and linked within the app.
+    -   **[ACTION NEEDED]** **Google Play Console's Data Safety form is incomplete.
+    -   **[CRITICAL]** **Content Rating:** The official content rating questionnaire must be completed.
+    -   **[ACTION NEEDED]** **Monetization Declaration:** You must declare if the app uses Ads or IAP.

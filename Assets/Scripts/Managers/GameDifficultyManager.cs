@@ -1,82 +1,19 @@
-
 using UnityEngine;
 
-public class GameDifficultyManager : MonoBehaviour
+/// <summary>
+/// Manages game difficulty settings that can be adjusted dynamically.
+/// This provides a centralized place for systems like the ObstacleSpawner
+/// to query for difficulty-related values.
+/// </summary>
+public class GameDifficultyManager : Singleton<GameDifficultyManager>
 {
-    // EVOLUTION: Kept singleton for global access, but now primarily uses ServiceLocator.
-    public static GameDifficultyManager Instance { get; private set; }
+    [Header("Current Difficulty Settings")]
+    [Tooltip("How frequently obstacles should spawn.")]
+    public float obstacleSpawnFrequency = 2.0f;
 
-    [Header("Difficulty Scaling")]
-    [Tooltip("The rate at which difficulty increases over time (units per second).")]
-    [SerializeField] private float difficultyIncreaseRate = 0.01f;
+    [Tooltip("The speed at which the game world moves.")]
+    public float gameSpeed = 10.0f;
 
-    [Tooltip("The maximum difficulty multiplier.")]
-    [SerializeField] private float maxDifficultyMultiplier = 3f;
-
-    private float currentDifficultyMultiplier = 1f;
-    private float timeElapsed = 0f;
-
-    private void Awake()
-    {
-        // EVOLUTION: Implement both Singleton and ServiceLocator registration
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        ServiceLocator.Register<GameDifficultyManager>(this);
-    }
-
-    private void Start()
-    {
-        // EVOLUTION: Subscribe to game state changes to reset difficulty
-        GameManager.OnGameStateChanged += OnGameStateChanged;
-    }
-
-    private void OnDestroy()
-    {
-        // EVOLUTION: Unsubscribe from events and unregister from ServiceLocator
-        GameManager.OnGameStateChanged -= OnGameStateChanged;
-        ServiceLocator.Unregister<GameDifficultyManager>();
-    }
-
-    private void Update()
-    {
-        if (GameManager.Instance.CurrentState == GameState.Playing)
-        {
-            timeElapsed += Time.deltaTime;
-            // EVOLUTION: More robust calculation for difficulty ramp
-            currentDifficultyMultiplier = 1f + (timeElapsed * difficultyIncreaseRate);
-            currentDifficultyMultiplier = Mathf.Min(currentDifficultyMultiplier, maxDifficultyMultiplier);
-        }
-    }
-
-    /// <summary>
-    /// EVOLUTION: Renamed for consistency with existing calls in ObstacleSpawner.
-    /// </summary>
-    public float GetDifficultyMultiplier()
-    {
-        return currentDifficultyMultiplier;
-    }
-
-    /// <summary>
-    /// EVOLUTION: Reset function is now private and called via GameState change.
-    /// </summary>
-    private void ResetDifficulty()
-    {
-        timeElapsed = 0f;
-        currentDifficultyMultiplier = 1f;
-    }
-
-    /// <summary>
-    /// EVOLUTION: Handles game state changes to automatically reset the difficulty.
-    /// </summary>
-    private void OnGameStateChanged(GameState newState)
-    {
-        if (newState == GameState.Menu || newState == GameState.EndOfRun)
-        {
-            ResetDifficulty();
-        }
-    }
+    // In the future, this manager can be expanded to include data from the
+    // AdaptiveDifficultyManager to dynamically change these values based on player skill.
 }
