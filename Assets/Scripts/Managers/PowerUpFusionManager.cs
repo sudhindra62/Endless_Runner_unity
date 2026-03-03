@@ -27,20 +27,36 @@ public class PowerUpFusionManager : Singleton<PowerUpFusionManager>
 
     private PowerUpManager powerUpManager;
     private FlowComboManager flowComboManager;
+    private PlayerController playerController; // Added reference to PlayerController
+    private ScoreManager scoreManager;       // Added reference to ScoreManager
 
     private void Start()
     {
+        // Get instances of required managers
         powerUpManager = PowerUpManager.Instance;
         flowComboManager = FlowComboManager.Instance;
-        
+        playerController = FindObjectOfType<PlayerController>(); // Find the PlayerController in the scene
+        scoreManager = ScoreManager.Instance;
+
+        // Subscribe to power-up activation and deactivation events
         PowerUpManager.OnPowerUpActivated += HandlePowerUpActivation;
         PowerUpManager.OnPowerUpDeactivated += HandlePowerUpDeactivation;
+        
+        // Subscribe to fusion events to apply their effects
+        OnFusionActivated += ApplyFusionEffect;
+        OnFusionDeactivated += RemoveFusionEffect;
     }
 
     private void OnDestroy()
     {
-        if (PowerUpManager.Instance != null) PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivation;
-        if (PowerUpManager.Instance != null) PowerUpManager.OnPowerUpDeactivated -= HandlePowerUpDeactivation;
+        // Unsubscribe from all events to prevent memory leaks
+        if (PowerUpManager.Instance != null)
+        {
+            PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivation;
+            PowerUpManager.OnPowerUpDeactivated -= HandlePowerUpDeactivation;
+        }
+        OnFusionActivated -= ApplyFusionEffect;
+        OnFusionDeactivated -= RemoveFusionEffect;
     }
 
     private void Update()
@@ -67,12 +83,61 @@ public class PowerUpFusionManager : Singleton<PowerUpFusionManager>
 
     private void HandlePowerUpActivation(PowerUpType type, float duration)
     {
+        // Apply the effect of the individual power-up
+        ApplyPowerUpEffect(type, true);
         CheckForFusion(type, duration);
     }
-    
+
     private void HandlePowerUpDeactivation(PowerUpType type)
     {
+        // Remove the effect of the individual power-up
+        ApplyPowerUpEffect(type, false);
         ClearRecentFusionOnComponentDeactivation(type);
+    }
+
+    /// <summary>
+    /// Applies or removes the effect of an individual power-up.
+    /// </summary>
+    private void ApplyPowerUpEffect(PowerUpType type, bool isActive)
+    {
+        switch (type)
+        {
+            case PowerUpType.Shield:
+                playerController?.SetShield(isActive);
+                break;
+            case PowerUpType.ScoreMultiplier:
+                scoreManager?.SetScoreMultiplier(isActive ? 2f : 1f); // Example: 2x multiplier
+                break;
+            // Other individual power-up effects can be added here
+        }
+    }
+
+    /// <summary>
+    /// Applies the effect of a fusion.
+    /// </summary>
+    private void ApplyFusionEffect(FusionModifierData data)
+    {
+        switch (data.Type)
+        {
+            case FusionType.InvincibleDash:
+                playerController?.SetFeverMode(true); // Example: Make player invincible
+                break;
+            // Other fusion effects can be added here
+        }
+    }
+
+    /// <summary>
+    /// Removes the effect of a fusion.
+    /// </summary>
+    private void RemoveFusionEffect(FusionType fusionType)
+    {
+        switch (fusionType)
+        {
+            case FusionType.InvincibleDash:
+                playerController?.SetFeverMode(false);
+                break;
+            // Other fusion effects can be added here
+        }
     }
 
     private void CheckForFusion(PowerUpType newPowerUp, float duration)

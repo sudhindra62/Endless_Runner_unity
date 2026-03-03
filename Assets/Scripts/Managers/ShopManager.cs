@@ -21,6 +21,11 @@ public class ShopManager : Singleton<ShopManager>
 
         // The EntitlementResolver is the authority on what each product ID means
         // and ensures the transaction hasn't been processed before.
-        EntitlementResolver.Instance.ResolvePurchase(productId, transactionId);
+        bool success = EntitlementResolver.Instance.ResolvePurchase(productId, transactionId);
+
+        if (success)
+        {
+            IAPManager.Instance.ConfirmPurchase(productId);
+        }
     }
 }

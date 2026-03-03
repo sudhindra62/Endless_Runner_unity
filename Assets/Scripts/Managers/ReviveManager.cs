@@ -9,6 +9,16 @@ public class ReviveManager : Singleton<ReviveManager>
 
     private int revivesUsedThisRun = 0;
 
+    private void OnEnable()
+    {
+        GameManager.OnRunStart += ResetReviveCount;
+    }
+
+    private void OnDisable()
+    {
+        GameManager.OnRunStart -= ResetReviveCount;
+    }
+
     public void AttemptRevive()
     {
         if (revivesUsedThisRun < MAX_REVIVES_PER_RUN)
