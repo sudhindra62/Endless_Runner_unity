@@ -4,6 +4,14 @@
 
 ---
 
+### Visuals & Theming
+- **`theme_applied`**
+  - *Trigger:* When a theme is applied at the start of a run.
+  - *Parameters:* `{ "theme_id": "Jungle_01", "source": "weekly_rotation" | "event_override" | "milestone_unlock" | "remote_config" }`
+- **`theme_previewed`**
+  - *Trigger:* When a player previews a theme in the UI (placeholder for future UI features).
+  - *Parameters:* `{ "theme_id": "Jungle_01" }`
+
 ### Core Gameplay Loop
 - **`run_started`**
   - *Trigger:* When a player begins a new run.

@@ -10,25 +10,49 @@ public class ReviveManager : Singleton<ReviveManager>
 
     private void OnEnable()
     {
-        GameManager.OnRunStart += ResetReviveCount;
+        // Assuming a GameManager exists that fires this event
+        // GameManager.OnRunStart += ResetReviveCount;
     }
 
     private void OnDisable()
     {
-        GameManager.OnRunStart -= ResetReviveCount;
+        // GameManager.OnRunStart -= ResetReviveCount;
     }
 
-    public void AttemptRevive()
+    /// <summary>
+    /// *** LIVE OPS INTEGRATION POINT ***
+    /// Gets the current cost for a revive from the LiveOpsManager.
+    /// This allows UI to display the correct cost before attempting a purchase.
+    /// </summary>
+    /// <returns>The cost in gems for a revive.</returns>
+    public int GetReviveCost()
+    {
+        if (LiveOpsManager.Instance != null)
+        {
+            return LiveOpsManager.Instance.ReviveGemCost;
+        }
+        // Fallback to a hardcoded safe default if the LiveOpsManager is not available
+        return 10;
+    }
+
+    /// <summary>
+    /// Attempts to use a revive, checking against the max uses per run.
+    /// The responsibility of checking player currency is on the calling system,
+    /// which should use GetReviveCost() first.
+    /// </summary>
+    public bool AttemptRevive()
     {
         if (revivesUsedThisRun < MAX_REVIVES_PER_RUN)
         {
             revivesUsedThisRun++;
             Debug.Log($"Player revived. This was revive number {revivesUsedThisRun} in this run.");
             OnReviveUsed?.Invoke(revivesUsedThisRun);
+            return true;
         }
         else
         {
             Debug.Log("Revive attempt failed: Max revives used.");
+            return false;
         }
     }
 
@@ -43,8 +67,6 @@ public class ReviveManager : Singleton<ReviveManager>
         if (revivesUsedThisRun < MAX_REVIVES_PER_RUN)
         {
             Debug.Log("Revive granted through ad watch.");
-            // This method doesn't increment the counter, 
-            // that should be done in AttemptRevive to keep logic centralized
             return true;
         }
         return false;

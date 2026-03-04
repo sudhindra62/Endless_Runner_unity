@@ -1,17 +1,26 @@
+
 using UnityEngine;
 using System;
 
-/// <summary>
-/// Placeholder for a future high-level event manager for world state changes.
-/// This could be used to signal major events, like the theme changing at run start.
-/// </summary>
 public class WorldEventManager : Singleton<WorldEventManager>
 {
-    public static event Action<ThemeData> OnThemeChanged;
+    // This event is for other systems to listen to for theme changes.
+    public static event Action<ThemeProfileData> OnThemeChanged;
 
-    public void BroadcastThemeChange(ThemeData newTheme)
+    private void OnEnable()
     {
-        // USE EVENTS: This is how other systems would be notified of a theme change.
+        WorldThemeManager.OnThemeApplied += HandleThemeApplied;
+    }
+
+    private void OnDisable()
+    {
+        WorldThemeManager.OnThemeApplied -= HandleThemeApplied;
+    }
+
+    private void HandleThemeApplied(ThemeProfileData newTheme)
+    {
+        // When the WorldThemeManager applies a theme, this event manager
+        // broadcasts it to the rest of the game.
         OnThemeChanged?.Invoke(newTheme);
     }
 }

@@ -28,3 +28,6 @@
 | **Density Increase on Dodge**      | 0.005                                |
 | **Maximum Unfairness Cap**         | 0.95                                 |
 | **Global Difficulty Curve**        | `Linear (0,0 to 1,1)`                |
+| **Active Theme Engine**            | `AAA Rotating World Theme Engine`    |
+| **Theme Rotation**                 | `Weekly`                             |
+| **Event Override**                 | `Enabled`                            |

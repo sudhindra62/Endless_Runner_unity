@@ -7,6 +7,42 @@
 
 ## EVENT & DEPENDENCY MAP
 
+### Rare Drop & Legendary Shard Engine
+
+*   **`RewardManager.OnRewardCalculation`** `(event)` -> **`RareDropEngine.EvaluateDrop`** `(subscriber)`
+    *   **Description:** The RewardManager, as the sole reward authority, triggers the rare drop evaluation *after* standard rewards are calculated but *before* they are displayed.
+
+*   **`RareDropEngine`** `(class)` -> **`RareDropProfileData`, `DropTableRegistry`, `PityCounterManager`, `DropIntegrityValidator`** `(dependencies)`
+    *   **Description:** The core engine uses profile data for rarity tiers, a registry for drop tables, a pity manager for bad luck protection, and an integrity validator to prevent exploits.
+
+*   **`DropIntegrityValidator`** `(class)` -> **`RunSessionData`** `(dependency)`
+    *   **Description:** The validator cross-references `RunSessionData` against server-side limits to ensure the run was legitimate before allowing a drop.
+
+*   **`PityCounterManager`** `(class)` -> **`SaveManager`** `(dependency)`
+    *   **Description:** The `PityCounterManager` interfaces with the `SaveManager` to persist its cross-run pity counters, ensuring bad luck protection works between play sessions.
+
+*   **`ShardInventoryManager`** `(class)` -> **`SaveManager`, `SkinManager`** `(dependencies)`
+    *   **Description:** Manages the player's collection of item shards. It uses the `SaveManager` to persist the inventory and calls the `SkinManager` to grant the final item once enough shards are collected.
+
+*   **`RareDropEngine.OnRareDropAwarded`** `(event)` -> **`UI.RareDropUI.AnimateReveal`, `ShardInventoryManager.AddShard`** `(subscribers)`
+    *   **Description:** When a rare drop is awarded, the engine broadcasts an event. The UI listens to this to play the reveal animation, and the `ShardInventoryManager` listens to add any awarded shards to the player's inventory.
+
+*   **`LiveEventManager.OnEventBoostsChanged`** `(event)` -> **`RareDropEngine.UpdateMultipliers`** `(subscriber)`
+    *   **Description:** The `RareDropEngine` listens for changes from the `LiveEventManager` and `LeagueManager` to apply capped, non-stacking boosts to the drop calculations.
+
+### World Theme Engine
+
+*   **`WorldThemeManager`** `(class)` -> **`ThemeProfileData`**, **`ThemeMaterialRegistry`**, **`ThemeAudioProfile`** `(dependencies)`
+    *   **Description:** The manager uses data-driven ScriptableObjects to define and manage all aspects of a visual and audio theme.
+*   **`WorldThemeManager.OnThemeApplied`** `(event)` -> **`AudioManager.PlayMusic`** `(subscriber)`
+    *   **Description:** The AudioManager plays the appropriate music track defined in the theme's `ThemeAudioProfile`.
+*   **`WorldThemeManager.OnThemeApplied`** `(event)` -> **`Various Systems (e.g., MasterObstacleSpawner)`** `(subscriber)`
+    *   **Description:** Systems that require themed assets (like materials) subscribe to this event. They then access the `ThemeMaterialRegistry` via the `GetCurrentTheme()` method on the `WorldThemeManager` to get the correct assets.
+*   **`LiveEventManager.OnEventStarted`** `(event)` -> **`WorldThemeManager.SetEventThemeOverride`** `(subscriber)`
+    *   **Description:** The `LiveEventManager` can remotely trigger a theme change, ensuring the game world reflects the current live event.
+*   **`RemoteConfigManager.OnConfigFetched`** `(event)` -> **`WorldThemeManager.SetEventThemeOverride`** `(subscriber)`
+    *   **Description:** A manual override from a remote config can be used to force a specific theme, providing ultimate live-ops control.
+
 ### Player Systems
 
 *   **`PlayerController`** `(class)` -> **`PlayerMovement`**, **`AttackManager`**, **`PlayerCollisionHandler`** `(dependencies)`

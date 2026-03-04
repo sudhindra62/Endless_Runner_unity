@@ -14,8 +14,7 @@ public enum PowerUpType
     SpeedBoost
 }
 
-// This class manages the lifecycle of all power-ups, acting as a single authority.
-// It has been extended to support the Power-Up Fusion system.
+// This class manages the lifecycle of all power-ups, now integrated with the LiveOps Engine.
 public class PowerUpManager : Singleton<PowerUpManager>
 {
     // --- EVENTS ---
@@ -54,18 +53,27 @@ public class PowerUpManager : Singleton<PowerUpManager>
     }
     #endregion
 
-    #region New & Extended Methods for Fusion System
+    #region Integrated and Extended Methods
     /// <summary>
-    /// Activates a power-up for a specified duration.
+    /// Activates a power-up with a duration modified by the LiveOps configuration.
     /// If the power-up is already active, its duration is refreshed.
     /// </summary>
-    public void ActivatePowerUp(PowerUpType type, float duration)
+    public void ActivatePowerUp(PowerUpType type, float baseDuration)
     {   
         // Respects the original arePowerUpsDisabled flag.
         if (arePowerUpsDisabled)
         { 
             Debug.Log($"Activation of {type} blocked because power-ups are disabled.");
             return;
+        }
+
+        // *** LIVE OPS INTEGRATION POINT ***
+        // The manager PULLS the multiplier from the LiveOpsManager.
+        // No value is pushed into this class, preserving its authority.
+        float finalDuration = baseDuration;
+        if (LiveOpsManager.Instance != null)
+        {
+            finalDuration *= LiveOpsManager.Instance.PowerUpDurationMultiplier;
         }
 
         // If the power-up is already running, stop the old coroutine before starting a new one.
@@ -75,12 +83,12 @@ public class PowerUpManager : Singleton<PowerUpManager>
             activePowerUps.Remove(type);
         }
 
-        Debug.Log($"Activating {type} for {duration} seconds.");
-        Coroutine powerUpCoroutine = StartCoroutine(PowerUpLifecycle(type, duration));
+        Debug.Log($"Activating {type} for a final duration of {finalDuration} seconds (Base: {baseDuration}).");
+        Coroutine powerUpCoroutine = StartCoroutine(PowerUpLifecycle(type, finalDuration));
         activePowerUps.Add(type, powerUpCoroutine);
 
         // Broadcast that a power-up has been activated.
-        OnPowerUpActivated?.Invoke(type, duration);
+        OnPowerUpActivated?.Invoke(type, finalDuration);
     }
 
     /// <summary>
