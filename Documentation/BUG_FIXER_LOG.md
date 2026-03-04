@@ -18,6 +18,20 @@ The "One-Click Fix" protocol is a directive for the AI Guardian to autonomously 
 ---
 
 ### [RESOLVED]
+- **BUG ID:** 20240525-001
+- **STATUS:** `[VERIFIED_FIXED]`
+- **ERROR MESSAGE:** `Project file duplication and disorganization.`
+- **LOCATION:** `Root Directory, Assets/Scripts, Assets/Scripts/Patterns`
+- **REPLICATION STEPS:** N/A - Proactive cleanup.
+- **ROOT CAUSE ANALYSIS:** Over time, files were created in multiple locations, leading to redundancy and making the project harder to navigate and maintain. This included duplicate `Singleton.cs` scripts, a fragmented save system with `SaveManager.cs` and `SaveSystem.cs`, and documentation files scattered in the root directory instead of the `Documentation` folder.
+- **SOLUTION:** 
+  1.  Consolidated the logic from `SaveSystem.cs` into `SaveManager.cs` and deleted `SaveSystem.cs`.
+  2.  Identified `Assets/Scripts/Patterns/Singleton.cs` as the more robust implementation and deleted the redundant `Assets/Scripts/Singleton.cs`.
+  3.  Moved all root-level `.md` files (`GAME_DASHBOARD.md`, `INTEGRATION_MAP.md`, `VERSION_HISTORY.md`) into the `Documentation` folder to centralize project knowledge.
+  4.  Deleted the now-unnecessary `GameManager.cs` file.
+  5.  Deleted the deprecated `ObstacleSpawner.cs`.
+
+### [RESOLVED]
 - **BUG ID:** 20240524-001
 - **STATUS:** `[VERIFIED_FIXED]`
 - **ERROR MESSAGE:** `NullReferenceException: Object reference not set to an instance of an object.`

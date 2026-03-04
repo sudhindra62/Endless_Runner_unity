@@ -2,7 +2,12 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class ObjectPooler : MonoBehaviour
+public interface IPoolable
+{
+    void OnObjectSpawn();
+}
+
+public class ObjectPooler : Singleton<ObjectPooler>
 {
     [System.Serializable]
     public class Pool
@@ -12,18 +17,12 @@ public class ObjectPooler : MonoBehaviour
         public int size;
     }
 
-    public static ObjectPooler Instance;
-
     public List<Pool> pools;
     public Dictionary<string, Queue<GameObject>> poolDictionary;
 
-    private void Awake()
+    protected override void Awake()
     {
-        Instance = this;
-    }
-
-    private void Start()
-    {
+        base.Awake();
         poolDictionary = new Dictionary<string, Queue<GameObject>>();
 
         foreach (Pool pool in pools)
@@ -49,14 +48,50 @@ public class ObjectPooler : MonoBehaviour
             return null;
         }
 
+        // If the pool is empty, dynamically create a new object.
+        if (poolDictionary[tag].Count == 0)
+        {
+            Pool pool = pools.Find(p => p.tag == tag);
+            if (pool != null)
+            {
+                GameObject obj = Instantiate(pool.prefab);
+                return ActivateAndSetup(obj, position, rotation);
+            }
+            else
+            {
+                return null; // Should not happen if tag exists
+            }
+        }
+
         GameObject objectToSpawn = poolDictionary[tag].Dequeue();
+        return ActivateAndSetup(objectToSpawn, position, rotation);
+    }
 
-        objectToSpawn.SetActive(true);
-        objectToSpawn.transform.position = position;
-        objectToSpawn.transform.rotation = rotation;
+    private GameObject ActivateAndSetup(GameObject obj, Vector3 position, Quaternion rotation)
+    {
+        obj.SetActive(true);
+        obj.transform.position = position;
+        obj.transform.rotation = rotation;
 
-        poolDictionary[tag].Enqueue(objectToSpawn);
+        IPoolable poolable = obj.GetComponent<IPoolable>();
+        if (poolable != null)
+        {
+            poolable.OnObjectSpawn();
+        }
 
-        return objectToSpawn;
+        return obj;
+    }
+
+    public void ReturnToPool(string tag, GameObject objectToReturn)
+    {
+        if (!poolDictionary.ContainsKey(tag))
+        {
+            Debug.LogWarning("Pool with tag " + tag + " doesn't exist.");
+            Destroy(objectToReturn);
+            return;
+        }
+
+        objectToReturn.SetActive(false);
+        poolDictionary[tag].Enqueue(objectToReturn);
     }
 }

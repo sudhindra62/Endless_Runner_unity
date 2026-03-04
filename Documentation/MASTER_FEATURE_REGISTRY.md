@@ -13,7 +13,7 @@
 
 2.  **FEATURE: Dynamic Level Generation**
     -   **STATUS:** [COMPLETE]
-    -   **DESCRIPTION:** Procedurally generates an endless experience using a tile-based system. Obstacle placement is now controlled by the `ProceduralPatternEngine`, which creates deterministic, fair, and skill-aware layouts.
+    -   **DESCRIPTION:** Procedurally generates an endless experience using a tile-based system. Obstacle placement is now controlled by the `ProceduralPatternEngine`, which creates deterministic, fair, and skill-aware layouts. Legacy spawner scripts have been removed to fully centralize logic.
     -   **GAPS:** None.
 
 3.  **FEATURE: Power-Up System**
@@ -33,7 +33,7 @@
 
 6.  **FEATURE: Enemy & Obstacle System**
     -   **STATUS:** [COMPLETE]
-    -   **DESCRIPTION:** Defines behaviors for various enemy types and dynamic obstacles. Obstacle placement is now fully managed by the `ProceduralPatternEngine`, ensuring patterns are validated and deterministic.
+    -   **DESCRIPTION:** Defines behaviors for various enemy types and dynamic obstacles. Obstacle placement is now fully managed by the `ProceduralPatternEngine`, ensuring patterns are validated and deterministic. All legacy spawning logic has been consolidated and removed.
     -   **GAPS:** The generation engine is complete, but the library of unique obstacle prefabs and enemy types with advanced AI remains to be expanded.
 
 7.  **FEATURE: Boss Battle System**
@@ -55,10 +55,10 @@
 
 ### **METAGAME & ECONOMY (8 Features)**
 
-10.  **FEATURE: Currency Management**
-    -   **STATUS:** [PLANNED]
-    -   **DESCRIPTION:** Manages all player currencies (Coins, Gems, Event Tokens).
-    -   **GAPS:** No central `CurrencyManager` script exists to unify transactions.
+10. **FEATURE: Currency Management**
+    -   **STATUS:** [PARTIAL]
+    -   **DESCRIPTION:** Manages all player currencies (Coins, Gems, Event Tokens). The `SaveManager` now persists currency data between sessions.
+    -   **GAPS:** No central `CurrencyManager` script exists to unify transactions *during* gameplay.
 
 11. **FEATURE: In-App Purchase (IAP) System**
     -   **STATUS:** [PLANNED]
@@ -76,9 +76,9 @@
     -   **GAPS:** Shop UI and product database are not created.
 
 14. **FEATURE: Mission & Quest System**
-    -   **STATUS:** [PLANNED]
-    -   **DESCRIPTION:** Manages daily, weekly, and storyline quests with rewards.
-    -   **GAPS:** `MissionManager` and quest database are conceptual.
+    -   **STATUS:** [PARTIAL]
+    -   **DESCRIPTION:** Manages daily, weekly, and storyline quests with rewards. The `SaveManager` now persists the state of active quests.
+    -   **GAPS:** A `MissionManager` exists, but lacks a connection to a UI to display quest progress to the player.
 
 15. **FEATURE: Character & Skin System**
     -   **STATUS:** [PLANNED]
@@ -106,13 +106,13 @@
 
 19. **FEATURE: Game State Management**
     -   **STATUS:** [COMPLETE]
-    -   **DESCRIPTION:** Manages core game states (`Menu`, `Playing`, `Paused`, `EndOfRun`). A foundational, stable system.
+    -   **DESCRIPTION:** Manages core game states (`Menu`, `Playing`, `Paused`, `EndOfRun`). A foundational, stable system that utilizes a refined Singleton pattern for manager access.
     -   **GAPS:** None.
 
 20. **FEATURE: Data Persistence (Save/Load)**
-    -   **STATUS:** [PLANNED]
-    -   **DESCRIPTION:** Saves and loads player progress, currency, and settings locally.
-    -   **GAPS:** No `SaveManager` is implemented.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** A unified `SaveManager` handles serialization of all critical game data, including player position, health, inventory, and quest status. It includes a checksum verification system to prevent data tampering.
+    -   **GAPS:** None.
 
 21. **FEATURE: Audio Management**
     -   **STATUS:** [PLANNED]

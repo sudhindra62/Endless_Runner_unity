@@ -9,6 +9,11 @@
 | ---------------------------------- | ------------------------------------ |
 | **Player Speed (Initial)**         | 10                                   |
 | **Player Speed (Max)**             | 30                                   |
+| **Lane Width**                     | 4.0                                  |
+| **Lane Change Speed**              | 15.0                                 |
+| **Jump Force**                     | 10.0                                 |
+| **Slide Duration**                 | 0.8                                  |
+| **Revive Immunity Duration**       | 2.0                                  |
 | **Coin Value**                     | 1                                    |
 | **Powerup Duration**               | 10s                                  |
 | **Run Seed (Current)**             | `DYNAMIC (from RunSessionData)`      |
