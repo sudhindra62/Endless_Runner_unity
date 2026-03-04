@@ -10,4 +10,9 @@ public class RunSessionData : ScriptableObject
     public float duration;
     public int score;
     public int reviveCount;
+
+    public float GetTotalDistance()
+    {
+        return distance;
+    }
 }

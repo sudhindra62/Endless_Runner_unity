@@ -1,19 +1,16 @@
 using UnityEngine;
 
-/// <summary>
-/// Placeholder for a future system to validate data integrity, prevent cheating,
-/// and ensure a fair gameplay environment.
-/// </summary>
-public class IntegrityManager : Singleton<IntegrityManager>
+public class IntegrityManager : MonoBehaviour
 {
-    /// <summary>
-    /// Validates run data against a set of anti-cheat rules.
-    /// </summary>
-    /// <returns>True if the data is considered valid, otherwise false.</returns>
-    public bool ValidateRun(byte[] runData)
+    // This is a placeholder for a more complex integrity manager.
+    // In a real implementation, this would involve things like:
+    // - Cheat detection
+    // - Memory scanning
+    // - Server-side validation
+
+    public bool IsRunLegitimate(SessionAnalyticsData sessionData)
     {
-        // Anti-cheat logic will be implemented here.
-        // For now, it returns true to not block other systems.
+        // For now, we'll just assume the run is always legitimate.
         return true;
     }
 }

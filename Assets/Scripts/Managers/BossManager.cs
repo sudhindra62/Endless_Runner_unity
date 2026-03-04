@@ -1,19 +1,19 @@
 using UnityEngine;
 
-public class ReviveManager : Singleton<ReviveManager>
+public class BossManager : Singleton<BossManager>
 {
     private PlayerAnalyticsManager analyticsManager;
 
-    private void Start()
+    private void Awake()
     {
         analyticsManager = PlayerAnalyticsManager.Instance;
     }
 
-    public void PlayerRevived()
+    public void BossEncounterEnded(bool playerWon)
     {
         if (analyticsManager != null)
         {
-            analyticsManager.TrackRevive();
+            analyticsManager.TrackBossEncounter(playerWon);
         }
     }
 }

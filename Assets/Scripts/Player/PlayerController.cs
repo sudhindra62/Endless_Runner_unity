@@ -223,10 +223,30 @@ public class PlayerController : MonoBehaviour
         bool isInputReversed = playerMovement.IsInputReversed();
         if (isInputReversed) direction.x *= -1;
 
-        if (direction == Vector2.up && (isGrounded || isWallRunning)) Jump();
-        else if (direction == Vector2.left && currentLane > -maxLaneOffset && !isWallRunning) { currentLane--; }
-        else if (direction == Vector2.right && currentLane < maxLaneOffset && !isWallRunning) { currentLane++; }
-        else if (direction == Vector2.down && !isSliding) StartCoroutine(Slide());
+        if (direction == Vector2.up && (isGrounded || isWallRunning))
+        {
+            Jump();
+            PlayerAnalyticsManager.Instance.TrackDodge(true);
+        }
+        else if (direction == Vector2.left && currentLane > -maxLaneOffset && !isWallRunning)
+        {
+            currentLane--;
+            PlayerAnalyticsManager.Instance.TrackDodge(true);
+        }
+        else if (direction == Vector2.right && currentLane < maxLaneOffset && !isWallRunning)
+        {
+            currentLane++;
+            PlayerAnalyticsManager.Instance.TrackDodge(true);
+        }
+        else if (direction == Vector2.down && !isSliding)
+        {
+            StartCoroutine(Slide());
+            PlayerAnalyticsManager.Instance.TrackDodge(true);
+        }
+        else
+        {
+            PlayerAnalyticsManager.Instance.TrackDodge(false);
+        }
     }
 
     public void OnTap()

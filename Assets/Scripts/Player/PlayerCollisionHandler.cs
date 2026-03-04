@@ -50,6 +50,9 @@ public class PlayerCollisionHandler : MonoBehaviour
             }
             else
             {
+                string cause = hit.gameObject.name;
+                float distance = GameManager.Instance.runSessionData.GetTotalDistance();
+                PlayerAnalyticsManager.Instance.TrackPlayerDeath(cause, distance);
                 playerController.Die();
             }
         }

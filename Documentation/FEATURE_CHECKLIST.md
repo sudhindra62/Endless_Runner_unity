@@ -53,4 +53,4 @@
 
 ## NEXT PRIORITY TASK:
 
-**Complete Live Ops Integration:** Surgically integrate the `LiveOpsManager` with all remaining target managers (`DifficultyManager`, `ReviveManager`, `RareDropManager`, etc.) using the established "pull" methodology. Ensure all runtime values are correctly modified without direct mutation.
+**Implement AAA PLAYER ANALYTICS ENGINE:** Create the foundational architecture for the new lightweight analytics system. This includes `PlayerAnalyticsManager`, `SessionAnalyticsData`, `BehaviorTrendAnalyzer`, and `FrustrationDetector`. The system must track key player behaviors without impacting gameplay performance and provide hooks for adaptive difficulty systems.

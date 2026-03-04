@@ -174,6 +174,12 @@ public class BossChaseManager : MonoBehaviour
             if(bossChaseUI != null) bossChaseUI.ShowRewardNotification("You escaped the boss and earned 100 coins!");
         }
 
+        // --- ANALYTICS INTEGRATION ---
+        if (PlayerAnalyticsManager.Instance != null)
+        {
+            PlayerAnalyticsManager.Instance.TrackBossEncounter(survived);
+        }
+
         OnBossChaseEnd?.Invoke();
     }
     
