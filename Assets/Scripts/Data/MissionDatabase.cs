@@ -1,14 +1,8 @@
 
-using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "MissionDatabase", menuName = "Gameplay/Mission Database")]
+[CreateAssetMenu(fileName = "MissionDatabase", menuName = "Missions/Mission Database")]
 public class MissionDatabase : ScriptableObject
 {
-    public List<Mission> Missions;
-
-    public Mission GetMissionById(string missionId)
-    {
-        return Missions.Find(m => m.MissionId == missionId);
-    }
+    public System.Collections.Generic.List<MissionData> allMissions;
 }

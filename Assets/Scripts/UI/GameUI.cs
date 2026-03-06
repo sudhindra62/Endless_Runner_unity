@@ -1,4 +1,6 @@
 
+using Managers;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,6 +12,10 @@ public class GameUI : MonoBehaviour
     [Header("UI Panels")]
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private Button restartButton;
+    
+    [Header("Currency Display")]
+    [SerializeField] private TextMeshProUGUI coinText;
+    [SerializeField] private TextMeshProUGUI gemText;
 
     private void Start()
     {
@@ -26,6 +32,16 @@ public class GameUI : MonoBehaviour
 
         // Subscribe to game events
         GameManager.OnGameOver += ShowGameOverScreen;
+        
+        // Subscribe to currency events
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCoinsChanged += UpdateCoinText;
+            CurrencyManager.Instance.OnGemsChanged += UpdateGemText;
+            // Initial UI update
+            UpdateCoinText(CurrencyManager.Instance.GetCoins());
+            UpdateGemText(CurrencyManager.Instance.GetGems());
+        }
     }
 
     private void OnDestroy()
@@ -36,6 +52,12 @@ public class GameUI : MonoBehaviour
         {
             restartButton.onClick.RemoveListener(GameManager.Instance.RestartGame);
         }
+        
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCoinsChanged -= UpdateCoinText;
+            CurrencyManager.Instance.OnGemsChanged -= UpdateGemText;
+        }
     }
 
     private void ShowGameOverScreen()
@@ -43,6 +65,22 @@ public class GameUI : MonoBehaviour
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
+        }
+    }
+    
+    private void UpdateCoinText(int newBalance)
+    {
+        if (coinText != null)
+        {
+            coinText.text = newBalance.ToString();
+        }
+    }
+
+    private void UpdateGemText(int newBalance)
+    {
+        if (gemText != null)
+        {
+            gemText.text = newBalance.ToString();
         }
     }
 }

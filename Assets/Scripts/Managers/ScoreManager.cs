@@ -24,14 +24,27 @@ public class ScoreManager : Singleton<ScoreManager>
 
     private void Start()
     {
-        // Reset score at the start of the game
+        // Subscribe to the new GameState event
+        GameManager.OnGameStateChanged += HandleGameStateChanged;
         ResetScore();
-        GameManager.OnGameOver += HandleGameOver;
     }
 
     private void OnDestroy()
     {
-        GameManager.OnGameOver -= HandleGameOver;
+        // Unsubscribe to prevent memory leaks
+        GameManager.OnGameStateChanged -= HandleGameStateChanged;
+    }
+
+    private void HandleGameStateChanged(GameState newState)
+    {
+        if (newState == GameState.GameOver)
+        {
+            CheckForNewHighScore();
+        }
+        else if (newState == GameState.MainMenu)
+        {
+            ResetScore();
+        }
     }
 
     private void Update()
@@ -55,15 +68,15 @@ public class ScoreManager : Singleton<ScoreManager>
         OnScoreChanged?.Invoke(CurrentScore);
     }
 
-    private void HandleGameOver()
+    private void CheckForNewHighScore()
     {
-        // Check if the current score is a new high score
         if (CurrentScore > HighScore)
         {
             HighScore = CurrentScore;
             PlayerPrefs.SetInt(HIGH_SCORE_KEY, (int)HighScore);
+            PlayerPrefs.Save(); // Make sure to save PlayerPrefs
             OnHighScoreChanged?.Invoke(HighScore);
-            Debug.Log("New High Score!");
+            Debug.Log("New High Score! " + HighScore);
         }
     }
 

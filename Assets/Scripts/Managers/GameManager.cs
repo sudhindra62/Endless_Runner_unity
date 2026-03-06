@@ -1,68 +1,113 @@
 
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System;
 
-/// <summary>
-/// Manages the core game loop, including game state, player death, and scene transitions.
-/// </summary>
-public class GameManager : Singleton<GameManager>
+public enum GameState
 {
-    public static event Action OnGameStart;
-    public static event Action OnGameOver;
+    MainMenu,
+    Gameplay,
+    Paused,
+    GameOver,
+    Revive,
+    RunSummary
+}
 
-    public bool IsGameActive { get; private set; }
+public class GameManager : MonoBehaviour
+{
+    public static GameManager Instance { get; private set; }
+
+    public static event Action<GameState> OnGameStateChanged;
+
+    public GameState CurrentState { get; private set; }
+
+    public bool IsGameActive => CurrentState == GameState.Gameplay;
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
 
     private void Start()
     {
-        // This setup assumes the game starts when the scene loads.
-        // For a more robust system, you might have a main menu that calls StartGame().
-        StartGame();
+        // Set the initial state of the game
+        SetState(GameState.MainMenu);
+    }
+
+    public void SetState(GameState newState)
+    {
+        if (CurrentState == newState) return;
+
+        CurrentState = newState;
+        OnGameStateChanged?.Invoke(newState);
+
+        switch (newState)
+        {
+            case GameState.MainMenu:
+                Time.timeScale = 1f;
+                break;
+            case GameState.Gameplay:
+                Time.timeScale = 1f;
+                break;
+            case GameState.Paused:
+                Time.timeScale = 0f;
+                break;
+            case GameState.GameOver:
+                // Actions to take when the game is over, before showing revive or summary
+                break;
+            case GameState.Revive:
+                Time.timeScale = 0f;
+                break;
+            case GameState.RunSummary:
+                Time.timeScale = 0f;
+                break;
+        }
     }
 
     public void StartGame()
     {
-        if (IsGameActive) return;
-
-        IsGameActive = true;
-        Time.timeScale = 1f; // Ensure the game is not paused
-        OnGameStart?.Invoke();
-        Debug.Log("Game Started!");
-
-        // You could spawn the player here, reset scores, etc.
+        SetState(GameState.Gameplay);
     }
 
-    public void GameOver()
+    public void PauseGame()
     {
-        if (!IsGameActive) return;
+        if (CurrentState == GameState.Gameplay)
+        {
+            SetState(GameState.Paused);
+        }
+    }
 
-        IsGameActive = false;
-        Time.timeScale = 0f; // Pause the game
-        OnGameOver?.Invoke();
-        Debug.Log("Game Over!");
+    public void ResumeGame()
+    {
+        if (CurrentState == GameState.Paused)
+        {
+            SetState(GameState.Gameplay);
+        }
+    }
 
-        // Here you would typically show a game over screen
-        // For simplicity, we'll add a delay and restart the level.
-        // StartCoroutine(RestartLevelAfterDelay(3f));
+    public void PlayerDied()
+    {
+        SetState(GameState.GameOver);
+        // Here you can decide whether to go to Revive or RunSummary
+        // For now, let's assume we always offer a revive.
+        SetState(GameState.Revive);
     }
 
     public void RestartGame()
     {
-        // Reload the current scene
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    /*
-    private System.Collections.IEnumerator RestartLevelAfterDelay(float delay)
+    public void GoToMainMenu()
     {
-        yield return new WaitForSecondsRealtime(delay);
-        RestartGame();
-    }
-    */
-
-    // Example of a method that might be called by an enemy or a death trigger
-    public void PlayerDied()
-    {
-        GameOver();
+        SetState(GameState.MainMenu);
     }
 }

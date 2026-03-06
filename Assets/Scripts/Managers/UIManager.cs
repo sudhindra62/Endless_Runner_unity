@@ -1,9 +1,9 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro; // Added for TextMeshPro integration
+using TMPro;
 
-public class UIManager : Singleton<UIManager>
+public class UIManager : MonoBehaviour
 {
     [Header("UI Panels")]
     [SerializeField] private GameObject menuPanel;
@@ -13,61 +13,65 @@ public class UIManager : Singleton<UIManager>
     [SerializeField] private GameObject runSummaryPanel;
 
     [Header("Gameplay UI Elements")]
-    [SerializeField] private TextMeshProUGUI scoreText; // Assign the gameplay score text element in the Inspector
+    [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI bestScoreText;
 
     [Header("Ghost Run UI")]
     [SerializeField] private Toggle ghostToggle;
 
     [Header("Fusion UI")]
-    [SerializeField] private FusionUI fusionUIPrefab; // Assign in Inspector
+    [SerializeField] private FusionUI fusionUIPrefab;
 
     private FusionUI fusionUIInstance;
 
     private void Start()
     {
-        // Subscribe to Game State, Score, and Fusion events
         GameManager.OnGameStateChanged += HandleGameStateChange;
         ScoreManager.OnScoreChanged += UpdateScoreUI;
-        PowerUpFusionManager.OnFusionActivated += HandleFusionActivation; // Subscribe to fusion activation
-        PowerUpFusionManager.OnFusionDeactivated += HandleFusionDeactivation; // Subscribe to fusion deactivation
-        ghostToggle.onValueChanged.AddListener(OnGhostToggleChanged);
+        if (PowerUpFusionManager.Instance != null)
+        {
+            PowerUpFusionManager.Instance.OnFusionActivated += HandleFusionActivation;
+            PowerUpFusionManager.Instance.OnFusionDeactivated += HandleFusionDeactivation;
+        }
+
+        if(ghostToggle != null)
+        {
+            ghostToggle.onValueChanged.AddListener(OnGhostToggleChanged);
+        }
 
         CreateFusionUI();
-        
-        // Initialize score text on game start
-        UpdateScoreUI(0); 
+        UpdateScoreUI(0);
     }
 
     private void OnDestroy()
     {
-        // Unsubscribe to prevent memory leaks
         GameManager.OnGameStateChanged -= HandleGameStateChange;
         ScoreManager.OnScoreChanged -= UpdateScoreUI;
-        if (PowerUpFusionManager.Instance != null) {
-            PowerUpFusionManager.OnFusionActivated -= HandleFusionActivation;
-            PowerUpFusionManager.OnFusionDeactivated -= HandleFusionDeactivation;
+        if (PowerUpFusionManager.Instance != null)
+        {
+            PowerUpFusionManager.Instance.OnFusionActivated -= HandleFusionActivation;
+            PowerUpFusionManager.Instance.OnFusionDeactivated -= HandleFusionDeactivation;
         }
     }
 
     private void HandleGameStateChange(GameState newState)
     {
-        menuPanel.SetActive(newState == GameState.Menu);
-        gameplayPanel.SetActive(newState == GameState.Playing);
+        menuPanel.SetActive(newState == GameState.MainMenu);
+        gameplayPanel.SetActive(newState == GameState.Gameplay);
         pausePanel.SetActive(newState == GameState.Paused);
-        revivePanel.SetActive(newState == GameState.Dead);
-        runSummaryPanel.SetActive(newState == GameState.EndOfRun);
+        revivePanel.SetActive(newState == GameState.Revive);
+        runSummaryPanel.SetActive(newState == GameState.RunSummary);
     }
-    
-    private void UpdateScoreUI(int newScore)
+
+    private void UpdateScoreUI(long newScore)
     {
         if (scoreText != null)
         {
-            scoreText.text = newScore.ToString("D8"); 
+            scoreText.text = newScore.ToString("D8");
         }
     }
 
-    public void UpdateBestScoreUI(int bestScore)
+    public void UpdateBestScoreUI(long bestScore)
     {
         if (bestScoreText != null)
         {
@@ -77,9 +81,10 @@ public class UIManager : Singleton<UIManager>
 
     private void OnGhostToggleChanged(bool isOn)
     {
-        if (GhostRunManager.Instance != null && GhostRunManager.Instance.playback != null) {
+        if (GhostRunManager.Instance != null && GhostRunManager.Instance.playback != null)
+        {
             GhostRunManager.Instance.playback.gameObject.SetActive(isOn);
-        } 
+        }
     }
 
     private void CreateFusionUI()
@@ -91,15 +96,13 @@ public class UIManager : Singleton<UIManager>
         }
     }
 
-    // --- Fusion UI Handlers ---
     private void HandleFusionActivation(FusionModifierData data)
     {
         ShowFusionUI(data.Type, data.Duration);
     }
 
-    private void HandleFusionDeactivation(FusionType fusionType)
+    private void HandleFusionDeactivation()
     {
-        // The parameter is passed from the event, but our Hide method doesn't need it.
         HideFusionUI();
     }
 
@@ -113,7 +116,6 @@ public class UIManager : Singleton<UIManager>
         if (fusionUIInstance != null) fusionUIInstance.Hide();
     }
 
-    // --- Other UI Methods ---
     public void ShowRevivePopup()
     {
         revivePanel.SetActive(true);

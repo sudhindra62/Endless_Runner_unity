@@ -1,71 +1,59 @@
 
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
-/// <summary>
-/// Displays active missions and their progress to the player.
-/// Subscribes to MissionManager events to stay updated.
-/// </summary>
 public class MissionUI : MonoBehaviour
 {
-    [Header("Dependencies")]
-    [SerializeField] private MissionManager missionManager;
+    [SerializeField] private GameObject missionPanel;
+    [SerializeField] private MissionSlotUI[] missionSlots;
 
-    [Header("UI Prefabs & Containers")]
-    [SerializeField] private GameObject missionSlotPrefab;
-    [SerializeField] private Transform missionContainer;
-
-    private List<MissionSlotUI> missionSlots = new List<MissionSlotUI>();
-
-    private void OnEnable()
+    private void Start()
     {
-        if (missionManager == null) missionManager = MissionManager.Instance;
-        
-        MissionManager.OnMissionProgress += UpdateMissionSlot;
-        MissionManager.OnMissionCompleted += HandleMissionCompletion; // Maybe play an animation
-
-        GenerateMissionSlots();
+        MissionManager.OnMissionProgress += UpdateMissionProgress;
+        MissionManager.OnMissionCompleted += HandleMissionCompletion;
+        InitializeMissionUI();
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
-        MissionManager.OnMissionProgress -= UpdateMissionSlot;
+        MissionManager.OnMissionProgress -= UpdateMissionProgress;
         MissionManager.OnMissionCompleted -= HandleMissionCompletion;
     }
 
-    private void GenerateMissionSlots()
+    private void InitializeMissionUI()
     {
-        // Clear old slots
-        foreach (Transform child in missionContainer)
+        List<MissionData> activeMissions = MissionManager.Instance.GetActiveMissions();
+        for (int i = 0; i < missionSlots.Length; i++)
         {
-            Destroy(child.gameObject);
-        }
-        missionSlots.Clear();
-
-        List<MissionData> activeMissions = missionManager.GetActiveMissions();
-        
-        foreach (var mission in activeMissions)
-        {
-            GameObject slotInstance = Instantiate(missionSlotPrefab, missionContainer);
-            MissionSlotUI slotUI = slotInstance.GetComponent<MissionSlotUI>();
-            slotUI.Setup(mission);
-            missionSlots.Add(slotUI);
+            if (i < activeMissions.Count)
+            {
+                missionSlots[i].gameObject.SetActive(true);
+                missionSlots[i].SetMission(activeMissions[i]);
+            }
+            else
+            {
+                missionSlots[i].gameObject.SetActive(false);
+            }
         }
     }
 
-    private void UpdateMissionSlot(MissionData mission)
+    private void UpdateMissionProgress(MissionData mission)
     {
-        MissionSlotUI slotToUpdate = missionSlots.Find(s => s.GetMissionData() == mission);
-        if (slotToUpdate != null)
+        foreach (var slot in missionSlots)
         {
-            slotToUpdate.RefreshProgress();
+            // This is not efficient, but it's simple for now.
+            // A better approach would be to have a dictionary mapping mission to slot.
+            if (slot.gameObject.activeSelf)
+            {
+                // Refresh all slots, or find the correct one to update.
+                InitializeMissionUI(); 
+            }
         }
     }
-    
+
     private void HandleMissionCompletion(MissionData mission)
     {
-        // Here you might trigger a UI animation or effect for completion
-        // After animation, you could replace the slot.
-        GenerateMissionSlots(); // Simple regeneration for now
+        // Potentially show a completion animation or message
+        InitializeMissionUI();
     }
 }

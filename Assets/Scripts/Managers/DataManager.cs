@@ -1,19 +1,46 @@
+
 using UnityEngine;
 
-public class DataManager : Singleton<DataManager>
+namespace Managers
 {
-    // This class is intended to manage game data, including currency and streaks.
-    // Currently, it only contains the coin streak logic.
-
-    public int CoinStreak { get; private set; }
-
-    public void AddToCoinStreak(int amount)
+    public class DataManager : MonoBehaviour
     {
-        CoinStreak += amount;
-    }
+        public static DataManager Instance { get; private set; }
+        
+        public GameData GameData { get; private set; }
 
-    public void ResetCoinStreak()
-    {
-        CoinStreak = 0;
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
+
+        public void LoadGameData()
+        {
+            // In a real project, this would load from a file
+            GameData = new GameData(); 
+            
+            if (CurrencyManager.Instance != null)
+            {
+                CurrencyManager.Instance.LoadCurrencyFromSaveData(GameData);
+            }
+        }
+
+        public void SaveGameData()
+        {
+            if (CurrencyManager.Instance != null)
+            {
+                CurrencyManager.Instance.PopulateSaveData(GameData);
+            }
+            
+            // In a real project, this would save to a file
+        }
     }
 }

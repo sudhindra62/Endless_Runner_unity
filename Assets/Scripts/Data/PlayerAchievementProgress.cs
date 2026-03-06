@@ -2,7 +2,7 @@
 using System;
 
 [Serializable]
-public class AchievementData
+public class PlayerAchievementProgress
 {
     public AchievementID id;
     public string name;

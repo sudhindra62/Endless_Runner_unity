@@ -6,6 +6,8 @@ public class GameData
 {
     public float[] playerPosition;
     public int playerHealth;
+    public int playerCoins;
+    public int playerGems;
     public List<ItemData> inventory;
     public List<QuestData> quests;
     public PlayerAchievementData achievementData;

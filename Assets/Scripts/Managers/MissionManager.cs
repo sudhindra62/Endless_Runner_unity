@@ -11,7 +11,7 @@ using System;
 public class MissionManager : Singleton<MissionManager>
 {
     [Header("Mission Pool")]
-    [SerializeField] private List<MissionData> allMissions = new List<MissionData>();
+    [SerializeField] private MissionDatabase missionDatabase;
     [SerializeField] private int concurrentMissions = 3;
 
     private List<MissionData> activeMissions = new List<MissionData>();
@@ -21,7 +21,7 @@ public class MissionManager : Singleton<MissionManager>
 
     private void Start()
     {
-        // LoadActiveMissions();
+        LoadActiveMissions();
         // SubscribeToGameEvents();
     }
 
@@ -48,7 +48,7 @@ public class MissionManager : Singleton<MissionManager>
                 }
             }
         }
-        // SaveActiveMissions();
+        SaveActiveMissions();
     }
 
     private void CompleteMission(MissionData mission)
@@ -73,7 +73,7 @@ public class MissionManager : Singleton<MissionManager>
     {
         activeMissions.Remove(completedMission);
         
-        List<MissionData> availableMissions = allMissions
+        List<MissionData> availableMissions = missionDatabase.allMissions
             .Except(activeMissions)
             .ToList();
 
@@ -88,8 +88,21 @@ public class MissionManager : Singleton<MissionManager>
 
     public List<MissionData> GetActiveMissions() => activeMissions;
 
-    // private void LoadActiveMissions() { ... }
-    // private void SaveActiveMissions() { ... }
+    private void LoadActiveMissions() 
+    { 
+        // For simplicity, we'll just grab the first few from the database
+        // In a real game, we would load the saved mission state
+        activeMissions = missionDatabase.allMissions.Take(concurrentMissions).Select(m => Instantiate(m)).ToList();
+        foreach(var mission in activeMissions)
+        {
+            mission.currentProgress = 0;
+            mission.isCompleted = false;
+        }
+    }
+    private void SaveActiveMissions() 
+    { 
+        // In a real game, we would save the active mission state to a file
+    }
     // private void SubscribeToGameEvents() { ... }
     // private void UnsubscribeFromGameEvents() { ... }
 }
