@@ -1,9 +1,0 @@
-## TODO List
-
-- **ScoreManager:**
-  - Implement `CalculateTotalMultiplier` to correctly aggregate all score multipliers.
-  - Ensure `BossChaseManager` can safely apply and remove its multiplier.
-
-- **ReviveManager:**
-  - Implement `CalculateTotalRevives` to accurately sum all available revives.
-  - Prevent `BossChaseManager` from interfering with the revive process.

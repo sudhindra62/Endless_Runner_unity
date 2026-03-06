@@ -1,62 +1,95 @@
+
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
+/// <summary>
+/// Manages active missions, tracks progress, and grants rewards.
+/// Acts as the central hub for all mission-related logic.
+/// </summary>
 public class MissionManager : Singleton<MissionManager>
 {
-    [SerializeField] private MissionDatabase missionDatabase;
-    public List<Mission> ActiveMissions { get; private set; } = new List<Mission>();
+    [Header("Mission Pool")]
+    [SerializeField] private List<MissionData> allMissions = new List<MissionData>();
+    [SerializeField] private int concurrentMissions = 3;
+
+    private List<MissionData> activeMissions = new List<MissionData>();
+
+    public static event Action<MissionData> OnMissionProgress;
+    public static event Action<MissionData> OnMissionCompleted;
 
     private void Start()
     {
-        // Load missions from the database
-        if (missionDatabase != null)
-        {
-            foreach (var mission in missionDatabase.missions)
-            {
-                AddMission(mission.MissionId);
-            }
-        }
+        // LoadActiveMissions();
+        // SubscribeToGameEvents();
     }
 
-    public void AddMission(string missionId)
+    private void OnDestroy()
     {
-        if (missionDatabase == null) return;
-        Mission missionToAdd = missionDatabase.missions.FirstOrDefault(m => m.MissionId == missionId);
-        if (missionToAdd != null && !ActiveMissions.Any(m => m.MissionId == missionId))
-        {
-            ActiveMissions.Add(new Mission(missionToAdd.MissionId, missionToAdd.Type, missionToAdd.Target));
-        }
+        // UnsubscribeFromGameEvents();
     }
 
-    public void UpdateMissionProgress(MissionType type, float value)
+    /// <summary>
+    /// Called by other game systems to report an event.
+    /// </summary>
+    public void ReportEvent(MissionType type, int amount)
     {
-        foreach (var mission in ActiveMissions)
+        foreach (var mission in activeMissions)
         {
-            if (mission.Type == type)
+            if (mission.missionType == type && !mission.isCompleted)
             {
-                mission.UpdateProgress(value);
-            }
-        }
-    }
+                mission.currentProgress += amount;
+                OnMissionProgress?.Invoke(mission);
 
-    public Mission GetClosestMission()
-    {
-        Mission closestMission = null;
-        float smallestDifference = float.MaxValue;
-
-        foreach (var mission in ActiveMissions)
-        {
-            if (!mission.IsCompleted)
-            {
-                float difference = mission.GetDifference();
-                if (difference < smallestDifference)
+                if (mission.currentProgress >= mission.goal)
                 {
-                    smallestDifference = difference;
-                    closestMission = mission;
+                    CompleteMission(mission);
                 }
             }
         }
-        return closestMission;
+        // SaveActiveMissions();
     }
+
+    private void CompleteMission(MissionData mission)
+    {
+        if (mission.isCompleted) return;
+
+        mission.isCompleted = true;
+
+        // Grant Rewards
+        PlayerProgression.Instance.AddXP(mission.rewardXP);
+        CurrencyManager.Instance.AddCoins(mission.rewardCoins);
+        CurrencyManager.Instance.AddGems(mission.rewardGems);
+
+        OnMissionCompleted?.Invoke(mission);
+        Debug.Log($"Mission Completed: {mission.missionName}");
+
+        // Replace the completed mission with a new one
+        ReplaceCompletedMission(mission);
+    }
+
+    private void ReplaceCompletedMission(MissionData completedMission)
+    {
+        activeMissions.Remove(completedMission);
+        
+        List<MissionData> availableMissions = allMissions
+            .Except(activeMissions)
+            .ToList();
+
+        if (availableMissions.Count > 0)
+        {
+            MissionData newMission = Instantiate(availableMissions[UnityEngine.Random.Range(0, availableMissions.Count)]);
+            newMission.currentProgress = 0;
+            newMission.isCompleted = false;
+            activeMissions.Add(newMission);
+        }
+    }
+
+    public List<MissionData> GetActiveMissions() => activeMissions;
+
+    // private void LoadActiveMissions() { ... }
+    // private void SaveActiveMissions() { ... }
+    // private void SubscribeToGameEvents() { ... }
+    // private void UnsubscribeFromGameEvents() { ... }
 }

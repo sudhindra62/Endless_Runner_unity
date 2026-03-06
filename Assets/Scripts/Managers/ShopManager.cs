@@ -1,31 +1,74 @@
 
 using UnityEngine;
+using System;
 
 /// <summary>
-/// Manages the fulfillment of in-app purchases. It acts as the intermediary
-/// between the IAPManager (which handles platform-specific transactions) and the
-/// EntitlementResolver (which grants the actual items/currency to the player).
-/// This centralization is key to a secure and maintainable monetization system.
+/// Handles all shop transactions, including the purchasing of skins.
+/// Acts as the intermediary between the UI and the player's inventory/currency.
 /// </summary>
 public class ShopManager : Singleton<ShopManager>
 {
-    /// <summary>
-    /// Called by the IAPManager after a purchase has been successfully validated.
-    /// This method is responsible for initiating the entitlement process.
-    /// </summary>
-    /// <param name="productId">The unique identifier of the purchased product.</param>
-    /// <param name="transactionId">The unique identifier for the transaction to prevent duplicates.</param>
-    public void ProcessPurchase(string productId, string transactionId)
-    {
-        Debug.Log($"ShopManager: Processing purchase for product '{productId}' with transaction ID '{transactionId}'.");
+    private SkinManager skinManager;
+    private CurrencyManager currencyManager;
 
-        // The EntitlementResolver is the authority on what each product ID means
-        // and ensures the transaction hasn't been processed before.
-        bool success = EntitlementResolver.Instance.ResolvePurchase(productId, transactionId);
+    public static event Action<string, bool> OnPurchaseCompleted; // skinID, success
+
+    private void Start()
+    {
+        skinManager = SkinManager.Instance;
+        currencyManager = CurrencyManager.Instance;
+    }
+
+    /// <summary>
+    /// Attempts to purchase a skin.
+    /// </summary>
+    public bool PurchaseSkin(string skinID)
+    {
+        SkinData skinToBuy = skinManager.GetAllSkins().Find(s => s.skinID == skinID);
+
+        if (skinToBuy == null)
+        {
+            Debug.LogError($"Attempted to buy a skin with an invalid ID: {skinID}");
+            OnPurchaseCompleted?.Invoke(skinID, false);
+            return false;
+        }
+
+        if (skinManager.IsSkinUnlocked(skinID))
+        {
+            Debug.LogWarning("Attempted to buy a skin that is already unlocked.");
+            OnPurchaseCompleted?.Invoke(skinID, false);
+            return false;
+        }
+
+        bool success = false;
+        switch (skinToBuy.currencyType)
+        {
+            case CurrencyType.Coins:
+                if (currencyManager.SpendCoins(skinToBuy.price))
+                {
+                    success = true;
+                }
+                break;
+            case CurrencyType.Gems:
+                if (currencyManager.SpendGems(skinToBuy.price))
+                {
+                    success = true;
+                }
+                break;
+        }
 
         if (success)
         {
-            IAPManager.Instance.ConfirmPurchase(productId);
+            skinManager.UnlockSkin(skinID);
+            Debug.Log($"Successfully purchased skin: {skinID}");
+            OnPurchaseCompleted?.Invoke(skinID, true);
+            return true;
+        }
+        else
+        {
+            Debug.Log("Not enough currency to purchase skin.");
+            OnPurchaseCompleted?.Invoke(skinID, false);
+            return false;
         }
     }
 }

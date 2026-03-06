@@ -2,79 +2,74 @@
 using UnityEngine;
 using System;
 
+/// <summary>
+/// Manages the player's score and high score.
+/// </summary>
 public class ScoreManager : Singleton<ScoreManager>
 {
-    public static event Action<int> OnScoreChanged;
+    public long CurrentScore { get; private set; }
+    public long HighScore { get; private set; }
 
-    private int currentCombo = 0;
-    private int comboPeak = 0;
+    public static event Action<long> OnScoreChanged;
+    public static event Action<long> OnHighScoreChanged;
 
-    private int totalScore = 0;
-    private int bestScore = 0;
+    private const string HIGH_SCORE_KEY = "PlayerHighScore";
+    private float scoreUpdateTimer;
 
-    private PlayerAnalyticsManager analyticsManager;
+    protected override void Awake()
+    {
+        base.Awake();
+        HighScore = PlayerPrefs.GetInt(HIGH_SCORE_KEY, 0);
+    }
 
     private void Start()
     {
-        analyticsManager = PlayerAnalyticsManager.Instance;
-        bestScore = PlayerPrefs.GetInt("BestScore", 0);
+        // Reset score at the start of the game
+        ResetScore();
+        GameManager.OnGameOver += HandleGameOver;
     }
 
-    public void AddScore(int amount)
+    private void OnDestroy()
     {
-        totalScore += amount;
-        OnScoreChanged?.Invoke(totalScore);
+        GameManager.OnGameOver -= HandleGameOver;
     }
 
-    public void IncrementCombo()
+    private void Update()
     {
-        currentCombo++;
-        if (currentCombo > comboPeak)
+        if (GameManager.Instance.IsGameActive)
         {
-            comboPeak = currentCombo;
-            if (analyticsManager != null)
+            // Increase score over time (e.g., based on distance traveled)
+            scoreUpdateTimer += Time.deltaTime;
+            if (scoreUpdateTimer >= 0.1f) // Update score every 0.1 seconds
             {
-                analyticsManager.LogComboPeak(comboPeak);
+                AddScore(1);
+                scoreUpdateTimer = 0f;
             }
         }
     }
 
-    public void ResetCombo()
+    public void AddScore(int amount)
     {
-        currentCombo = 0;
+        if (!GameManager.Instance.IsGameActive || amount <= 0) return;
+        CurrentScore += amount;
+        OnScoreChanged?.Invoke(CurrentScore);
     }
 
-    public void FinalizeRun(float runDistance, float runTime)
+    private void HandleGameOver()
     {
-        // INTEGRATION: Validate the run data before finalizing the score.
-        if (!IntegrityManager.Instance.ValidateRun(runDistance, runTime))
+        // Check if the current score is a new high score
+        if (CurrentScore > HighScore)
         {
-            IntegrityManager.Instance.ReportError("Run data validation failed. Score will not be recorded.");
-            return;
+            HighScore = CurrentScore;
+            PlayerPrefs.SetInt(HIGH_SCORE_KEY, (int)HighScore);
+            OnHighScoreChanged?.Invoke(HighScore);
+            Debug.Log("New High Score!");
         }
-
-        if (totalScore > bestScore)
-        {
-            bestScore = totalScore;
-            PlayerPrefs.SetInt("BestScore", bestScore);
-        }
-
-        // Log the final score and run summary.
-        if (analyticsManager != null)
-        {
-            analyticsManager.LogRunSummary(totalScore, runDistance, runTime);
-        }
-
-        Debug.Log($"Run finalized with score: {totalScore}, distance: {runDistance}, time: {runTime}");
     }
 
-    public int GetCurrentScore()
+    public void ResetScore()
     {
-        return totalScore;
-    }
-
-    public int GetBestScore()
-    {
-        return bestScore;
+        CurrentScore = 0;
+        OnScoreChanged?.Invoke(CurrentScore);
     }
 }

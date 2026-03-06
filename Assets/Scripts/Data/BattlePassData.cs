@@ -2,27 +2,27 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[CreateAssetMenu(fileName = "NewBattlePassSeason", menuName = "Endless Runner/Battle Pass Season")]
+[System.Serializable]
+public struct RewardItem
+{
+    public string itemID; // Could be a ScriptableObject ID or a simple string
+    public int quantity;
+    public Sprite icon;
+    // public ItemType itemType; // e.g., Currency, Skin, PowerUp
+}
+
+[System.Serializable]
+public struct BattlePassTier
+{
+    public int xpRequired;
+    public List<RewardItem> freeRewards;
+    public List<RewardItem> premiumRewards;
+}
+
+[CreateAssetMenu(fileName = "NewBattlePass", menuName = "Gameplay/Battle Pass/New Battle Pass")]
 public class BattlePassData : ScriptableObject
 {
-    [System.Serializable]
-    public struct RewardTier
-    {
-        public int xpRequired;
-        public Reward freeTrackReward;
-        public Reward premiumTrackReward;
-    }
-
-    [System.Serializable]
-    public struct Reward
-    {
-        public string rewardId; // e.g., "Coins", "Gems", "Skin_Cyberpunk"
-        public int amount;
-        public Sprite icon;
-    }
-
-    public string seasonName;
+    public string passName;
     public int seasonNumber;
-    public Sprite seasonIcon;
-    public List<RewardTier> tiers = new List<RewardTier>();
+    public List<BattlePassTier> tiers;
 }

@@ -1,88 +1,68 @@
+
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using System;
 
-public class GameManager : MonoBehaviour
+/// <summary>
+/// Manages the core game loop, including game state, player death, and scene transitions.
+/// </summary>
+public class GameManager : Singleton<GameManager>
 {
-    public static GameManager Instance { get; private set; }
+    public static event Action OnGameStart;
+    public static event Action OnGameOver;
 
-    public RunSessionData runSessionData;
-    public PlayerAnalyticsManager playerAnalyticsManager;
-    public TimeWarpManager timeWarpManager;
-    public MultiplayerGhostManager multiplayerGhostManager;
+    public bool IsGameActive { get; private set; }
 
-    private void Awake()
+    private void Start()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-
-        playerAnalyticsManager = FindObjectOfType<PlayerAnalyticsManager>();
-        if (playerAnalyticsManager == null)
-        {
-            GameObject analyticsObject = new GameObject("PlayerAnalyticsManager");
-            playerAnalyticsManager = analyticsObject.AddComponent<PlayerAnalyticsManager>();
-        }
-
-        timeWarpManager = FindObjectOfType<TimeWarpManager>();
-        if (timeWarpManager == null)
-        {
-            GameObject timeWarpObject = new GameObject("TimeWarpManager");
-            timeWarpManager = timeWarpObject.AddComponent<TimeWarpManager>();
-        }
-
-        multiplayerGhostManager = FindObjectOfType<MultiplayerGhostManager>();
-        if (multiplayerGhostManager == null)
-        {
-            GameObject ghostManagerObject = new GameObject("MultiplayerGhostManager");
-            multiplayerGhostManager = ghostManagerObject.AddComponent<MultiplayerGhostManager>();
-        }
+        // This setup assumes the game starts when the scene loads.
+        // For a more robust system, you might have a main menu that calls StartGame().
+        StartGame();
     }
 
-    public void StartNewRun()
+    public void StartGame()
     {
-        // Reset session data for the new run
-        if (runSessionData != null)
-        {
-            runSessionData.Reset();
-        }
+        if (IsGameActive) return;
 
-        // Reset the time warp ability
-        if (timeWarpManager != null)
-        {
-            timeWarpManager.ResetWarp();
-        }
+        IsGameActive = true;
+        Time.timeScale = 1f; // Ensure the game is not paused
+        OnGameStart?.Invoke();
+        Debug.Log("Game Started!");
 
-        // Start analytics session
-        if (IntegrityManager.Instance.IsAnalyticsEnabled())
-        {
-            playerAnalyticsManager.StartNewSession();
-        }
+        // You could spawn the player here, reset scores, etc.
     }
 
-    public void StartGhostRace(GhostRunData ghostData)
+    public void GameOver()
     {
-        if (multiplayerGhostManager != null)
-        {
-            multiplayerGhostManager.StartGhostRace(ghostData);
-        }
+        if (!IsGameActive) return;
+
+        IsGameActive = false;
+        Time.timeScale = 0f; // Pause the game
+        OnGameOver?.Invoke();
+        Debug.Log("Game Over!");
+
+        // Here you would typically show a game over screen
+        // For simplicity, we'll add a delay and restart the level.
+        // StartCoroutine(RestartLevelAfterDelay(3f));
     }
 
-    private void OnApplicationQuit()
+    public void RestartGame()
     {
-        if (IntegrityManager.Instance.IsAnalyticsEnabled())
-        {
-            playerAnalyticsManager.EndSession();
-        }
+        // Reload the current scene
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
+    /*
+    private System.Collections.IEnumerator RestartLevelAfterDelay(float delay)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+        RestartGame();
+    }
+    */
+
+    // Example of a method that might be called by an enemy or a death trigger
     public void PlayerDied()
     {
-        if(IntegrityManager.Instance.IsAnalyticsEnabled())
-        {
-            FrustrationDetector.Instance.ReportPlayerDeath();
-        }
+        GameOver();
     }
 }

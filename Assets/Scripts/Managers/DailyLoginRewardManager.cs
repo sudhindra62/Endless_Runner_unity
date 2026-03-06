@@ -13,7 +13,7 @@ public class DailyLoginRewardManager : Singleton<DailyLoginRewardManager>
     {
         public int coins;
         public int gems;
-        // Could also include item IDs, etc.
+        public int xp; // Added XP
     }
 
     [Header("Configuration")]
@@ -81,10 +81,11 @@ public class DailyLoginRewardManager : Singleton<DailyLoginRewardManager>
         DailyReward reward = rewards[rewardIndex];
         
         // Grant reward through a centralized system
-        // CurrencyManager.Instance.AddCoins(reward.coins);
-        // CurrencyManager.Instance.AddGems(reward.gems);
+        CurrencyManager.Instance.AddCoins(reward.coins);
+        CurrencyManager.Instance.AddGems(reward.gems);
+        PlayerProgression.Instance.AddXP(reward.xp); // Grant XP
         
-        Debug.Log($"Claimed Day {consecutiveDays} reward: {reward.coins} coins, {reward.gems} gems.");
+        Debug.Log($"Claimed Day {consecutiveDays} reward: {reward.coins} coins, {reward.gems} gems, {reward.xp} XP.");
 
         // Update state
         IsRewardAvailable = false;

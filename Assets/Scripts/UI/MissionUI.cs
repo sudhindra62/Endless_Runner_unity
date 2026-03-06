@@ -1,104 +1,71 @@
+
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using System.Collections.Generic;
 
 /// <summary>
-/// Manages the UI for displaying the list of active missions.
-/// Listens to events from the MissionManager to keep the display synchronized.
-/// 
-/// --- Inspector Setup ---
-/// 1. Attach this script to a UI panel for missions.
-/// 2. Create three identical UI prefabs/groups for displaying a single mission.
-/// 3. Assign the parent Transform of each mission UI group to the 'missionUIParents' list.
-/// 4. Ensure each mission group has a consistent hierarchy with Text and Image components for the script to find.
+/// Displays active missions and their progress to the player.
+/// Subscribes to MissionManager events to stay updated.
 /// </summary>
 public class MissionUI : MonoBehaviour
 {
-    [Header("UI References")]
-    [Tooltip("A list of parent GameObjects, one for each of the 3 active mission displays.")]
-    [SerializeField] private List<GameObject> missionUIGroups;
+    [Header("Dependencies")]
+    [SerializeField] private MissionManager missionManager;
 
-    #region Unity Lifecycle & Event Subscription
+    [Header("UI Prefabs & Containers")]
+    [SerializeField] private GameObject missionSlotPrefab;
+    [SerializeField] private Transform missionContainer;
+
+    private List<MissionSlotUI> missionSlots = new List<MissionSlotUI>();
 
     private void OnEnable()
     {
-        MissionManager.OnMissionsUpdated += HandleMissionsUpdated;
-        // Initial update
-        if(MissionManager.Instance != null) UpdateMissionDisplay(MissionManager.Instance.GetActiveMissions());
+        if (missionManager == null) missionManager = MissionManager.Instance;
+        
+        MissionManager.OnMissionProgress += UpdateMissionSlot;
+        MissionManager.OnMissionCompleted += HandleMissionCompletion; // Maybe play an animation
+
+        GenerateMissionSlots();
     }
 
     private void OnDisable()
     {
-        MissionManager.OnMissionsUpdated -= HandleMissionsUpdated;
+        MissionManager.OnMissionProgress -= UpdateMissionSlot;
+        MissionManager.OnMissionCompleted -= HandleMissionCompletion;
     }
 
-    #endregion
-
-    private void HandleMissionsUpdated()
+    private void GenerateMissionSlots()
     {
-        if (MissionManager.Instance != null)
+        // Clear old slots
+        foreach (Transform child in missionContainer)
         {
-            UpdateMissionDisplay(MissionManager.Instance.GetActiveMissions());
+            Destroy(child.gameObject);
         }
-    }
+        missionSlots.Clear();
 
-    private void UpdateMissionDisplay(List<ProjectMissionData> activeMissions)
-    {
-        if (activeMissions == null) return;
-
-        for (int i = 0; i < missionUIGroups.Count; i++)
+        List<MissionData> activeMissions = missionManager.GetActiveMissions();
+        
+        foreach (var mission in activeMissions)
         {
-            var group = missionUIGroups[i];
-            if (group == null) continue;
-
-            if (i < activeMissions.Count)
-            {
-                group.SetActive(true);
-                PopulateMissionUI(group, new ActiveMissionState { Definition = activeMissions[i] });
-            }
-            else
-            {
-                group.SetActive(false);
-            }
+            GameObject slotInstance = Instantiate(missionSlotPrefab, missionContainer);
+            MissionSlotUI slotUI = slotInstance.GetComponent<MissionSlotUI>();
+            slotUI.Setup(mission);
+            missionSlots.Add(slotUI);
         }
     }
 
-    private void PopulateMissionUI(GameObject group, ActiveMissionState missionState)
+    private void UpdateMissionSlot(MissionData mission)
     {
-        if (missionState == null || missionState.Definition == null) return;
-
-        var mission = missionState.Definition;
-
-        // Find UI components within the group - safely
-        TMP_Text descriptionText = group.transform.Find("DescriptionText")?.GetComponent<TMP_Text>();
-        TMP_Text rewardText = group.transform.Find("RewardText")?.GetComponent<TMP_Text>();
-        Image progressBar = group.transform.Find("ProgressBar")?.GetComponent<Image>();
-
-        if (descriptionText != null)
+        MissionSlotUI slotToUpdate = missionSlots.Find(s => s.GetMissionData() == mission);
+        if (slotToUpdate != null)
         {
-            descriptionText.text = GetMissionDescription(mission);
-        }
-
-        if (rewardText != null)
-        { 
-            rewardText.text = $"{mission.rewardAmount} {mission.rewardType}";
-        }
-
-        if (progressBar != null)
-        {
-            progressBar.fillAmount = missionState.GetProgress01();
+            slotToUpdate.RefreshProgress();
         }
     }
-
-    private string GetMissionDescription(ProjectMissionData mission)
+    
+    private void HandleMissionCompletion(MissionData mission)
     {
-        switch (mission.type)
-        {
-            case MissionType.RunDistance: return $"Run {mission.goal}m in one go";
-            case MissionType.CollectCoins: return $"Collect {mission.goal} coins in one run";
-            case MissionType.SurviveTime: return $"Survive for {mission.goal} seconds";
-            default: return "Unknown Mission";
-        }
+        // Here you might trigger a UI animation or effect for completion
+        // After animation, you could replace the slot.
+        GenerateMissionSlots(); // Simple regeneration for now
     }
 }
