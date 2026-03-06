@@ -1,30 +1,54 @@
 using UnityEngine;
 
+/// <summary>
+/// Validates the integrity of a single game run session.
+/// Checks for score anomalies, excessive revives, and time manipulation.
+/// </summary>
 public class SessionValidator
 {
-    private float lastTimeScale = 1.0f;
-    private float timeScaleSpikeThreshold = 5.0f;
+    // A reasonable upper bound for score per second.
+    // This should be tuned based on game balancing and can be fetched from Remote Config.
+    private const float THEORETICAL_MAX_SCORE_PER_SECOND = 150f;
 
-    public bool IsTimeScaleValid()
+    /// <summary>
+    /// Validates the final run data against established rules.
+    /// </summary>
+    /// <param name="runSessionData">The data from the completed run.</param>
+    /// <param name="maxRevivesAllowed">The maximum number of revives allowed for this run.</param>
+    /// <returns>True if the session data is valid, false otherwise.</returns>
+    public bool ValidateRun(RunSessionData runSessionData, int maxRevivesAllowed)
     {
-        if (Time.timeScale > lastTimeScale + timeScaleSpikeThreshold)
+        // 1. Score Validation: Score must be plausible for the run duration and multiplier.
+        // We add a small buffer to the max theoretical score to avoid false positives from legitimate, exceptional gameplay.
+        float buffer = 1.2f;
+        float maxTheoreticalScore = runSessionData.distance * THEORETICAL_MAX_SCORE_PER_SECOND * runSessionData.highestMultiplier * buffer;
+
+        if (runSessionData.score > maxTheoreticalScore && runSessionData.score > 1000) // Don't flag very low scores
         {
-            Debug.LogWarning("Time scale has spiked unexpectedly!");
+            IntegrityManager.Instance.ReportError($"Score validation failed. Score: {runSessionData.score}, Max Theoretical: {maxTheoreticalScore}");
             return false;
         }
-        lastTimeScale = Time.timeScale;
+
+        // 2. Revive Validation: Player cannot use more revives than the configured limit.
+        if (runSessionData.reviveCount > maxRevivesAllowed)
+        {
+            IntegrityManager.Instance.ReportError($"Revive validation failed. Revives used: {runSessionData.reviveCount}, Max allowed: {maxRevivesAllowed}");
+            return false;
+        }
+
         return true;
     }
 
-    public bool IsRunDataValid(float runDistance, float runTime)
+    /// <summary>
+    /// Checks if the current time scale is valid. Detects speed hacks.
+    /// </summary>
+    /// <returns>True if Time.timeScale is at or below the normal value (1.0f).</returns>
+    public bool IsTimeScaleValid()
     {
-        // A very basic check. A more robust implementation would involve
-        // a more sophisticated model of expected performance.
-        float maxPossibleDistance = runTime * 30.0f; // Assuming a generous max speed of 30 units/sec
-        if (runDistance > maxPossibleDistance)
+        // Allow for minor floating point inaccuracies and deliberate slow-motion effects.
+        if (Time.timeScale > 1.05f)
         {
-            Debug.LogWarning("Run distance exceeds theoretical maximum.");
-            return false;
+             return false;
         }
         return true;
     }

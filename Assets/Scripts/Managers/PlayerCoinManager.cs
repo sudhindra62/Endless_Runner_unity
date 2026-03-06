@@ -9,11 +9,11 @@ public class PlayerCoinManager : Singleton<PlayerCoinManager>
 
     public void UpdateCoins(int amount)
     {
-        // INTEGRATION: Validate the currency change before applying it.
-        if (!IntegrityManager.Instance.ValidateCurrencyChange(totalCoins, totalCoins + amount, amount))
+        // INTEGRATION: Validate the currency transaction before applying it.
+        if (IntegrityManager.Instance != null && !IntegrityManager.Instance.economyValidator.ValidateCurrencyTransaction(totalCoins, amount, "Coins"))
         {
-            IntegrityManager.Instance.ReportError("Currency validation failed. Transaction will not be processed.");
-            return;
+            IntegrityManager.Instance.ReportError("Coin transaction failed integrity check.");
+            return; // Abort transaction
         }
 
         totalCoins += amount;
@@ -22,11 +22,25 @@ public class PlayerCoinManager : Singleton<PlayerCoinManager>
 
     public bool SpendCoins(int amount)
     {
+        // The validation is implicitly handled by UpdateCoins.
         if (totalCoins >= amount)
         {
             UpdateCoins(-amount);
             return true;
         }
         return false;
+    }
+
+    // Method to be called by SaveManager
+    public int GetTotalCoins()
+    {
+        return totalCoins;
+    }
+
+    // Method to be called by SaveManager
+    public void SetTotalCoins(int coins)
+    {
+        totalCoins = coins;
+        OnCoinsChanged?.Invoke(totalCoins);
     }
 }

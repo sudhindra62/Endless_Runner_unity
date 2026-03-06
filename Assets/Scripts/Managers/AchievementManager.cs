@@ -1,151 +1,116 @@
 
-using System;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
-/// Authoritative, consolidated manager for all game achievements.
-/// Merged from /Managers/AchievementManager and /Achievements/AchievementManager.
-/// This version prioritizes the event-driven architecture from the /Achievements version for better decoupling,
-/// and uses a specific SaveSystem for more robust data persistence.
+/// Tracks, unlocks, and stores the state of all achievements in the game.
 /// </summary>
 public class AchievementManager : Singleton<AchievementManager>
 {
-    // From /Achievements: Event-driven approach for UI decoupling.
-    public static event Action<AchievementData> OnAchievementUnlocked;
+    [SerializeField] private List<AchievementData> allAchievements; // All possible achievements, loaded from Resources
 
-    // From /Achievements: This list contains the master data for all achievements.
-    public List<AchievementData> achievements;
+    // Runtime dictionary to track progress and unlock status
+    private Dictionary<string, float> achievementProgress = new Dictionary<string, float>();
+    private HashSet<string> unlockedAchievements = new HashSet<string>();
+
+    private const string PROGRESS_KEY_PREFIX = "AchievementProgress_";
+    private const string UNLOCKED_KEY_PREFIX = "AchievementUnlocked_";
 
     protected override void Awake()
     {
-        base.Awake(); // Call the base Singleton Awake.
-        InitializeAchievements();
-        LoadAchievements(); // Load progress from the specific save system.
+        base.Awake();
+        LoadAchievements();
     }
 
-    private void OnEnable()
+    private void Start()
     {
-        // Logic from /Achievements version to manage the tracker lifecycle
-        AchievementProgressTracker.Initialize();
-    }
-
-    private void OnDisable()
-    {
-        // Logic from /Achievements version to manage the tracker lifecycle
-        AchievementProgressTracker.Uninitialize();
+        // Subscribe to game events to update progress
+        // Example: ScoreManager.OnScoreUpdated += UpdateDistanceStat;
+        // Example: CurrencyManager.OnCoinsUpdated += UpdateCoinStat;
     }
 
     /// <summary>
-    /// From /Achievements: Preserves the hardcoded, essential achievement definitions.
-    /// This is the master list of all possible achievements in the game.
+    /// Updates the progress for a specific statistic.
+    /// Checks all relevant achievements to see if they are unlocked.
     /// </summary>
-    private void InitializeAchievements()
+    /// <param name="stat">The stat to update.</param>
+    /// <param name="value">The value to add to the progress.</param>
+    public void UpdateStat(AchievementStat stat, float value)
     {
-        achievements = new List<AchievementData>
+        // Find all achievements that track this stat
+        foreach (var achievement in allAchievements.Where(a => a.statToTrack == stat && !unlockedAchievements.Contains(a.achievementId)))
         {
-            new AchievementData { id = AchievementID.TotalDistance, name = "Road Warrior", description = "Run 100km total", requiredValue = 100000, rewardId = "REWARD_COINS_LARGE" },
-            new AchievementData { id = AchievementID.ComboPeak, name = "Combo Master", description = "Reach 50 combo", requiredValue = 50, rewardId = "REWARD_GEMS_SMALL" },
-            new AchievementData { id = AchievementID.BossesDefeated, name = "Boss Hunter", description = "Defeat 20 bosses", requiredValue = 20, rewardId = "REWARD_CHEST_RARE" },
-            new AchievementData { id = AchievementID.LegendaryShards, name = "Shard Hoarder", description = "Collect 5 legendary shards", requiredValue = 5, rewardId = "REWARD_SHARD_LEGENDARY_RANDOM" },
-            new AchievementData { id = AchievementID.DiamondLeague, name = "Diamond Status", description = "Reach Diamond league", requiredValue = 1, rewardId = "REWARD_SKIN_EXCLUSIVE" },
-            new AchievementData { id = AchievementID.LoginStreak, name = "Loyal Player", description = "7-day login streak", requiredValue = 7, rewardId = "REWARD_COINS_MEDIUM" },
-            new AchievementData { id = AchievementID.NoReviveRun, name = "Untouchable", description = "Complete a run with no revives", requiredValue = 1, rewardId = "REWARD_GEMS_MEDIUM" },
-            new AchievementData { id = AchievementID.TotalCoins, name = "Millionaire", description = "Collect 1 million total coins", requiredValue = 1000000, rewardId = "REWARD_GEMS_LARGE" }
-        };
-    }
+            float currentProgress = achievementProgress.ContainsKey(achievement.achievementId) ? achievementProgress[achievement.achievementId] : 0;
+            currentProgress += value;
+            achievementProgress[achievement.achievementId] = currentProgress;
 
-    /// <summary>
-    /// From /Achievements: More robust incremental progress updating.
-    /// </summary>
-    public void UpdateAchievement(AchievementID id, int progressAmount)
-    {
-        AchievementData achievement = achievements.Find(a => a.id == id);
+            Debug.Log($"Updating stat {stat} for achievement '{achievement.displayName}'. New progress: {currentProgress}/{achievement.goalValue}");
 
-        if (achievement != null && !achievement.isCompleted)
-        {
-            achievement.IncrementProgress(progressAmount);
-
-            if (achievement.currentValue >= achievement.requiredValue)
+            if (currentProgress >= achievement.goalValue)
             {
                 UnlockAchievement(achievement);
             }
-            SaveAchievements(); // Persist progress
         }
+
+        // SaveProgress();
     }
 
-    /// <summary>
-    /// From /Achievements: Handles unlocking with validation and fires event for UI.
-    /// </summary>
     private void UnlockAchievement(AchievementData achievement)
     {
-        if (AchievementUnlockValidator.CanUnlock(achievement.id))
-        {
-            achievement.isCompleted = true;
-            AchievementUnlockValidator.MarkAsUnlocked(achievement.id);
+        if (unlockedAchievements.Contains(achievement.achievementId)) return;
 
-            // Fire event for UI systems to listen to. This is superior to direct UI calls.
-            OnAchievementUnlocked?.Invoke(achievement);
+        unlockedAchievements.Add(achievement.achievementId);
+        achievement.isUnlocked = true; // Update runtime data
 
-            // From both versions: Reward logic is essential.
-            if (!string.IsNullOrEmpty(achievement.rewardId))
-            {
-                // The quantity is determined by the RewardManager, which holds the master reward data.
-                RewardManager.Instance.Award(achievement.rewardId, 1);
-            }
+        Debug.Log($"<color=yellow>Achievement Unlocked: {achievement.displayName}!</color>");
 
-            SaveAchievements(); // Persist the unlocked state
-        }
+        // Grant rewards via a central manager
+        // RewardManager.Instance.GrantReward(new Reward(achievement.rewardCoins, achievement.rewardGems));
+
+        // Show a UI notification
+        // UIManager.Instance.ShowAchievementNotification(achievement);
+        
+        // Save that this specific achievement is unlocked
+        PlayerPrefs.SetInt(UNLOCKED_KEY_PREFIX + achievement.achievementId, 1);
     }
 
-    /// <summary>
-    /// From /Achievements: Specific and robust saving mechanism.
-    /// </summary>
-    private void SaveAchievements()
+    public bool IsAchievementUnlocked(string achievementId)
     {
-        PlayerAchievementSaveData data = new PlayerAchievementSaveData(achievements, AchievementUnlockValidator.UnlockedAchievements);
-        SaveSystem.SaveAchievements(data);
+        return unlockedAchievements.Contains(achievementId);
     }
 
-    /// <summary>
-    /// From /Achievements: Specific and robust loading mechanism.
-    /// This logic safely restores progress to the master list of achievements.
-    /// </summary>
+    public float GetAchievementProgress(string achievementId)
+    {
+        return achievementProgress.ContainsKey(achievementId) ? achievementProgress[achievementId] : 0;
+    }
+
+    // --- Persistence ---
     private void LoadAchievements()
     {
-        PlayerAchievementSaveData data = SaveSystem.LoadAchievements();
-        if (data != null)
+        // In a real game, you'd load from a save file (e.g., JSON, binary)
+        // For this example, we'll use PlayerPrefs.
+        foreach (var achievement in allAchievements)
         {
-            var savedProgress = new Dictionary<AchievementID, AchievementData>();
-            foreach(var savedAch in data.achievements)
+            if (PlayerPrefs.GetInt(UNLOCKED_KEY_PREFIX + achievement.achievementId, 0) == 1)
             {
-                savedProgress[savedAch.id] = savedAch;
+                unlockedAchievements.Add(achievement.achievementId);
+                achievement.isUnlocked = true;
+                achievementProgress[achievement.achievementId] = achievement.goalValue;
             }
-        
-            foreach(var masterAch in this.achievements)
+            else
             {
-                if(savedProgress.TryGetValue(masterAch.id, out var progress))
-                {
-                    masterAch.currentValue = progress.currentValue;
-                    masterAch.isCompleted = progress.isCompleted;
-                }
+                achievementProgress[achievement.achievementId] = PlayerPrefs.GetFloat(PROGRESS_KEY_PREFIX + achievement.achievementId, 0);
             }
-            
-            AchievementUnlockValidator.LoadUnlockedAchievements(data.unlockedAchievements);
-        }
-        else
-        {
-            // If no save data, initialize validator with an empty set.
-            AchievementUnlockValidator.LoadUnlockedAchievements(new HashSet<AchievementID>());
         }
     }
 
-    /// <summary>
-    /// Checks if a given achievement has been completed.
-    /// </summary>
-    public bool IsAchievementUnlocked(AchievementID achievementId)
+    private void SaveProgress()
     {
-        AchievementData achievement = achievements.Find(a => a.id == achievementId);
-        return achievement != null && achievement.isCompleted;
+        foreach (var progress in achievementProgress)
+        {
+            PlayerPrefs.SetFloat(PROGRESS_KEY_PREFIX + progress.Key, progress.Value);
+        }
+        PlayerPrefs.Save();
     }
 }

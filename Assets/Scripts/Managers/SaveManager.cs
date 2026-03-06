@@ -11,12 +11,16 @@ public class SaveManager : Singleton<SaveManager>
     public SaveData GameData { get; private set; }
 
     private const string GameSaveFileName = "gameSave.json";
-    private const string ChecksumFileName = "gameSave.checksum";
 
     private string SavePath => Application.persistentDataPath;
 
     private void Awake()
     {
+        // Ensure an IntegrityManager exists to handle save/load operations
+        if (IntegrityManager.Instance == null)
+        {
+            gameObject.AddComponent<IntegrityManager>();
+        }
         GameData = new SaveData();
     }
 
@@ -27,17 +31,17 @@ public class SaveManager : Singleton<SaveManager>
 
     public void SaveGame()
     {
+        // 1. Let other systems populate the SaveData object before saving.
         OnBeforeSave?.Invoke(GameData);
 
-        string json = JsonUtility.ToJson(GameData);
-        // INTEGRATION: Use IntegrityManager for checksum generation.
-        string checksum = IntegrityManager.Instance.GenerateSaveChecksum(json);
+        // 2. Create a backup of the *current* valid game data before attempting to write.
+        IntegrityManager.Instance.saveIntegrityGuard.CreateBackup(GameData);
 
         try
         {
+            string json = JsonUtility.ToJson(GameData);
             File.WriteAllText(Path.Combine(SavePath, GameSaveFileName), json);
-            File.WriteAllText(Path.Combine(SavePath, ChecksumFileName), checksum);
-            Debug.Log("Game saved successfully via Integrity-Guarded SaveManager.");
+            Debug.Log("[SaveManager] Game saved successfully.");
         }
         catch (Exception e)
         {
@@ -49,46 +53,41 @@ public class SaveManager : Singleton<SaveManager>
     public void LoadGame()
     {
         string saveFile = Path.Combine(SavePath, GameSaveFileName);
-        string checksumFile = Path.Combine(SavePath, ChecksumFileName);
 
-        if (!File.Exists(saveFile) || !File.Exists(checksumFile))
+        if (!File.Exists(saveFile))
         {
-            Debug.Log("No game save file found. Creating a new one.");
-            SaveGame();
+            Debug.Log("[SaveManager] No save file found. Creating a new one.");
+            GameData = new SaveData(); // Start with fresh data
+            SaveGame(); // Create the initial save file
             return;
         }
 
         try
         {
             string json = File.ReadAllText(saveFile);
-            string savedChecksum = File.ReadAllText(checksumFile);
-
-            // INTEGRATION: Use IntegrityManager for checksum validation.
-            if (!IntegrityManager.Instance.ValidateSaveChecksum(json, savedChecksum))
-            {
-                IntegrityManager.Instance.ReportError("Save file checksum mismatch. Data may be corrupt or tampered with.");
-                // FAILSAFE: As per requirements, do not load corrupt data. Can optionally restore from a backup.
-                Debug.LogError("Save file has been tampered with or is corrupt! Halting load.");
-                return;
-            }
-
             SaveData data = JsonUtility.FromJson<SaveData>(json);
-            if (data != null)
-            { 
+
+            // 3. Validate the loaded data *before* accepting it.
+            if (data != null && IntegrityManager.Instance.saveIntegrityGuard.ValidateSaveData(data))
+            {
                 GameData = data;
                 OnLoad?.Invoke(GameData);
-                Debug.Log("Game loaded successfully via Integrity-Guarded SaveManager.");
+                Debug.Log("[SaveManager] Game loaded and validated successfully.");
             }
             else
             {
-                 IntegrityManager.Instance.ReportError("Save file deserialization failed.");
-                Debug.LogError("Failed to deserialize save data.");
+                // 4. If validation fails or data is null, restore from backup.
+                IntegrityManager.Instance.ReportError("Save data failed validation. Attempting to restore backup.");
+                GameData = IntegrityManager.Instance.saveIntegrityGuard.RestoreBackup();
+                OnLoad?.Invoke(GameData);
             }
         }
         catch (Exception e)
         {
-            IntegrityManager.Instance.ReportError($"Load I/O Failure: {e.Message}");
-            Debug.LogError($"Failed to load game: {e.Message}");
+            // 5. If there's a file read error, restore from backup as a failsafe.
+            IntegrityManager.Instance.ReportError($"Load I/O Failure: {e.Message}. Attempting to restore backup.");
+            GameData = IntegrityManager.Instance.saveIntegrityGuard.RestoreBackup();
+            OnLoad?.Invoke(GameData);
         }
     }
 }

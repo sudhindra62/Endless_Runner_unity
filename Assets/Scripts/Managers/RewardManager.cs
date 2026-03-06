@@ -39,7 +39,7 @@ public class RewardManager : MonoBehaviour
     public void Award(string itemID, int quantity)
     {
         // INTEGRATION: Validate the reward before granting it.
-        if (!IntegrityManager.Instance.GrantReward(itemID))
+        if (IntegrityManager.Instance != null && !IntegrityManager.Instance.GrantReward(itemID))
         {
             IntegrityManager.Instance.ReportError($"Duplicate reward detected: {itemID}");
             return;
@@ -53,23 +53,36 @@ public class RewardManager : MonoBehaviour
         {
             // Note: RareDropManager now calls ShardInventoryManager directly for shard awards.
             // This route can be maintained for other shard sources (e.g., chests).
-            ShardInventoryManager.Instance.AddShards(itemID, quantity); // Ensure correct method name
+            if (ShardInventoryManager.Instance != null) ShardInventoryManager.Instance.AddShards(itemID, quantity); // Ensure correct method name
         }
         else if (itemID.StartsWith("SKIN_"))
         {
-            SkinManager.Instance.UnlockSkin(itemID);
+            if (SkinManager.Instance != null) SkinManager.Instance.UnlockSkin(itemID);
         }
         else if (itemID.StartsWith("EFFECT_"))
         {
-            CosmeticEffectManager.Instance.UnlockEffect(itemID);
+            if (CosmeticEffectManager.Instance != null) CosmeticEffectManager.Instance.UnlockEffect(itemID);
         }
         else if (itemID == "COINS")
         {
-            PlayerCoinManager.Instance.UpdateCoins(quantity);
+            if (PlayerCoinManager.Instance != null) PlayerCoinManager.Instance.UpdateCoins(quantity);
         }
         else
         {
             Debug.LogWarning($"No manager found to handle reward: {itemID}");
         }
+    }
+
+    public void AwardChallengeReward()
+    {
+        int coinReward = 500;
+        // Double rewards during events
+        if (LiveOpsManager.Instance != null && LiveOpsManager.Instance.IsEventActive("Friend Rivalry Week"))
+        {
+            coinReward *= 2;
+        }
+        Award("COINS", coinReward);
+        // In a real game, we would award challenge tokens and chests here.
+        Debug.Log("Awarding challenge reward!");
     }
 }
