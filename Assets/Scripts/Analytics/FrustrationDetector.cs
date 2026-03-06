@@ -1,99 +1,118 @@
-
 using UnityEngine;
-using System.Collections.Generic;
 
-/// <summary>
-/// This component analyzes a player's session data to determine if they are likely
-/// becoming frustrated. It uses a set of simple, lightweight rules to make this
-/// determination. This detector is a key part of the adaptive difficulty loop.
-/// </summary>
 public class FrustrationDetector : MonoBehaviour
 {
-    [Header("Frustration Thresholds")]
-    [Tooltip("Number of deaths in a short time to be considered 'quick deaths'")]
-    [SerializeField] private int quickDeathThreshold = 3;
-    [Tooltip("The time window (in seconds) to check for quick deaths.")]
-    [SerializeField] private float quickDeathTimeWindow = 60f; // 1 minute
-    [Tooltip("The maximum combo streak to be considered 'low'")]
-    [SerializeField] private int lowComboStreakThreshold = 5;
-    [Tooltip("A session shorter than this (in seconds) after a death is a frustration signal")]
-    [SerializeField] private float shortSessionAfterDeathThreshold = 30f;
+    public static FrustrationDetector Instance { get; private set; }
+
+    private int quickDeathCounter;
+    private float lastDeathTime;
+
+    private const int QUICK_DEATH_THRESHOLD = 3;
+    private const float QUICK_DEATH_WINDOW = 60f; // 1 minute
 
     public bool IsPlayerFrustrated { get; private set; }
 
-    private List<float> deathTimestamps = new List<float>();
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
 
-    /// <summary>
-    /// The main analysis function. It checks the provided session data against the frustration rules.
-    /// This should be called periodically or at the end of a session.
-    /// </summary>
+    public void ReportPlayerDeath()
+    {
+        if (Time.time - lastDeathTime < QUICK_DEATH_WINDOW)
+        {
+            quickDeathCounter++;
+            if (quickDeathCounter >= QUICK_DEATH_THRESHOLD)
+            {
+                IsPlayerFrustrated = true;
+                FlagForSoftEasing();
+            }
+        }
+        else
+        {
+            quickDeathCounter = 1;
+        }
+        lastDeathTime = Time.time;
+    }
+
     public void AnalyzeSession(SessionAnalyticsData sessionData)
     {
         if (sessionData == null) return;
 
-        IsPlayerFrustrated = false; // Reset before analysis
+        IsPlayerFrustrated = false; // Reset at the start of analysis
 
-        // RULE 1: Check for quick, successive deaths using the timestamped list.
-        if (CheckForQuickDeaths())
+        // 1. Quick Deaths
+        if (quickDeathCounter >= QUICK_DEATH_THRESHOLD)
         {
             IsPlayerFrustrated = true;
-            Debug.Log("Frustration Detected: Quick, successive deaths.");
-            return; 
         }
 
-        // RULE 2: Check for a consistently low combo streak in a reasonably long session.
-        if (sessionData.ComboPeak <= lowComboStreakThreshold && sessionData.SessionDuration > 120f)
+        // 2. High deaths, low distance
+        if (sessionData.deaths.Count > 5)
+        {
+            float totalDistance = 0;
+            foreach (var death in sessionData.deaths)
+            {
+                totalDistance += death.distance;
+            }
+            float avgDistance = totalDistance / sessionData.deaths.Count;
+            if (avgDistance < 200f)
+            {
+                IsPlayerFrustrated = true;
+                Debug.Log("Frustration Detected: High death count with low average distance.");
+            }
+        }
+
+        // 3. Low dodge success rate
+        if (sessionData.dodges.total > 10)
+        {
+            float successRate = (float)sessionData.dodges.successful / sessionData.dodges.total;
+            if (successRate < 0.3f)
+            {
+                IsPlayerFrustrated = true;
+                Debug.Log("Frustration Detected: Low dodge success rate.");
+            }
+        }
+
+        // 4. Consistently failing boss encounters
+        int failedBossEncounters = 0;
+        foreach (var encounter in sessionData.bossEncounters)
+        {
+            if (!encounter.survived)
+            {
+                failedBossEncounters++;
+            }
+        }
+        if (failedBossEncounters >= 2)
         {
             IsPlayerFrustrated = true;
-            Debug.Log("Frustration Detected: Low combo peak despite long playtime.");
-            return;
+            Debug.Log("Frustration Detected: Consistently failing boss encounters.");
+        }
+
+
+        if (IsPlayerFrustrated)
+        {
+            FlagForSoftEasing();
         }
     }
 
-    /// <summary>
-    /// Called by the PlayerAnalyticsManager whenever a player dies.
-    /// </summary>
-    /// <param name="timestamp">The Time.time of the death event.</param>
-    public void OnPlayerDeath(float timestamp)
-    {
-        deathTimestamps.Add(timestamp);
-        // Remove old timestamps that are outside the frustration window
-        deathTimestamps.RemoveAll(t => timestamp - t > quickDeathTimeWindow);
-
-        // After adding the new death, analyze the current state
-        CheckForQuickDeaths();
-    }
-
-    private bool CheckForQuickDeaths()
-    {
-        // If we have enough deaths within the time window, the player is likely frustrated.
-        if (deathTimestamps.Count >= quickDeathThreshold)
-        {
-            IsPlayerFrustrated = true;
-            return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Called at the end of a session to perform a final frustration check.
-    /// </summary>
     public void OnSessionEnd(SessionAnalyticsData sessionData)
     {
-        if (sessionData.WasAbruptlyEnded && sessionData.DeathCount > 0 && sessionData.SessionDuration < shortSessionAfterDeathThreshold)
-        {
-            // If the player died and quit within a short time, it's a strong frustration signal.
-            IsPlayerFrustrated = true;
-            Debug.Log("Frustration Detected: Player quit shortly after dying.");
-        }
+        Debug.Log("Session End Analysis. Player frustrated state: " + IsPlayerFrustrated);
     }
 
-    /// <summary>
-    /// Resets the detector's state for the next session.
-    /// </summary>
-    public void ResetFrustrationState()
+
+    private void FlagForSoftEasing()
     {
-        IsPlayerFrustrated = false;
-        deathTimestamps.Clear();
+        if (AdaptiveDifficultyManager.Instance != null)
+        {
+            AdaptiveDifficultyManager.Instance.ApplySoftEasing();
+        }
     }
 }

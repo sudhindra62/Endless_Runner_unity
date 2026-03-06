@@ -18,6 +18,20 @@ public class GameFlowController : Singleton<GameFlowController>
         ChangeState(GameState.MainMenu);
     }
 
+    private void Update()
+    {
+        // INTEGRATION: Continuously monitor for time scale manipulation during gameplay.
+        if (CurrentState == GameState.Playing)
+        {
+            if (!IntegrityManager.Instance.sessionValidator.IsTimeScaleValid())
+            {
+                IntegrityManager.Instance.ReportError("Time scale manipulation detected!");
+                // FAILSAFE: As per requirements, reset the time scale to its normal value.
+                Time.timeScale = 1.0f;
+            }
+        }
+    }
+
     public void StartGame()
     {
         ChangeState(GameState.Playing);

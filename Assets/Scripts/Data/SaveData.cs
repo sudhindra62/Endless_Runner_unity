@@ -1,5 +1,11 @@
+
 [System.Serializable]
 public class SaveData
 {
-    public int bestScore;
+    public PlayerAchievementData achievementData;
+
+    public SaveData()
+    {
+        achievementData = new PlayerAchievementData();
+    }
 }

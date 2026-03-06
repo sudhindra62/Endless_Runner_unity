@@ -22,7 +22,8 @@ public class RewardManager : MonoBehaviour
     public void ProcessEndOfRunRewards(RunSessionData runData, bool bossDefeated)
     {
         // Step 1: Calculate and award standard rewards (currency, XP, etc.)
-        // (Existing reward calculation logic would go here)
+        int coinsEarned = (int)(runData.distance / 10); // 1 coin for every 10 meters
+        Award("COINS", coinsEarned);
 
         // Step 2: Trigger the rare drop evaluation AFTER standard rewards are calculated.
         // This fulfills the requirement: "After reward calculation. Before reward display."
@@ -37,6 +38,13 @@ public class RewardManager : MonoBehaviour
 
     public void Award(string itemID, int quantity)
     {
+        // INTEGRATION: Validate the reward before granting it.
+        if (!IntegrityManager.Instance.GrantReward(itemID))
+        {
+            IntegrityManager.Instance.ReportError($"Duplicate reward detected: {itemID}");
+            return;
+        }
+
         // This method is the designated authority for granting items.
         // It is called by RareDropManager and other systems.
         Debug.Log($"REWARD_MANAGER: Awarding {quantity} of {itemID}");
@@ -54,6 +62,10 @@ public class RewardManager : MonoBehaviour
         else if (itemID.StartsWith("EFFECT_"))
         {
             CosmeticEffectManager.Instance.UnlockEffect(itemID);
+        }
+        else if (itemID == "COINS")
+        {
+            PlayerCoinManager.Instance.UpdateCoins(quantity);
         }
         else
         {

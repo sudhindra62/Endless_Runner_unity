@@ -1,90 +1,84 @@
-
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-public class CinematicFinishManager : Singleton<CinematicFinishManager>
+public class CinematicFinishManager : MonoBehaviour
 {
-    [Header("Dependencies")]
-    [SerializeField] private GameFlowController gameFlowController;
-    [SerializeField] private ScoreManager scoreManager;
-    [SerializeField] private TimeControlManager timeControlManager;
-    [SerializeField] private CameraShakeController cameraShakeController;
-    [SerializeField] private AlmostWinManager almostWinManager;
+    public static CinematicFinishManager Instance { get; private set; }
 
-    [Header("Slow-Motion Settings")]
+    [Header("Slow Motion Settings")]
     [SerializeField] private float slowMotionTimeScale = 0.2f;
-    [SerializeField] private float slowMotionDuration = 1.0f;
+    [SerializeField] private float slowMotionDuration = 0.7f;
 
-    [Header("Replay Buffer Settings")]
-    [SerializeField] private float replayBufferDuration = 3.0f;
-    private List<Vector3> replayBuffer = new List<Vector3>();
-    private bool isRecording = false;
+    [Header("Replay Settings")]
+    [SerializeField] private int replayBufferSize = 180; // 3 seconds at 60fps
+    private List<Vector3> replayBuffer;
 
-    private void OnEnable()
+    private void Awake()
     {
-        PlayerController.OnPlayerDeath += HandlePlayerDeath;
-    }
-
-    private void OnDisable()
-    {
-        PlayerController.OnPlayerDeath -= HandlePlayerDeath;
-    }
-
-    private void Update()
-    {
-        if (isRecording)
+        if (Instance != null && Instance != this)
         {
-            replayBuffer.Add(transform.position);
+            Destroy(gameObject);
+            return;
         }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+        replayBuffer = new List<Vector3>(replayBufferSize);
     }
 
-    public void StartRecording()
+    public void OnPlayerDeath()
     {
-        isRecording = true;
-        StartCoroutine(ReplayBufferPruner());
+        StartCoroutine(DeathSequence());
     }
 
-    public void StopRecording()
+    public void RecordPosition(Vector3 position)
     {
-        isRecording = false;
+        if (replayBuffer.Count >= replayBufferSize)
+        {
+            replayBuffer.RemoveAt(0);
+        }
+        replayBuffer.Add(position);
+    }
+
+    public void ClearReplayBuffer()
+    {
         replayBuffer.Clear();
     }
 
-    private IEnumerator ReplayBufferPruner()
+    private IEnumerator DeathSequence()
     {
-        while (isRecording)
+        yield return StartCoroutine(SlowMotionEffect());
+
+        if (AlmostWinManager.Instance != null)
         {
-            if (replayBuffer.Count > 0 && (Time.time - replayBuffer[0].z) > replayBufferDuration)
-            {
-                replayBuffer.RemoveAt(0);
-            }
-            yield return new WaitForSeconds(0.1f);
-        }
-    }
-
-    private void HandlePlayerDeath()
-    {
-        StartCoroutine(DeathCinematicCoroutine());
-    }
-
-    private IEnumerator DeathCinematicCoroutine()
-    {
-        timeControlManager.SetTimeScale(slowMotionTimeScale);
-        cameraShakeController.ShakeCamera(0.5f, slowMotionDuration);
-        // Add screen desaturation and camera zoom-in logic here
-
-        yield return new WaitForSeconds(slowMotionDuration);
-
-        timeControlManager.SetTimeScale(1.0f);
-
-        string almostWinMessage = almostWinManager.GetAlmostWinMessage();
-        if (!string.IsNullOrEmpty(almostWinMessage))
-        {
-            Debug.Log(almostWinMessage);
-            // Display this message in the UI
+            AlmostWinManager.Instance.CheckAlmostWinConditions();
         }
 
-        gameFlowController.PlayerDied();
+        PlayReplay();
+    }
+
+    private IEnumerator SlowMotionEffect()
+    {
+        TimeControlManager.Instance.SetTimeScale(slowMotionTimeScale);
+        yield return new WaitForSecondsRealtime(slowMotionDuration);
+
+        if (ReviveManager.Instance != null && ReviveManager.Instance.IsReviveActive())
+        {
+            yield break;
+        }
+
+        TimeControlManager.Instance.SetTimeScale(1f);
+    }
+
+    private void PlayReplay()
+    {
+        // In a full implementation, this would trigger a replay system.
+        // For now, we will just log the contents of the buffer.
+        Debug.Log("--- REPLAY BUFFER ---");
+        foreach (Vector3 position in replayBuffer)
+        {
+            Debug.Log(position);
+        }
+        Debug.Log("--- END REPLAY ---");
     }
 }

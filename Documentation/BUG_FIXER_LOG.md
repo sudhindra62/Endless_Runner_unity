@@ -17,6 +17,26 @@ The "One-Click Fix" protocol is a directive for the AI Guardian to autonomously 
 
 ---
 
+### [NO BUGS ENCOUNTERED]
+- **BUG ID:** 20240527-001
+- **STATUS:** `[CLEAN_SCAN]`
+- **ERROR MESSAGE:** None.
+- **LOCATION:** N/A
+- **REPLICATION STEPS:** N/A
+- **ROOT CAUSE ANALYSIS:** N/A
+- **SOLUTION:** N/A
+
+### [RESOLVED]
+- **BUG ID:** 20240526-001
+- **STATUS:** `[VERIFIED_FIXED]`
+- **ERROR MESSAGE:** `Duplicate Definition`
+- **LOCATION:** `Assets/Scripts/Gameplay/GhostRunPlayback.cs`, `Assets/Scripts/Multiplayer/GhostRunPlayback.cs`, `Assets/Scripts/Gameplay/GhostRunRecorder.cs`, `Assets/Scripts/Multiplayer/GhostRunRecorder.cs`
+- **REPLICATION STEPS:** N/A - Proactive cleanup.
+- **ROOT CAUSE ANALYSIS:** Duplicate scripts for the Ghost Run feature were found in the `Gameplay` and `Multiplayer` directories. The `Multiplayer` versions were found to be architecturally superior, more robust, and more feature-complete than their `Gameplay` counterparts.
+- **SOLUTION:** 
+  1.  Deleted `Assets/Scripts/Gameplay/GhostRunPlayback.cs`.
+  2.  Deleted `Assets/Scripts/Gameplay/GhostRunRecorder.cs`.
+
 ### [RESOLVED]
 - **BUG ID:** 20240525-001
 - **STATUS:** `[VERIFIED_FIXED]`

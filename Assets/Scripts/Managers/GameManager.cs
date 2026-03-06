@@ -6,6 +6,8 @@ public class GameManager : MonoBehaviour
 
     public RunSessionData runSessionData;
     public PlayerAnalyticsManager playerAnalyticsManager;
+    public TimeWarpManager timeWarpManager;
+    public MultiplayerGhostManager multiplayerGhostManager;
 
     private void Awake()
     {
@@ -23,15 +25,64 @@ public class GameManager : MonoBehaviour
             GameObject analyticsObject = new GameObject("PlayerAnalyticsManager");
             playerAnalyticsManager = analyticsObject.AddComponent<PlayerAnalyticsManager>();
         }
+
+        timeWarpManager = FindObjectOfType<TimeWarpManager>();
+        if (timeWarpManager == null)
+        {
+            GameObject timeWarpObject = new GameObject("TimeWarpManager");
+            timeWarpManager = timeWarpObject.AddComponent<TimeWarpManager>();
+        }
+
+        multiplayerGhostManager = FindObjectOfType<MultiplayerGhostManager>();
+        if (multiplayerGhostManager == null)
+        {
+            GameObject ghostManagerObject = new GameObject("MultiplayerGhostManager");
+            multiplayerGhostManager = ghostManagerObject.AddComponent<MultiplayerGhostManager>();
+        }
     }
 
-    private void Start()
+    public void StartNewRun()
     {
-        playerAnalyticsManager.StartNewSession();
+        // Reset session data for the new run
+        if (runSessionData != null)
+        {
+            runSessionData.Reset();
+        }
+
+        // Reset the time warp ability
+        if (timeWarpManager != null)
+        {
+            timeWarpManager.ResetWarp();
+        }
+
+        // Start analytics session
+        if (IntegrityManager.Instance.IsAnalyticsEnabled())
+        {
+            playerAnalyticsManager.StartNewSession();
+        }
+    }
+
+    public void StartGhostRace(GhostRunData ghostData)
+    {
+        if (multiplayerGhostManager != null)
+        {
+            multiplayerGhostManager.StartGhostRace(ghostData);
+        }
     }
 
     private void OnApplicationQuit()
     {
-        playerAnalyticsManager.EndSession();
+        if (IntegrityManager.Instance.IsAnalyticsEnabled())
+        {
+            playerAnalyticsManager.EndSession();
+        }
+    }
+
+    public void PlayerDied()
+    {
+        if(IntegrityManager.Instance.IsAnalyticsEnabled())
+        {
+            FrustrationDetector.Instance.ReportPlayerDeath();
+        }
     }
 }

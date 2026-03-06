@@ -16,6 +16,8 @@ public struct DailyReward
 /// </summary>
 public class DailyLoginManager : Singleton<DailyLoginManager>
 {
+    public static event Action<int> OnLoginStreakChanged;
+
     [Tooltip("A list of rewards for each consecutive day of logging in. The list size determines the streak cycle.")]
     [SerializeField] private DailyReward[] streakRewards;
 
@@ -60,6 +62,8 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
             {
                 streak = 1;
             }
+
+            OnLoginStreakChanged?.Invoke(streak);
 
             // Grant reward
             GrantStreakReward(streak);

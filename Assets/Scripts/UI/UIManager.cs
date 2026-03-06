@@ -14,6 +14,8 @@ public class UIManager : Singleton<UIManager>
     [SerializeField] private PauseMenuController pauseMenuController;
     [SerializeField] private RevivePopupUI revivePopupController;
     [SerializeField] private RunSummaryUI runSummaryController;
+    [SerializeField] private TrophyGalleryController trophyGalleryController;
+    [SerializeField] private AchievementPopup achievementPopupPrefab;
 
     protected override void Awake()
     {
@@ -34,6 +36,23 @@ public class UIManager : Singleton<UIManager>
         GameFlowController.OnGameStateChanged -= HandleGameStateChanged;
     }
 
+    public void ShowAchievementPopup(Achievement achievement)
+    {
+        if (achievementPopupPrefab != null)
+        {
+            AchievementPopup popup = Instantiate(achievementPopupPrefab, transform);
+            popup.ShowAchievement(achievement);
+        }
+    }
+
+    public void ShowTrophyGallery()
+    {
+        if (trophyGalleryController != null)
+        {
+            trophyGalleryController.Show();
+        }
+    }
+
     /// <summary>
     /// Acts as a state machine for the UI, showing and hiding panels based on game state.
     /// This is the only place where the visibility of major UI panels should be controlled.
@@ -46,6 +65,7 @@ public class UIManager : Singleton<UIManager>
         if (pauseMenuController != null) pauseMenuController.Hide();
         if (revivePopupController != null) revivePopupController.Hide();
         if (runSummaryController != null) runSummaryController.Hide();
+        if (trophyGalleryController != null) trophyGalleryController.Hide();
 
         // Activate the correct panel(s) for the new state.
         switch (newState)
@@ -84,5 +104,6 @@ public class UIManager : Singleton<UIManager>
         if (pauseMenuController == null) Debug.LogError("PauseMenuController is not assigned in the UIManager.");
         if (revivePopupController == null) Debug.LogError("RevivePopupUI is not assigned in the UIManager.");
         if (runSummaryController == null) Debug.LogError("RunSummaryUI is not assigned in the UIManager.");
+        if (trophyGalleryController == null) Debug.LogError("TrophyGalleryController is not assigned in the UIManager.");
     }
 }

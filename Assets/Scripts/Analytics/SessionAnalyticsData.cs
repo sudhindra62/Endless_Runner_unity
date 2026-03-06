@@ -1,112 +1,73 @@
-
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 
-/// <summary>
-/// A data container for a single gameplay session. This object holds all the raw
-/// analytics data collected between the start and end of a run. It's designed to be
-/// lightweight and easily serializable.
-/// </summary>
 [System.Serializable]
 public class SessionAnalyticsData
 {
-    // Session Timing
-    public float SessionStartTime { get; private set; }
-    public float SessionEndTime { get; private set; }
-    public float SessionDuration => SessionEndTime - SessionStartTime;
-    public bool WasAbruptlyEnded { get; private set; }
+    public float sessionStartTime;
+    public float sessionEndTime;
+    public float sessionDuration;
+    public List<PlayerDeath> deaths = new List<PlayerDeath>();
+    public int totalDodges;
+    public int successfulDodges;
+    public int comboPeak;
+    public int reviveCount;
+    public List<BossEncounter> bossEncounters = new List<BossEncounter>();
 
-    // Core Gameplay Metrics
-    public int TotalDodges { get; private set; }
-    public int SuccessfulDodges { get; private set; }
-    public float DodgeSuccessRate => TotalDodges > 0 ? (float)SuccessfulDodges / TotalDodges : 0;
-
-    public List<float> ReactionTimes { get; private set; } = new List<float>();
-    public float AverageReactionTime
+    public void StartSession()
     {
-        get
-        {
-            if (ReactionTimes.Count == 0) return 0;
-            float total = 0;
-            foreach (var time in ReactionTimes) total += time;
-            return total / ReactionTimes.Count;
-        }
+        sessionStartTime = Time.time;
     }
 
-    // Death Tracking with Timestamps
-    public struct DeathEvent
+    public void EndSession()
     {
-        public float Timestamp;
-        public string Cause;
-    }
-    public List<DeathEvent> DeathHistory { get; private set; } = new List<DeathEvent>();
-    public int DeathCount => DeathHistory.Count;
-
-    public int ComboPeak { get; private set; }
-    public int ReviveCount { get; private set; }
-
-    // Boss Encounters
-    public Dictionary<string, int> BossEncounters { get; private set; } = new Dictionary<string, int>();
-    public Dictionary<string, int> BossSurvivability { get; private set; } = new Dictionary<string, int>();
-    public float GetBossSurvivalRate(string bossName)
-    {
-        if (!BossEncounters.ContainsKey(bossName) || BossEncounters[bossName] == 0) return 0;
-        int survivals = BossSurvivability.ContainsKey(bossName) ? BossSurvivability[bossName] : 0;
-        return (float)survivals / BossEncounters[bossName];
+        sessionEndTime = Time.time;
+        sessionDuration = sessionEndTime - sessionStartTime;
     }
 
-    // --- Session Lifecycle ---
-
-    public void BeginSession()
+    public void RecordDeath(string cause, float distance)
     {
-        SessionStartTime = Time.time;
+        deaths.Add(new PlayerDeath { cause = cause, distance = distance });
     }
-
-    public void EndSession(bool wasAbrupt)
-    {
-        SessionEndTime = Time.time;
-        WasAbruptlyEnded = wasAbrupt;
-    }
-
-    // --- Data Recording ---
 
     public void RecordDodge(bool success)
     {
-        TotalDodges++;
-        if (success) SuccessfulDodges++;
+        totalDodges++;
+        if (success)
+        {
+            successfulDodges++;
+        }
     }
 
-    public void RecordReactionTime(float time)
+    public void RecordCombo(int peak)
     {
-        ReactionTimes.Add(time);
-    }
-
-    public void RecordDeath(string cause, float timestamp)
-    {
-        DeathHistory.Add(new DeathEvent { Cause = cause, Timestamp = timestamp });
-    }
-
-    public void UpdateComboPeak(int peak)
-    {
-        if (peak > ComboPeak) ComboPeak = peak;
+        if (peak > comboPeak)
+        {
+            comboPeak = peak;
+        }
     }
 
     public void RecordRevive()
     {
-        ReviveCount++;
+        reviveCount++;
     }
 
     public void RecordBossEncounter(string bossName, bool survived)
     {
-        if (!BossEncounters.ContainsKey(bossName))
-        {
-            BossEncounters[bossName] = 0;
-            BossSurvivability[bossName] = 0;
-        }
-        BossEncounters[bossName]++;
-        if (survived)
-        {
-            BossSurvivability[bossName]++;
-        }
+        bossEncounters.Add(new BossEncounter { bossName = bossName, survived = survived });
     }
+}
+
+[System.Serializable]
+public struct PlayerDeath
+{
+    public string cause;
+    public float distance;
+}
+
+[System.Serializable]
+public struct BossEncounter
+{
+    public string bossName;
+    public bool survived;
 }

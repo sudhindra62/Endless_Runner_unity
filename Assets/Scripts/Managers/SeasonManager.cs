@@ -1,65 +1,63 @@
 using UnityEngine;
 using System;
 
-/// <summary>
-/// Manages the lifecycle of competitive seasons, including start/end times and resets.
-/// This system is authoritative for all time-based season logic.
-/// </summary>
-public class SeasonManager : MonoBehaviour
+namespace CompetitiveGaming
 {
-    public static event Action<int> OnSeasonStart;
-    public static event Action<int> OnSeasonEnd;
-    public static event Action OnWeeklyReset;
-
-    private const int WEEKS_PER_SEASON = 4;
-    private DateTime _seasonStartDate;
-    private int _currentWeek;
-
-    // This would be initialized from a server or reliable time source
-    public void Initialize(DateTime serverTime)
+    public class SeasonManager : MonoBehaviour
     {
-        // Logic to determine and set the current season start date.
-        _seasonStartDate = serverTime.Date;
-        InvokeRepeating(nameof(CheckForWeeklyReset), 0f, 60f); // Check every minute
-    }
+        public static SeasonManager Instance { get; private set; }
 
-    private void CheckForWeeklyReset()
-    {
-        // ANTI-EXPLOIT: Uses server time (simulated) instead of device time.
-        TimeSpan timeSinceStart = DateTime.UtcNow - _seasonStartDate;
-        int week = (int)(timeSinceStart.TotalDays / 7);
+        public event Action OnWeeklyReset;
+        public event Action OnSeasonReset;
 
-        if(week != _currentWeek)
+        private DateTime nextWeeklyReset;
+        private DateTime nextSeasonReset;
+
+        private const int WEEKS_IN_SEASON = 4;
+
+        private void Awake()
         {
-            _currentWeek = week;
-            OnWeeklyReset?.Invoke();
-            
-            if(_currentWeek >= WEEKS_PER_SEASON)
+            if (Instance != null && Instance != this)
             {
-                EndSeason();
-                StartNewSeason();
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+
+        void Start()
+        {
+            // In a real game, this would be loaded from a persistent save or server time
+            CalculateNextResetTimes(DateTime.UtcNow);
+            InvokeRepeating(nameof(CheckForResets), 1f, 60f); // Check every minute
+        }
+
+        void CheckForResets()
+        {
+            DateTime now = DateTime.UtcNow;
+            if (now >= nextWeeklyReset)
+            {
+                OnWeeklyReset?.Invoke();
+                if (now >= nextSeasonReset)
+                {
+                    OnSeasonReset?.Invoke();
+                }
+                CalculateNextResetTimes(now);
             }
         }
-    }
 
-    private void StartNewSeason()
-    {
-        _seasonStartDate = DateTime.UtcNow.Date;
-        _currentWeek = 0;
-        OnSeasonStart?.Invoke(1); // Pass season number
-        Debug.Log("New season has started!");
-    }
+        void CalculateNextResetTimes(DateTime fromTime)
+        {
+            // Find the next Sunday for weekly reset
+            nextWeeklyReset = fromTime.AddDays(7 - (int)fromTime.DayOfWeek).Date;
 
-    private void EndSeason()
-    {
-        OnSeasonEnd?.Invoke(0); // Pass old season number
-        Debug.Log("Season has ended! Calculating final rewards...");
-    }
+            // Logic for season reset
+            // This is a simplified example
+            nextSeasonReset = nextWeeklyReset.AddDays(WEEKS_IN_SEASON * 7);
 
-    public TimeSpan GetTimeUntilWeeklyReset()
-    {
-        DateTime now = DateTime.UtcNow;
-        DateTime nextReset = _seasonStartDate.AddDays((_currentWeek + 1) * 7);
-        return nextReset - now;
+            Debug.Log($"Next Weekly Reset: {nextWeeklyReset}");
+            Debug.Log($"Next Season Reset: {nextSeasonReset}");
+        }
     }
 }

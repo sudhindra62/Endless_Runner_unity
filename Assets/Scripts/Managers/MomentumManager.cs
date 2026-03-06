@@ -1,146 +1,108 @@
-
 using UnityEngine;
 using System;
 
+/// <summary>
+/// Tracks uninterrupted player flow to build and apply momentum.
+/// This system acts as a 'flow mastery layer', rewarding skilled play with stacking modifiers.
+/// </summary>
 public class MomentumManager : MonoBehaviour
 {
-    #region EVENTS
-    public static event Action<int> OnMomentumTierChanged;
-    public static event Action<float> OnSpeedModifierChanged;
-    public static event Action<float> OnScoreMultiplierChanged;
-    #endregion
+    public static MomentumManager Instance { get; private set; }
 
-    #region CONFIGURATION
-    [Header("Momentum Tiers")]
-    [SerializeField] private float[] timeThresholds = { 5f, 15f, 30f };
-    [SerializeField] private float[] speedModifiers = { 1.1f, 1.25f, 1.5f };
-    [SerializeField] private float[] scoreMultipliers = { 1.5f, 2.0f, 3.0f };
+    // --- Events ---
+    public event Action<MomentumData> OnMomentumChanged;
+    public event Action OnMomentumLost;
 
-    [Header("Hard Caps")]
-    [SerializeField] private float maxSpeedBonus = 8.0f;
-    #endregion
+    [Header("Tier Configuration")]
+    [Tooltip("Time of uninterrupted flow required to reach each tier.")]
+    [SerializeField] private float[] timeToReachTier = { 5f, 15f, 30f, 60f };
 
-    #region STATE
-    private int currentTier = -1;
-    private float uninterruptedFlowTime = 0f;
-    private bool isMomentumActive = false;
-    private float lastEmittedSpeedModifier = 1f;
-    private float lastEmittedScoreMultiplier = 1f;
-    #endregion
+    [Tooltip("Speed modifier applied at each tier.")]
+    [SerializeField] private float[] speedModifiers = { 1.05f, 1.1f, 1.15f, 1.2f };
 
-    #region UNITY_LIFECYCLE
+    [Tooltip("Score multiplier applied at each tier.")]
+    [SerializeField] private float[] scoreMultipliers = { 1.5f, 2f, 2.5f, 3f };
+
+    // --- State ---
+    public int CurrentTier { get; private set; } = 0;
+    private float flowTimer = 0f;
+    private bool isPaused = false; // Used to temporarily halt momentum gain (e.g., during Fever Mode).
+
     private void Awake()
     {
-        ServiceLocator.Register(this);
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
     }
 
     private void Start()
     {
-        // Subscribe to relevant events
-        GameManager.OnGameStateChanged += HandleGameStateChanged;
-        PlayerController.OnPlayerHit += HandlePlayerHit;
-        FlowComboManager.OnComboBroken += HandleComboBroken;
-    }
-
-    private void OnDestroy()
-    {
-        // Unsubscribe to prevent memory leaks
-        GameManager.OnGameStateChanged -= HandleGameStateChanged;
-        PlayerController.OnPlayerHit -= HandlePlayerHit;
-        FlowComboManager.OnComboBroken -= HandleComboBroken;
-        ServiceLocator.Unregister<MomentumManager>();
+        // --- Subscribe to Game Events ---
+        // PlayerCollisionHandler.OnObstacleHit += ResetMomentum;
+        // FlowComboManager.OnComboBroken += ResetMomentum;
+        // FeverModeManager.OnFeverModeStarted += (data) => { isPaused = true; };
+        // FeverModeManager.OnFeverModeEnded += () => { isPaused = false; };
     }
 
     private void Update()
     {
-        if (GameManager.Instance.CurrentState == GameState.Playing && isMomentumActive)
-        {
-            uninterruptedFlowTime += Time.deltaTime;
-            UpdateMomentumTier();
-        }
-    }
-    #endregion
+        if (isPaused) return;
 
-    #region EVENT_HANDLERS
-    private void HandleGameStateChanged(GameState newState)
-    {
-        if (newState == GameState.Playing)
-        {
-            isMomentumActive = true;
-        }
-        else
-        {
-            ResetMomentum();
-        }
-    }
+        flowTimer += Time.deltaTime;
 
-    private void HandlePlayerHit()
-    {
-        ResetMomentum();
-    }
-
-    private void HandleComboBroken()
-    {
-        ResetMomentum();
-    }
-    #endregion
-
-    #region INTERNAL_LOGIC
-    private void UpdateMomentumTier()
-    {
-        int newTier = -1;
-        for (int i = timeThresholds.Length - 1; i >= 0; i--)
+        int nextTier = 0;
+        for (int i = 0; i < timeToReachTier.Length; i++)
         {
-            if (uninterruptedFlowTime >= timeThresholds[i])
+            if (flowTimer >= timeToReachTier[i])
             {
-                newTier = i;
-                break;
+                nextTier = i + 1;
             }
         }
 
-        if (newTier != currentTier)
+        if (nextTier != CurrentTier)
         {
-            SetTier(newTier);
+            SetTier(nextTier);
         }
     }
 
-    private void SetTier(int tier)
+    private void SetTier(int newTier)
     {
-        currentTier = tier;
-        OnMomentumTierChanged?.Invoke(currentTier);
+        if (newTier > timeToReachTier.Length) newTier = timeToReachTier.Length;
+        CurrentTier = newTier;
 
-        // Emit new modifiers, ensuring not to stack with Fever Mode incorrectly
-        float feverSpeedMultiplier = FeverModeManager.Instance?.IsFeverActive() ?? false ? FeverModeManager.Instance.GetFeverSpeedMultiplier() : 1f;
-        float finalSpeedModifier = currentTier >= 0 ? Mathf.Min(speedModifiers[currentTier] * feverSpeedMultiplier, maxSpeedBonus) : 1f;
-        
-        if (Math.Abs(finalSpeedModifier - lastEmittedSpeedModifier) > 0.01f)
-        {
-            OnSpeedModifierChanged?.Invoke(finalSpeedModifier);
-            lastEmittedSpeedModifier = finalSpeedModifier;
-        }
-        
-        float finalScoreMultiplier = currentTier >= 0 ? scoreMultipliers[currentTier] : 1f;
-        if (Math.Abs(finalScoreMultiplier - lastEmittedScoreMultiplier) > 0.01f)
-        {
-            OnScoreMultiplierChanged?.Invoke(finalScoreMultiplier);
-            lastEmittedScoreMultiplier = finalScoreMultiplier;
-        }
+        float speedMod = (CurrentTier > 0) ? speedModifiers[CurrentTier - 1] : 1f;
+        float scoreMod = (CurrentTier > 0) ? scoreMultipliers[CurrentTier - 1] : 1f;
+
+        var data = new MomentumData(CurrentTier, speedMod, scoreMod);
+        OnMomentumChanged?.Invoke(data);
+        Debug.Log($"[MomentumManager] Tier changed to {CurrentTier}");
     }
 
+    /// <summary>
+    /// Resets all momentum progress. Called on hits or combo breaks.
+    /// </summary>
     public void ResetMomentum()
     {
-        uninterruptedFlowTime = 0f;
-        isMomentumActive = false; // Stop tracking time
-        if (currentTier != -1)
+        if (CurrentTier == 0 && flowTimer < timeToReachTier[0]) return; // No momentum to lose
+
+        Debug.Log("[MomentumManager] Momentum lost!");
+        flowTimer = 0f;
+        if (CurrentTier != 0)
         {
-            SetTier(-1); // Reset to base values
+            SetTier(0);
+            OnMomentumLost?.Invoke();
         }
     }
-    #endregion
-
-    #region PUBLIC_API (FOR OTHER SYSTEMS)
-    public float GetCurrentSpeedModifier() => lastEmittedSpeedModifier;
-    public float GetCurrentScoreMultiplier() => lastEmittedScoreMultiplier;
-    public int GetCurrentMomentumTier() => currentTier;
-    #endregion
+    
+    /// <summary>
+    /// A hard reset for end-of-run or revive scenarios.
+    /// </summary>
+    public void ResetManager()
+    {
+        isPaused = false;
+        ResetMomentum();
+    }
 }

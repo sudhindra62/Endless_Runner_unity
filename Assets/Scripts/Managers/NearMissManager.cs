@@ -1,107 +1,112 @@
-
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
+/// <summary>
+/// Processes validated near-miss events and broadcasts them to other game systems.
+/// This manager is the central authority for what constitutes a successful near-miss.
+/// It does NOT perform detection itself; it listens to NearMissDetector components.
+/// </summary>
 public class NearMissManager : MonoBehaviour
 {
-    #region EVENTS
-    public static event Action OnNearMiss;
-    #endregion
+    public static NearMissManager Instance { get; private set; }
 
-    #region CONFIGURATION
-    [Header("Detection Settings")]
-    [SerializeField] private float nearMissThreshold = 1.5f;
-    [SerializeField] private LayerMask obstacleLayer;
-    [SerializeField] private float cooldownSeconds = 0.5f; // Prevent multiple triggers for one obstacle group
-    #endregion
+    // --- Events ---
+    public event Action<NearMissData> OnNearMissProcessed;
 
-    #region STATE
-    private Collider[] overlapResults = new Collider[10];
-    private float lastNearMissTime = -1f;
-    private int lastNearMissInstanceId = -1;
-    #endregion
+    [Header("Gameplay Configuration")]
+    [SerializeField] private float scoreBonus = 100f;
+    [SerializeField] private float comboBonus = 0.5f;
+    [SerializeField] private float slowMoDuration = 0.15f;
+    [SerializeField] private float slowMoFactor = 0.5f;
+    [SerializeField] private float cooldownSeconds = 0.2f; // Cooldown to prevent spam from a single obstacle group
+
+    // --- State ---
+    private float lastMissTime = -1f;
+    // Tracks obstacle instance IDs that have already triggered a miss to prevent duplicates.
+    private HashSet<int> processedObstacles = new HashSet<int>();
+
+    #region UNITY_LIFECYCLE
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
 
     private void OnEnable()
     {
-        // Subscribe to player death to disable functionality if needed
-        PlayerController.OnPlayerDeath += HandlePlayerDeath;
+        NearMissDetector.OnNearMissCandidate += HandleNearMissCandidate;
+        // GameState.OnRunEnded += ClearProcessedObstacles; // Example of hooking into a game state manager
     }
 
     private void OnDisable()
     {
-        PlayerController.OnPlayerDeath -= HandlePlayerDeath;
+        NearMissDetector.OnNearMissCandidate -= HandleNearMissCandidate;
+        // GameState.OnRunEnded -= ClearProcessedObstacles;
     }
+    #endregion
 
-    private void Update()
+    #region EVENT_HANDLERS
+    /// <summary>
+    /// Primary logic. Receives a potential near-miss event from a detector.
+    /// </summary>
+    private void HandleNearMissCandidate(int obstacleInstanceID, Vector3 obstaclePosition, float proximity)
     {
-        // Performance: Only run detection if not on cooldown
-        if (Time.time < lastNearMissTime + cooldownSeconds) return;
+        // --- SAFETY CHECKS ---
+        // 1. Global Cooldown: Is the system ready for another near miss?
+        if (Time.time < lastMissTime + cooldownSeconds) return;
 
-        DetectNearMiss();
+        // 2. Duplicate Check: Has this specific obstacle already been processed?
+        if (processedObstacles.Contains(obstacleInstanceID)) return;
+
+        // --- VALIDATION SUCCESS ---
+        lastMissTime = Time.time;
+        processedObstacles.Add(obstacleInstanceID);
+
+        // Create rich data object for subscribers
+        var nearMissData = new NearMissData(obstaclePosition, proximity);
+
+        // --- BROADCAST and APPLY BONUSES ---
+        Debug.Log($"[NearMissManager] Near miss PROCESSED for obstacle {obstacleInstanceID}");
+        OnNearMissProcessed?.Invoke(nearMissData);
+
+        // Route bonuses to the authoritative managers
+        ApplyBonuses();
     }
 
-    private void DetectNearMiss()
+    private void ApplyBonuses()
     {
-        int numFound = Physics.OverlapSphereNonAlloc(transform.position, nearMissThreshold, overlapResults, obstacleLayer);
+        // 1. Route to ScoreManager
+        // ScoreManager.Instance.AddStyleBonus(scoreBonus, "Near Miss");
 
-        if (numFound > 0)
-        {
-            for (int i = 0; i < numFound; i++)
-            {
-                Collider obstacleCollider = overlapResults[i];
-                int instanceId = obstacleCollider.GetInstanceID();
+        // 2. Route to FlowComboManager
+        // FlowComboManager.Instance.IncreaseCombo(comboBonus);
 
-                // SAFETY RULE: Not trigger twice for same obstacle
-                if (instanceId != lastNearMissInstanceId)
-                {
-                    // Validate player did NOT collide (This is implicitly handled by the fact that the player is not dead)
-                    // Obstacle passed fully (This is a simplified check; for a more robust solution, we'd track obstacle positions)
-                    
-                    // Check if the player is actually moving past the obstacle, not just standing near it.
-                    // This is a simplified check using the obstacle's bounds.
-                    Vector3 closestPoint = obstacleCollider.bounds.ClosestPoint(transform.position);
-                    float distance = Vector3.Distance(transform.position, closestPoint);
+        // 3. Trigger safe slow-motion via TimeControlManager
+        // TimeControlManager.Instance.RequestSlowMotion(slowMoDuration, slowMoFactor);
 
-                    if (distance > 0.1f) // Ensure we are not currently colliding
-                    {
-                        lastNearMissTime = Time.time;
-                        lastNearMissInstanceId = instanceId;
-
-                        // Emit near-miss event
-                        OnNearMiss?.Invoke();
-
-                        // Stop checking after the first valid near miss in a frame to prevent event stacking
-                        return; 
-                    }
-                }
-            }
-        }
-        else
-        {
-            // Reset instance ID when no obstacles are nearby
-            lastNearMissInstanceId = -1;
-        }
+        // 4. Trigger Camera Shake
+        // CameraController.Instance.TriggerShake(CameraShakeType.NearMiss);
     }
+    #endregion
 
-    private void HandlePlayerDeath()
+    #region STATE_MANAGEMENT
+    /// <summary>
+    /// Called on player revive or new run to ensure near-misses can trigger again.
+    /// </summary>
+    public void ResetManager()
     {
-        // Disable near miss detection on death
-        this.enabled = false;
-    }
-    
-    // Called via animation event or GameManager on revive
-    public void OnPlayerRevive()
-    {
-        this.enabled = true;
-        lastNearMissTime = Time.time; // Add a brief cooldown on revive
-        lastNearMissInstanceId = -1;
+        lastMissTime = -1f;
+        ClearProcessedObstacles();
     }
 
-#if UNITY_EDITOR
-    private void OnDrawGizmosSelected()
+    private void ClearProcessedObstacles()
     {
-        Gizmos.color = new Color(1, 1, 0, 0.5f); // Yellow, semi-transparent
-        Gizmos.DrawSphere(transform.position, nearMissThreshold);
+        processedObstacles.Clear();
     }
-#endif
+    #endregion
 }

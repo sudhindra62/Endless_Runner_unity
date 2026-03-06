@@ -1,7 +1,11 @@
+
 using UnityEngine;
+using System;
 
 public class ReviveManager : Singleton<ReviveManager>
 {
+    public static event Action OnPlayerRevived;
+
     private PlayerAnalyticsManager analyticsManager;
 
     private void Start()
@@ -11,9 +15,11 @@ public class ReviveManager : Singleton<ReviveManager>
 
     public void PlayerRevived()
     {
-        if (analyticsManager != null)
+        if (analyticsManager != null && IntegrityManager.Instance.IsAnalyticsEnabled())
         {
             analyticsManager.TrackRevive();
         }
+
+        OnPlayerRevived?.Invoke();
     }
 }

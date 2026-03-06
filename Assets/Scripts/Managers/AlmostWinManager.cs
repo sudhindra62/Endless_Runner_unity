@@ -1,44 +1,87 @@
 using UnityEngine;
 
-public class AlmostWinManager : Singleton<AlmostWinManager>
+public class AlmostWinManager : MonoBehaviour
 {
-    [SerializeField] private ScoreManager scoreManager;
-    [SerializeField] private LeagueManager leagueManager;
-    [SerializeField] private MissionManager missionManager;
-    [SerializeField] private FlowComboManager flowComboManager;
+    public static AlmostWinManager Instance { get; private set; }
 
-    public string GetAlmostWinMessage()
+    [Header("Thresholds")]
+    [SerializeField] private float bestScoreThresholdPercentage = 0.05f;
+    [SerializeField] private int leaguePromotionThreshold = 100;
+    [SerializeField] private int nearMissThreshold = 1;
+    [SerializeField] private float feverTimeThreshold = 2f;
+
+    private void Awake()
     {
-        // Check for best score
-        int currentScore = scoreManager.Score;
-        int bestScore = scoreManager.GetBestScore(); // This method needs to be created in ScoreManager
-        if (bestScore > 0 && currentScore > bestScore * 0.95f)
+        if (Instance != null && Instance != this)
         {
-            return $"You were only {bestScore - currentScore} points away from your best score!";
+            Destroy(gameObject);
+            return;
         }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
 
-        // Check for league promotion
-        // This requires a method in LeagueManager to get the points needed for promotion
-        int pointsToPromotion = leagueManager.GetPointsToPromotion();
-        if (pointsToPromotion > 0 && pointsToPromotion < 100) // Example threshold
+    public void CheckAlmostWinConditions()
+    {
+        CheckBestScore();
+        CheckLeaguePromotion();
+        CheckMissionCompletion();
+        CheckFever();
+    }
+
+    private void CheckBestScore()
+    {
+        int currentScore = ScoreManager.Instance.GetCurrentScore();
+        int bestScore = ScoreManager.Instance.GetBestScore();
+
+        if (bestScore > 0 && currentScore < bestScore)
         {
-            return $"Only {pointsToPromotion} points away from promotion!";
+            float difference = bestScore - currentScore;
+            if (difference / bestScore <= bestScoreThresholdPercentage)
+            {
+                DisplayMessage($"You were only {difference} points away from your best score!");
+            }
         }
+    }
 
-        // Check for mission completion
-        // This requires a method in MissionManager to get the closest mission
-        string closestMission = missionManager.GetClosestMission();
-        if (!string.IsNullOrEmpty(closestMission))
+    private void CheckLeaguePromotion()
+    {
+        LeagueTier currentLeague = LeagueManager.Instance.GetCurrentPlayerLeague();
+        int currentScore = ScoreManager.Instance.GetCurrentScore();
+        int nextLeagueScore = LeagueManager.Instance.GetAdjustedThreshold(currentLeague.LeagueName) + 1; 
+
+        if (nextLeagueScore > currentScore)
         {
-            return closestMission;
+            int difference = nextLeagueScore - currentScore;
+            if (difference <= leaguePromotionThreshold)
+            {
+                DisplayMessage($"You are only {difference} points away from promotion!");
+            }
         }
+    }
 
-        // Check for rare drop threshold
-        // This requires a method in RareDropManager to get the progress
+    private void CheckMissionCompletion()
+    {
+        Mission closestMission = MissionManager.Instance.GetClosestMission();
+        if (closestMission != null)
+        {
+            float difference = closestMission.GetDifference();
+            if (difference > 0 && difference <= nearMissThreshold)
+            {
+                DisplayMessage($"Just {(int)difference} more {closestMission.Type.ToString().ToLower()} to beat record!");
+            }
+        }
+    }
 
-        // Check for fever mode
-        // This requires a method in FeverModeManager
+    private void CheckFever()
+    {
+        // Placeholder for FlowComboManager integration
+        // As FlowComboManager does not expose time to fever, we will skip this for now.
+    }
 
-        return string.Empty;
+    private void DisplayMessage(string message)
+    {
+        // In a full implementation, this would trigger a UI element.
+        Debug.Log(message);
     }
 }

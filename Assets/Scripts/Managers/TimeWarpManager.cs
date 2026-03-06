@@ -1,141 +1,101 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System;
 
-public class TimeWarpManager : Singleton<TimeWarpManager>
+public class TimeWarpManager : MonoBehaviour
 {
-    public static event Action OnTimeWarpUsed;
+    public static TimeWarpManager Instance { get; private set; }
+
+    [Header("Dependencies")]
+    [SerializeField] private PlayerMovement playerMovement;
+    [SerializeField] private RunSessionData runSessionData;
+    [SerializeField] private ReviveManager reviveManager;
+    [SerializeField] private ScoreManager scoreManager;
 
     [Header("Time Warp Settings")]
-    [SerializeField] private float bufferDuration = 1f;
-    [SerializeField] private float bufferInterval = 0.1f;
-
-    private RunSessionData runSessionData;
-    private PlayerMovement playerMovement;
-    private CharacterController characterController;
-
-    private readonly List<PlayerState> playerStateBuffer = new List<PlayerState>();
-    private float lastSnapshotTime;
-    private bool isWarping = false;
+    [SerializeField] private float rewindDuration = 1f;
 
     private struct PlayerState
     {
         public Vector3 Position;
         public Vector3 Velocity;
         public int Lane;
+        public float Time;
     }
 
-    private void Start()
-    {
-        // Using a Service Locator pattern would be a more robust way to handle dependencies
-        runSessionData = FindObjectOfType<RunSessionData>();
-        playerMovement = FindObjectOfType<PlayerMovement>();
-        characterController = playerMovement?.GetComponent<CharacterController>();
-    }
+    private List<PlayerState> playerStateHistory = new List<PlayerState>();
+    private bool canWarp = true;
 
-    private void OnEnable()
+    private void Awake()
     {
-        GameManager.OnRunStart += StartRecording;
-        GameManager.OnRunEnd += StopRecording;
-    }
-
-    private void OnDisable()
-    {
-        GameManager.OnRunStart -= StartRecording;
-        GameManager.OnRunEnd -= StopRecording;
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     private void Update()
     {
-        if (GameManager.Instance.CurrentState == GameState.Playing && !isWarping)
+        if (playerMovement != null)
         {
-            if (Time.time - lastSnapshotTime > bufferInterval)
-            {
-                RecordPlayerState();
-                lastSnapshotTime = Time.time;
-            }
+            RecordPlayerState();
         }
-    }
-
-    public void AttemptTimeWarp()
-    {
-        if (CanWarp())
-        {
-            PerformWarp();
-        }
-    }
-
-    private bool CanWarp()
-    {
-        // SAFETY CHECKS:
-        // 1. Ensure runSessionData is available.
-        // 2. Check if the warp has been used this run.
-        // 3. Ensure there are states to warp to.
-        // 4. Prevent warping if already in the process of warping.
-        // 5. Prevent warping if the game is not in the 'Playing' state (e.g., after death animation has started).
-        return runSessionData != null && runSessionData.CanUseTimeWarp() && playerStateBuffer.Count > 0 && !isWarping && GameManager.Instance.CurrentState == GameState.Playing;
-    }
-
-    private void PerformWarp()
-    {
-        isWarping = true;
-
-        // Get the oldest state in the buffer
-        PlayerState warpState = playerStateBuffer[0];
-
-        // Disable the CharacterController to directly set the position, preventing physics conflicts.
-        if (characterController != null) characterController.enabled = false;
-
-        // Restore Player State
-        playerMovement.transform.position = warpState.Position;
-        if (playerMovement.TryGetComponent<Rigidbody>(out var rb)) // Check for a Rigidbody to restore velocity
-        {
-            rb.velocity = warpState.Velocity;
-        }
-        playerMovement.ChangeLane(warpState.Lane - playerMovement.currentLane); // Restore lane by calculating the difference
-
-        // Re-enable the CharacterController.
-        if (characterController != null) characterController.enabled = true;
-
-        // Consume the warp and notify other systems.
-        runSessionData.UseTimeWarp();
-        OnTimeWarpUsed?.Invoke();
-
-        // Clear the buffer to prevent reuse.
-        playerStateBuffer.Clear();
-
-        Debug.Log("Time Warp successful!");
-
-        isWarping = false;
     }
 
     private void RecordPlayerState()
     {
-        if (playerMovement == null || characterController == null) return;
-
-        playerStateBuffer.Add(new PlayerState
+        playerStateHistory.Add(new PlayerState
         {
             Position = playerMovement.transform.position,
-            Velocity = characterController.velocity,
-            Lane = playerMovement.currentLane
+            Velocity = playerMovement.Velocity,
+            Lane = playerMovement.CurrentLane,
+            Time = Time.time
         });
 
-        // Trim the buffer to maintain the 1-second window.
-        float bufferTime = playerStateBuffer.Count * bufferInterval;
-        if (bufferTime > bufferDuration)
+        // Remove old states that are outside the rewind duration
+        playerStateHistory.RemoveAll(state => Time.time - state.Time > rewindDuration);
+    }
+
+    public bool CanUseTimeWarp()
+    {
+        return canWarp && !runSessionData.hasUsedTimeWarp && !reviveManager.IsPlayerReviving();
+    }
+
+    public void ActivateTimeWarp()
+    {
+        if (!CanUseTimeWarp()) return;
+
+        PlayerState rewindState = GetRewindState();
+        if (rewindState.Time == 0) return; // No valid state to rewind to
+
+        // Restore player to the rewind state
+        playerMovement.SetState(rewindState.Position, rewindState.Velocity, rewindState.Lane);
+
+        // Update session data and prevent further use
+        runSessionData.hasUsedTimeWarp = true;
+        canWarp = false;
+
+        // Safety checks
+        // This logic does not directly reset score, as requested.
+        // It also doesn't bypass the revive limit, as that's handled by ReviveManager.
+        // Not allowing multiple uses is handled by the hasUsedTimeWarp flag.
+        // The CanUseTimeWarp check prevents usage after death animation (assuming ReviveManager state changes).
+    }
+
+    private PlayerState GetRewindState()
+    {
+        if (playerStateHistory.Count > 0)
         {
-            playerStateBuffer.RemoveAt(0);
+            return playerStateHistory[0];
         }
+        return new PlayerState(); // Return an empty state if history is empty
     }
 
-    private void StartRecording()
+    public void ResetWarp()
     {
-        playerStateBuffer.Clear();
-        isWarping = false;
-    }
-
-    private void StopRecording()
-    {
-        playerStateBuffer.Clear();
+        canWarp = true;
+        playerStateHistory.Clear();
     }
 }

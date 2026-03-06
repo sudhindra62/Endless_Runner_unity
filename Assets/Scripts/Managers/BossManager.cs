@@ -1,7 +1,11 @@
+
 using UnityEngine;
+using System;
 
 public class BossManager : Singleton<BossManager>
 {
+    public static event Action OnBossDefeated;
+
     private PlayerAnalyticsManager analyticsManager;
 
     private void Awake()
@@ -14,6 +18,11 @@ public class BossManager : Singleton<BossManager>
         if (analyticsManager != null)
         {
             analyticsManager.TrackBossEncounter(playerWon);
+        }
+
+        if (playerWon)
+        {
+            OnBossDefeated?.Invoke();
         }
     }
 }

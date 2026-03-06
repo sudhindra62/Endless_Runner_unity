@@ -1,59 +1,77 @@
 using UnityEngine;
+using System.Collections.Generic;
 
-public class MultiplayerGhostManager : Singleton<MultiplayerGhostManager>
+public class MultiplayerGhostManager : MonoBehaviour
 {
-    private byte[] currentGhostData;
-    private GameObject ghostPlaybackInstance;
+    public static MultiplayerGhostManager Instance { get; private set; }
 
-    public void LoadGhostFromData(byte[] ghostData)
+    [Header("Dependencies")]
+    [SerializeField] private GhostRunPlayback ghostPlayback;
+    [SerializeField] private PlayerMovement playerMovement;
+    [SerializeField] private IntegrityManager integrityManager;
+    [SerializeField] private GameObject raceUI;
+
+    private GhostRunData currentGhostRun;
+    private bool isRaceActive = false;
+
+    private void Awake()
     {
-        if (!ValidateGhostData(ghostData))
+        if (Instance != null && Instance != this)
         {
-            Debug.LogError("Ghost data is corrupt or invalid. Race cannot start.");
+            Destroy(gameObject);
             return;
         }
-        currentGhostData = ghostData;
-        Debug.Log("Ghost data loaded and validated.");
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
-    public void StartGhostRace()
+    public void StartGhostRace(GhostRunData ghostData)
     {
-        if (currentGhostData == null)
+        if (ghostData == null || !ghostData.IsValid(integrityManager.GetTheoreticalMaxScore()))
         {
-            Debug.LogWarning("No ghost data loaded to start a race.");
+            Debug.LogWarning("Invalid ghost data. Race cannot start.");
             return;
         }
 
-        if (ghostPlaybackInstance != null)
-        {
-            Destroy(ghostPlaybackInstance);
-        }
+        currentGhostRun = ghostData;
+        ghostPlayback.LoadGhostRun(currentGhostRun.dataPoints);
+        isRaceActive = true;
 
-        // In a real scenario, we'd use a prefab for the ghost.
-        ghostPlaybackInstance = new GameObject("GhostPlayback");
-        GhostRunPlayback playback = ghostPlaybackInstance.AddComponent<GhostRunPlayback>();
-        playback.StartPlayback(currentGhostData);
+        if (raceUI != null) raceUI.SetActive(true);
     }
 
-    private bool ValidateGhostData(byte[] data)
+    private void Update()
     {
-        // DATA RULES & ANTI-CHEAT: Placeholder for checksum, score, and cap validation
-        // In a real implementation, this would involve a checksum comparison
-        // and validation against a server-side theoretical score cap.
-        if (data == null || data.Length == 0)
+        if (!isRaceActive) return;
+
+        // Track player vs. ghost progress and update UI
+        // This is a simplified example. A more robust implementation would compare distance or score.
+        if (playerMovement.transform.position.z > ghostPlayback.transform.position.z)
         {
-            return false;
+            // Display "You are ahead!" message
         }
-        // Simple validation: just checking if data is not empty
-        return true;
     }
 
-    // UI Responsibility: In a real game, this would call a UI Manager
-    public void UpdateRaceProgress(float playerProgress, float ghostProgress)
+    public void EndGhostRace()
     {
-        if (playerProgress > ghostProgress)
+        isRaceActive = false;
+        ghostPlayback.StopPlayback();
+        if (raceUI != null) raceUI.SetActive(false);
+    }
+
+    public void ToggleGhostVisibility(bool isVisible)
+    {
+        ghostPlayback.gameObject.SetActive(isVisible);
+    }
+
+    // Method to simulate long sessions and test for memory leaks
+    public void SimulateLongSession(int raceCount, GhostRunData testData)
+    {
+        for (int i = 0; i < raceCount; i++)
         {
-            // UIManager.Instance.ShowMessage("You are ahead!");
+            StartGhostRace(testData);
+            // In a real test, we would wait for the race to finish
+            EndGhostRace();
         }
     }
 }

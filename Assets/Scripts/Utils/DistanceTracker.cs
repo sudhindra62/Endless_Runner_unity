@@ -1,9 +1,11 @@
 
 using UnityEngine;
+using System;
 
 public class DistanceTracker : MonoBehaviour
 {
     public static DistanceTracker Instance { get; private set; }
+    public static event Action<float> OnDistanceChanged;
 
     public float Distance { get; private set; }
 
@@ -35,8 +37,10 @@ public class DistanceTracker : MonoBehaviour
     {
         if (playerMovement != null)
         {
-            Distance += Vector3.Distance(playerMovement.transform.position, lastPosition);
+            float distanceDelta = Vector3.Distance(playerMovement.transform.position, lastPosition);
+            Distance += distanceDelta;
             lastPosition = playerMovement.transform.position;
+            OnDistanceChanged?.Invoke(Distance);
         }
     }
 

@@ -1,93 +1,56 @@
 
 using UnityEngine;
-using System.Collections.Generic;
 
-/// <summary>
-/// Analyzes trends across multiple gameplay sessions. This class maintains a record
-/// of past sessions and provides insights into long-term player behavior, such as
-/// identifying a "rage quit" pattern.
-/// </summary>
-[System.Serializable]
-public class BehaviorTrendAnalyzer
+public class BehaviorTrendAnalyzer : MonoBehaviour
 {
-    private const int SESSION_HISTORY_LIMIT = 20; // Keep the last 20 sessions for trend analysis
-    private const float SHORT_SESSION_THRESHOLD = 120f; // 2 minutes
+    public static BehaviorTrendAnalyzer Instance { get; private set; }
 
-    [SerializeField] private List<SessionAnalyticsData> sessionHistory = new List<SessionAnalyticsData>();
-
-    // --- Trend Metrics ---
-    [SerializeField] private float overallDodgeSuccessRate;
-    [SerializeField] private int totalRageQuits;
-    [SerializeField] private int recentShortSessionCount;
-
-    public void FinalizeSession(SessionAnalyticsData newSession)
+    private void Awake()
     {
-        // Add the new session to the history, maintaining the limit.
-        if (sessionHistory.Count >= SESSION_HISTORY_LIMIT)
+        if (Instance != null && Instance != this)
         {
-            sessionHistory.RemoveAt(0);
+            Destroy(gameObject);
+            return;
         }
-        sessionHistory.Add(newSession);
-
-        // Recalculate trends based on the updated history.
-        RecalculateTrends();
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
-    private void RecalculateTrends()
+    public void AnalyzeSessionData(SessionAnalyticsData sessionData)
     {
-        if (sessionHistory.Count == 0) return;
+        // In a real-world scenario, this would involve more complex analysis.
+        Debug.Log("Analyzing session data...");
+        Debug.Log("Dodge Success Rate: " + (float)sessionData.successfulDodges / sessionData.totalDodges);
+        Debug.Log("Death Cause Frequency: " + GetDeathCauseFrequency(sessionData));
 
-        // --- Calculate Overall Dodge Success Rate ---
-        int totalDodges = 0;
-        int successfulDodges = 0;
-        foreach (var session in sessionHistory)
+        // --- MERGED LOGIC ---
+        // From Assets/Scripts/Analyzers/BehaviorTrendAnalyzer.cs
+        if (sessionData.RageQuitIndicator)
         {
-            totalDodges += session.TotalDodges;
-            successfulDodges += session.SuccessfulDodges;
+            UnityEngine.Debug.Log("Rage quit detected!");
         }
-        overallDodgeSuccessRate = (totalDodges > 0) ? (float)successfulDodges / totalDodges : 0;
+    }
 
-        // --- Count Rage Quits ---
-        totalRageQuits = 0;
-        foreach (var session in sessionHistory)
+    private string GetDeathCauseFrequency(SessionAnalyticsData sessionData)
+    {
+        var deathCounts = new System.Collections.Generic.Dictionary<string, int>();
+        foreach (var death in sessionData.deaths)
         {
-            if (session.WasAbruptlyEnded)
+            if (deathCounts.ContainsKey(death.cause))
             {
-                totalRageQuits++;
+                deathCounts[death.cause]++;
+            }
+            else
+            {
+                deathCounts[death.cause] = 1;
             }
         }
 
-        // --- Count Recent Short Sessions ---
-        // This is a simple way to detect if a player is repeatedly starting and stopping.
-        recentShortSessionCount = 0;
-        int checkRange = Mathf.Min(sessionHistory.Count, 3); // Check the last 3 sessions
-        for (int i = sessionHistory.Count - 1; i >= sessionHistory.Count - checkRange; i--)
+        string frequency = "";
+        foreach (var entry in deathCounts)
         {
-            if (sessionHistory[i].SessionDuration < SHORT_SESSION_THRESHOLD)
-            {
-                recentShortSessionCount++;
-            }
+            frequency += entry.Key + ": " + entry.Value + ", ";
         }
+        return frequency;
     }
-
-    public PlayerTrends GetTrends()
-    {
-        return new PlayerTrends
-        {
-            OverallDodgeSuccessRate = overallDodgeSuccessRate,
-            TotalRageQuits = totalRageQuits,
-            IsShowingRageQuitPattern = recentShortSessionCount >= 3
-        };
-    }
-}
-
-/// <summary>
-/// A simple data structure to hold the calculated trend information.
-/// </summary>
-[System.Serializable]
-public struct PlayerTrends
-{
-    public float OverallDodgeSuccessRate;
-    public int TotalRageQuits;
-    public bool IsShowingRageQuitPattern;
 }

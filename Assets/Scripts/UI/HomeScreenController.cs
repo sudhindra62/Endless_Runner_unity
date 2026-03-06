@@ -30,6 +30,7 @@ public class HomeScreenController : MonoBehaviour
     [SerializeField] private Button settingsButton;
     [SerializeField] private Button statsButton;
     [SerializeField] private Button dailyRewardButton;
+    [SerializeField] private Button achievementsButton;
 
     [Header("Visuals")]
     [SerializeField] private GameObject rewardNotification;
@@ -68,6 +69,7 @@ public class HomeScreenController : MonoBehaviour
         if (settingsButton) settingsButton.onClick.AddListener(() => Debug.Log("Settings Button Clicked"));
         if (statsButton) statsButton.onClick.AddListener(() => Debug.Log("Stats Button Clicked"));
         if (dailyRewardButton) dailyRewardButton.onClick.AddListener(ClaimDailyReward);
+        if (achievementsButton) achievementsButton.onClick.AddListener(() => UIManager.Instance.ShowTrophyGallery());
 
         // Initial UI setup
         InitialUIDisplay();
@@ -89,6 +91,7 @@ public class HomeScreenController : MonoBehaviour
         if (settingsButton) settingsButton.onClick.RemoveListener(() => Debug.Log("Settings Button Clicked"));
         if (statsButton) statsButton.onClick.RemoveListener(() => Debug.Log("Stats Button Clicked"));
         if (dailyRewardButton) dailyRewardButton.onClick.RemoveListener(ClaimDailyReward);
+        if (achievementsButton) achievementsButton.onClick.RemoveListener(() => UIManager.Instance.ShowTrophyGallery());
     }
 
     private void Update()
@@ -229,4 +232,14 @@ public class HomeScreenController : MonoBehaviour
     }
 
     #endregion
+
+    public void Hide()
+    {
+        gameObject.SetActive(false);
+    }
+
+    public void Show()
+    {
+        gameObject.SetActive(true);
+    }
 }

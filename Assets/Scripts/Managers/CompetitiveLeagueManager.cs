@@ -1,142 +1,97 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using CompetitiveGaming;
 
-/// <summary>
-/// Authoritative manager for the competitive league system.
-/// Replaces legacy LeagueManager and RankManager to prevent authority conflicts.
-/// Handles player ranking, promotion/demotion, rewards, and anti-cheat.
-/// </summary>
-public class CompetitiveLeagueManager : Singleton<CompetitiveLeagueManager>
+public class CompetitiveLeagueManager : MonoBehaviour
 {
-    private List<LeagueTierDefinition> _leagueTiers; // Loaded from config
-    private PlayerLeagueState _playerState;
+    public static CompetitiveLeagueManager Instance { get; private set; }
 
-    private void OnEnable()
-    {
-        // Subscribe to events from other authoritative systems
-        SeasonManager.OnWeeklyReset += ProcessWeeklyReset;
-        SeasonManager.OnSeasonEnd += ProcessSeasonEnd;
-        // ScoreManager.OnFinalScoreSubmitted += UpdatePlayerScore; (EXAMPLE)
-    }
+    [SerializeField] private List<LeagueDivisionData> leagueStructure;
 
-    private void OnDisable()
-    {
-        SeasonManager.OnWeeklyReset -= ProcessWeeklyReset;
-        SeasonManager.OnSeasonEnd -= ProcessSeasonEnd;
-    }
+    // Player data would be in a separate class, this is a simplification
+    private string playerDivisionId;
+    private int playerScoreInDivision;
+    private List<string> playerGroup = new List<string>(50);
 
-    public void Initialize(List<LeagueTierDefinition> tiers)
+    private void Awake()
     {
-        _leagueTiers = tiers;
-        LoadPlayerState();
-    }
-
-    private void LoadPlayerState()
-    {
-        // string savedData = SaveSystem.Instance.LoadLeagueData();
-        // if (!string.IsNullOrEmpty(savedData))
-        // {
-        //     _playerState = JsonUtility.FromJson<PlayerLeagueState>(savedData);
-        // }
-        // else
-        // {
-        //     _playerState = new PlayerLeagueState(); // New player
-        // }
-    }
-
-    private void SavePlayerState()
-    {
-        // string dataToSave = JsonUtility.ToJson(_playerState);
-        // SaveSystem.Instance.SaveLeagueData(dataToSave);
-    }
-
-    public void UpdatePlayerScore(long score, bool isIntegrityPassed)
-    {
-        // ANTI-CHEAT: Score is ignored if the session was flagged.
-        if (!isIntegrityPassed) return;
-        if (score > _playerState.BestScoreThisWeek)
+        if (Instance != null && Instance != this)
         {
-            _playerState.BestScoreThisWeek = score;
-            // SavePlayerState(); (Can be optimized to save less frequently)
+            Destroy(gameObject);
+            return;
         }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    private void Start()
+    {
+        SeasonManager.Instance.OnWeeklyReset += ProcessWeeklyReset;
+        // Load player league data...
+    }
+
+    private void OnDestroy()
+    {
+        if (SeasonManager.Instance != null)
+        {
+            SeasonManager.Instance.OnWeeklyReset -= ProcessWeeklyReset;
+        }
+    }
+
+    public void SubmitScore(string playerId, int score)
+    {
+        // Anti-cheat integration point
+        // In a real implementation, you would call out to the IntegrityManager
+        // if (IntegrityManager.IsSessionFlagged(playerId)) return;
+
+        // Update score and re-rank within the 50-person group
+        playerScoreInDivision = score;
     }
 
     private void ProcessWeeklyReset()
     {
-        // In a real system, you'd fetch the player's group ranking from a server.
-        // Here, we simulate it based on their score relative to division thresholds.
-        
-        var currentDivision = GetDivisionForScore(_playerState.BestScoreThisWeek);
-        if (currentDivision == null) return;
-        
-        // PROMOTION / DEMOTION LOGIC
-        float scorePercentage = GetScorePercentageInDivision(currentDivision, _playerState.BestScoreThisWeek);
+        // 1. Determine player's rank in their 50-person group
+        int rank = GetPlayerRankInGroup();
 
-        if (scorePercentage >= 0.8f) // Top 20%
+        // 2. Calculate promotion/demotion based on rank
+        var division = leagueStructure.FirstOrDefault(d => d.TierName + d.Division == playerDivisionId);
+        if (rank <= division.PromotionThreshold) 
         {
             PromotePlayer();
         }
-        else if (scorePercentage < 0.2f) // Bottom 20%
+        else if (rank >= division.DemotionThreshold)
         {
             DemotePlayer();
         }
-        
-        // Grant weekly rewards through the authoritative RewardManager
-        // RewardManager.Instance.GrantRewards(_playerState.CurrentTier, isWeekly: true);
 
-        _playerState.BestScoreThisWeek = 0;
-        SavePlayerState();
+        // 3. Grant weekly rewards via RewardManager
+        // In a real implementation, you would call out to the RewardManager
+        // RewardManager.Instance.GrantReward(division.WeeklyReward.RewardId);
+
+        // 4. Reset score for the new week
+        playerScoreInDivision = 0;
+
+        // 5. Re-group players for the new week
+        // ... grouping logic ...
     }
 
-    private void ProcessSeasonEnd()
-    { 
-        // Grant seasonal rewards (exclusive skins, frames)
-        // RewardManager.Instance.GrantRewards(_playerState.HighestTierThisSeason, isSeason: true);
-
-        // PARTIAL RANK DECAY: Drop player by a few tiers (e.g., 2-3 divisions)
-        DecayPlayerRank();
-
-        _playerState.HighestTierThisSeason = _playerState.CurrentTier;
-        SavePlayerState();
-    }
-
-    private void PromotePlayer()
+    private void PromotePlayer() 
     {
-       // Logic to move player to the next division, ensuring no double-promotions
+        // Logic to move the player to the next division/tier
+        Debug.Log("Player Promoted!");
     }
 
-    private void DemotePlayer()
+    private void DemotePlayer() 
     {
-        // Logic to move player to the previous division
+        // Logic to move the player to the previous division/tier
+        Debug.Log("Player Demoted.");
     }
 
-    private void DecayPlayerRank()
+    private int GetPlayerRankInGroup()
     {
-        // Logic for partial rank reset at season end
-    }
-
-    #region Helper Methods
-    private LeagueDivisionData GetDivisionForScore(long score)
-    {
-        // Finds the correct division for a given score from the _leagueTiers config
-        return null; 
-    }
-    
-    private float GetScorePercentageInDivision(LeagueDivisionData division, long score)
-    {
-        long range = division.PromotionScore - division.DemotionScore;
-        if (range <= 0) return 0.5f;
-        return (float)(score - division.DemotionScore) / range;
-    }
-    #endregion
-
-    // Internal state of the player in the league system
-    private class PlayerLeagueState
-    {
-        public string CurrentTier;
-        public int CurrentDivision;
-        public string HighestTierThisSeason;
-        public long BestScoreThisWeek;
+        // Logic to compare player's score against their 49 ghost competitors
+        // This is a simplified placeholder
+        return 10; // Top 20% for promotion
     }
 }

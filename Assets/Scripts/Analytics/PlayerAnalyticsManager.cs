@@ -1,101 +1,85 @@
-
 using UnityEngine;
 
-/// <summary>
-/// The central singleton for managing the AAA Player Analytics Engine.
-/// It handles session data, aggregates metrics, and provides a single point of access for all analytics tracking.
-/// This script is designed to be lightweight and avoid any gameplay interference.
-/// </summary>
-[RequireComponent(typeof(FrustrationDetector))]
-public class PlayerAnalyticsManager : Singleton<PlayerAnalyticsManager>
+public class PlayerAnalyticsManager : MonoBehaviour
 {
-    public SessionAnalyticsData currentSession;
-    private FrustrationDetector frustrationDetector;
-    private BehaviorTrendAnalyzer trendAnalyzer;
+    public static PlayerAnalyticsManager Instance { get; private set; }
 
-    protected override void Awake()
+    private SessionAnalyticsData currentSession;
+
+    private void Awake()
     {
-        base.Awake();
-        frustrationDetector = GetComponent<FrustrationDetector>();
-        trendAnalyzer = new BehaviorTrendAnalyzer();
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
-    /// <summary>
-    /// Begins a new analytics session, resetting all data trackers.
-    /// </summary>
-    public void StartSession()
+    private void OnEnable()
+    {
+        PlayerController.OnPlayerAction += TrackDodge;
+    }
+
+    private void OnDisable()
+    {
+        PlayerController.OnPlayerAction -= TrackDodge;
+    }
+
+    public void StartNewSession()
     {
         currentSession = new SessionAnalyticsData();
-        currentSession.BeginSession();
-        frustrationDetector.ResetFrustrationState();
-        Debug.Log("New Analytics Session Started.");
+        currentSession.StartSession();
     }
 
-    /// <summary>
-    /// Ends the current analytics session and logs the final data.
-    /// </summary>
-    /// <param name="wasAbrupt">Indicates if the session ended unexpectedly (e.g., rage quit).</param>
-    public void EndSession(bool wasAbrupt)
+    public void EndSession()
     {
-        if (currentSession == null) return;
-
-        currentSession.EndSession(wasAbrupt);
-        trendAnalyzer.FinalizeSession(currentSession);
-        frustrationDetector.OnSessionEnd(currentSession);
-
-        // In a real project, this data would be sent to a backend service.
-        Debug.Log($"Analytics Session Ended. Duration: {currentSession.SessionDuration:F2}s. Rage Quit: {wasAbrupt}");
-        Debug.Log($"Player Frustrated: {frustrationDetector.IsPlayerFrustrated}");
+        if (currentSession != null)
+        {
+            currentSession.EndSession();
+            // In a real-world scenario, you would send this data to a server.
+            Debug.Log("Session Ended: " + JsonUtility.ToJson(currentSession));
+        }
     }
 
-    // --- DATA COLLECTION METHODS ---
-
-    public void TrackDeath(string cause, float timestamp)
+    public void TrackPlayerDeath(string cause, float distance)
     {
-        if (currentSession == null) return;
-        currentSession.RecordDeath(cause, timestamp);
-        frustrationDetector.OnPlayerDeath(timestamp);
+        if (currentSession != null)
+        {
+            currentSession.RecordDeath(cause, distance);
+        }
     }
 
     public void TrackDodge(bool success)
     {
-        if (currentSession == null) return;
-        currentSession.RecordDodge(success);
+        if (currentSession != null)
+        {
+            currentSession.RecordDodge(success);
+        }
     }
 
-
-
-    public void TrackReactionTime(float time)
+    public void TrackCombo(int peak)
     {
-        if (currentSession == null) return;
-        currentSession.RecordReactionTime(time);
+        if (currentSession != null)
+        {
+            currentSession.RecordCombo(peak);
+        }
     }
 
-    public void LogComboPeak(int peak)
+    public void TrackRevive()
     {
-        if (currentSession == null) return;
-        currentSession.UpdateComboPeak(peak);
-    }
-
-    public void LogRevive()
-    {
-        if (currentSession == null) return;
-        currentSession.RecordRevive();
+        if (currentSession != null)
+        {
+            currentSession.RecordRevive();
+        }
     }
 
     public void TrackBossEncounter(string bossName, bool survived)
     {
-        if (currentSession == null) return;
-        currentSession.RecordBossEncounter(bossName, survived);
-    }
-
-    public SessionAnalyticsData GetCurrentSessionData()
-    {
-        return currentSession;
-    }
-
-    public PlayerTrends GetPlayerTrends()
-    {
-        return trendAnalyzer.GetTrends();
+        if (currentSession != null)
+        {
+            currentSession.RecordBossEncounter(bossName, survived);
+        }
     }
 }

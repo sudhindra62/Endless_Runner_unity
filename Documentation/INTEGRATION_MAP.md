@@ -7,6 +7,18 @@
 
 ## EVENT & DEPENDENCY MAP
 
+### Ghost Run System
+
+*   **`GhostRunRecorder`** `(class)` -> **`Transform`** `(dependency)`
+    *   **Description:** The recorder tracks the position of a target `Transform`.
+*   **`GhostRunPlayback`** `(class)` -> **`None`**
+    *   **Description:** The playback system is self-contained and does not have any hard dependencies.
+
+### Live Events
+
+*   **`EffectsManager.OnNearMiss`** `(event)` -> **`EventProgressTracker.HandleNearMiss`** `(subscriber)`
+    *   **Description:** The `EventProgressTracker` listens for near-miss events to update the player's progress in live events.
+
 ### Rare Drop & Legendary Shard Engine
 
 *   **`RewardManager.OnRewardCalculation`** `(event)` -> **`RareDropEngine.EvaluateDrop`** `(subscriber)`

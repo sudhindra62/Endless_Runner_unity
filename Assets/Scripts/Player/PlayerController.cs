@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using System;
 using System.Collections;
@@ -56,6 +55,7 @@ public class PlayerController : MonoBehaviour
 
     // --- EVENTS ---
     public static event Action OnPlayerDeath;
+    public static event Action<bool> OnPlayerAction;
 
     // --- STATE ---
     private CharacterController controller;
@@ -91,6 +91,9 @@ public class PlayerController : MonoBehaviour
     // Fusion State
     private bool isInvincibleDashActive = false;
 
+    private PlayerAnalyticsManager _analyticsManager;
+    private SessionAnalyticsData _sessionAnalyticsData;
+
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -98,6 +101,8 @@ public class PlayerController : MonoBehaviour
         collisionHandler = GetComponent<PlayerCollisionHandler>(); // EVOLUTION: Get the new handler
         originalColliderHeight = controller.height;
         startPosition = transform.position;
+
+        _analyticsManager = PlayerAnalyticsManager.Instance;
     }
 
     private void Start()
@@ -108,6 +113,11 @@ public class PlayerController : MonoBehaviour
         PowerUpFusionManager.OnFusionDeactivated += HandleFusionDeactivation;
         transform.position = startPosition;
         lastInputTime = Time.time;
+
+        if (_analyticsManager != null && IntegrityManager.Instance.IsAnalyticsEnabled())
+        {
+            _sessionAnalyticsData = _analyticsManager.GetCurrentSessionData();
+        }
     }
 
     private void OnDestroy()
@@ -125,6 +135,8 @@ public class PlayerController : MonoBehaviour
         animator.SetBool(isRunningHash, isPlaying && (isGrounded || isWallRunning) && !isDead);
 
         if (!isPlaying || isDead) return;
+
+        CinematicFinishManager.Instance.RecordPosition(transform.position);
 
         HandleGroundDetection();
         HandleWallRunning();
@@ -226,26 +238,26 @@ public class PlayerController : MonoBehaviour
         if (direction == Vector2.up && (isGrounded || isWallRunning))
         {
             Jump();
-            PlayerAnalyticsManager.Instance.TrackDodge(true);
+            OnPlayerAction?.Invoke(true);
         }
         else if (direction == Vector2.left && currentLane > -maxLaneOffset && !isWallRunning)
         {
             currentLane--;
-            PlayerAnalyticsManager.Instance.TrackDodge(true);
+            OnPlayerAction?.Invoke(true);
         }
         else if (direction == Vector2.right && currentLane < maxLaneOffset && !isWallRunning)
         {
             currentLane++;
-            PlayerAnalyticsManager.Instance.TrackDodge(true);
+            OnPlayerAction?.Invoke(true);
         }
         else if (direction == Vector2.down && !isSliding)
         {
             StartCoroutine(Slide());
-            PlayerAnalyticsManager.Instance.TrackDodge(true);
+            OnPlayerAction?.Invoke(true);
         }
         else
         {
-            PlayerAnalyticsManager.Instance.TrackDodge(false);
+            OnPlayerAction?.Invoke(false);
         }
     }
 
@@ -386,6 +398,8 @@ public class PlayerController : MonoBehaviour
         jumpStreak = 0;
         slowSpeedTimer = 0;
         lastInputTime = Time.time;
+
+        CinematicFinishManager.Instance.ClearReplayBuffer();
 
         controller.enabled = false;
         transform.position = startPosition;
