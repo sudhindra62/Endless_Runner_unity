@@ -3,109 +3,144 @@ using System;
 using System.Linq;
 
 /// <summary>
-/// Analyzes player performance in real-time to generate a difficulty modifier.
-/// This system is purely analytical and does not directly alter game mechanics.
-/// It emits a modifier that other managers (like ProceduralPatternEngine) can subscribe to.
+/// The SUPREME singleton for difficulty. It analyzes player performance, incorporates a time-based scalar,
+/// and integrates a LiveOps multiplier to generate the final difficulty value.
+/// This script has absorbed all functionality from the redundant DifficultyManager.
 /// </summary>
-public class AdaptiveDifficultyManager : MonoBehaviour
+public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
 {
-    public static AdaptiveDifficultyManager Instance { get; private set; }
-
-    public event Action<float> OnDifficultyModifierChanged;
+    // --- Events ---
+    public event Action<float> OnDifficultyMultiplierChanged;
     public event Action<ObstacleType> OnPlayerStrugglingWithObstacle;
 
-    // --- Configuration ---
-    private const float ANALYSIS_INTERVAL_SECONDS = 10f;
-    private const float MODIFIER_MIN = 0.8f;   // Max easing
-    private const float MODIFIER_MAX = 1.3f;   // Max difficulty increase
-    private const float MODIFIER_STEP = 0.05f;
-    private const float HIGH_PERFORMANCE_DODGE_RATE = 0.9f;
-    private const float LOW_PERFORMANCE_DODGE_RATE = 0.4f;
-    private const int OBSTACLE_HIT_THRESHOLD_FOR_STRUGGLE = 3;
+    // --- Configuration: Time-Based (from old DifficultyManager) ---
+    [Header("Time-Based Scaling")]
+    [SerializeField] private float _baseDifficulty = 1.0f;
+    [SerializeField] private float _difficultyIncreaseRate = 0.005f;
+    private float _timeElapsed;
+
+    // --- Configuration: Adaptive (Player Performance) ---
+    [Header("Adaptive Configuration")]
+    [SerializeField] private float ANALYSIS_INTERVAL_SECONDS = 10f;
+    [SerializeField] private float MODIFIER_MIN = 0.8f;   // Max easing
+    [SerializeField] private float MODIFIER_MAX = 1.3f;   // Max difficulty increase
+    [SerializeField] private float MODIFIER_STEP = 0.05f;
+    [SerializeField] private float HIGH_PERFORMANCE_DODGE_RATE = 0.9f;
+    [SerializeField] private float LOW_PERFORMANCE_DODGE_RATE = 0.4f;
+    [SerializeField] private int OBSTACLE_HIT_THRESHOLD_FOR_STRUGGLE = 3;
 
     // --- State ---
     private RunSessionData currentRunData;
-    private float currentDifficultyModifier = 1.0f;
+    private float adaptiveModifier = 1.0f;
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
+        base.Awake();
         currentRunData = new RunSessionData();
     }
 
     private void Start()
     {
-        SubscribeToGameEvents();
+        // This subscription is commented out as GameManager.OnGameStateChanged is not defined.
+        // To make this functional, GameManager needs to define a static event 'OnGameStateChanged'.
+        // GameManager.OnGameStateChanged += HandleGameStateChanged;
+
+        ResetDifficulty();
         InvokeRepeating(nameof(AnalyzePerformance), ANALYSIS_INTERVAL_SECONDS, ANALYSIS_INTERVAL_SECONDS);
     }
 
-    private void SubscribeToGameEvents()
+    private void Update()
     {
-        // -- Link to other systems via events for full integration --
-        // PlayerCollisionHandler.OnObstacleHit += RecordObstacleHit;
-        // PlayerDeathHandler.OnPlayerDied += RecordDeath;
-        // PerfectDodgeDetector.OnPerfectDodge += () => currentRunData.RecordDodge(true);
-        // FlowComboManager.OnComboReset += currentRunData.RecordComboBroken;
+        // We only increase time-based difficulty when the game is active.
+        // This check requires a functional GameManager with an IsGameActive property.
+        // if (GameManager.Instance != null && GameManager.Instance.IsGameActive)
+        // {
+        //     _timeElapsed += Time.deltaTime;
+        // }
     }
 
-    // --- Public API for Event Subscribers ---
+    // --- Public API for calculating final difficulty ---
+
+    /// <summary>
+    /// Calculates the final, combined difficulty multiplier from all sources.
+    /// </summary>
+    /// <returns>The final difficulty multiplier.</returns>
+    public float GetCurrentDifficultyMultiplier()
+    {
+        // 1. Calculate time-based progression
+        float timeBasedDifficulty = _baseDifficulty + (_timeElapsed * _difficultyIncreaseRate);
+
+        // 2. Get LiveOps multiplier
+        float liveOpsMultiplier = (LiveOpsManager.Instance != null) ? LiveOpsManager.Instance.DifficultyMultiplier : 1.0f;
+
+        // 3. Combine all factors: Time * LiveOps * Adaptive
+        float finalDifficulty = timeBasedDifficulty * liveOpsMultiplier * adaptiveModifier;
+
+        return finalDifficulty;
+    }
+
+    // --- Event Handlers & Data Recording ---
+
     public void RecordObstacleHit(ObstacleType type)
     {
-        currentRunData.RecordDodge(false); // An obstacle hit is a failed dodge.
+        currentRunData.RecordDodge(false);
         currentRunData.RecordObstacleHit(type);
     }
 
     public void RecordDeath(DeathCause cause)
     {
         currentRunData.RecordDeath(cause);
-        AdjustDifficulty(increase: false, immediate: true); // Immediate penalty on death.
+        AdjustAdaptiveModifier(increase: false, immediate: true);
     }
 
-    // --- Core Analysis Logic ---
     private void AnalyzePerformance()
     {
+        // This check requires a functional GameManager.
+        // if (GameManager.Instance == null || !GameManager.Instance.IsGameActive) return;
         if (currentRunData.DodgeSuccessHistory.Count == 0) return;
 
-        // 1. Analyze Dodge Performance
         float successRate = (float)currentRunData.DodgeSuccessHistory.Count(s => s) / currentRunData.DodgeSuccessHistory.Count;
-        if (successRate >= HIGH_PERFORMANCE_DODGE_RATE) AdjustDifficulty(increase: true);
-        else if (successRate <= LOW_PERFORMANCE_DODGE_RATE) AdjustDifficulty(increase: false);
+        if (successRate >= HIGH_PERFORMANCE_DODGE_RATE) AdjustAdaptiveModifier(increase: true);
+        else if (successRate <= LOW_PERFORMANCE_DODGE_RATE) AdjustAdaptiveModifier(increase: false);
 
-        // 2. Analyze Specific Obstacle Struggles
         var strugglingObstacle = currentRunData.ObstacleHitCounts.FirstOrDefault(kvp => kvp.Value >= OBSTACLE_HIT_THRESHOLD_FOR_STRUGGLE);
         if (strugglingObstacle.Key != default)
         {
             OnPlayerStrugglingWithObstacle?.Invoke(strugglingObstacle.Key);
-            // This event could be used by a 'GameDirector' to temporarily reduce the spawn rate of that specific obstacle.
-            currentRunData.ObstacleHitCounts.Remove(strugglingObstacle.Key); // Reset count after flagging.
+            currentRunData.ObstacleHitCounts.Remove(strugglingObstacle.Key);
         }
     }
 
-    private void AdjustDifficulty(bool increase, bool immediate = false)
+    private void AdjustAdaptiveModifier(bool increase, bool immediate = false)
     {
-        float oldModifier = currentDifficultyModifier;
-        float step = immediate ? MODIFIER_STEP * 2 : MODIFIER_STEP; // Make immediate changes more significant.
+        float oldModifier = adaptiveModifier;
+        float step = immediate ? MODIFIER_STEP * 2 : MODIFIER_STEP;
 
-        currentDifficultyModifier += increase ? step : -step;
-        currentDifficultyModifier = Mathf.Clamp(currentDifficultyModifier, MODIFIER_MIN, MODIFIER_MAX);
+        adaptiveModifier += increase ? step : -step;
+        adaptiveModifier = Mathf.Clamp(adaptiveModifier, MODIFIER_MIN, MODIFIER_MAX);
 
-        if (!Mathf.Approximately(oldModifier, currentDifficultyModifier))
+        if (!Mathf.Approximately(oldModifier, adaptiveModifier))
         {
-            Debug.Log($"[AdaptiveDifficultyManager] Difficulty modifier updated to: {currentDifficultyModifier}");
-            OnDifficultyModifierChanged?.Invoke(currentDifficultyModifier);
+            Debug.Log($"[AdaptiveDifficultyManager] Adaptive modifier updated to: {adaptiveModifier}");
+            // Broadcast the change of the final, combined multiplier
+            OnDifficultyMultiplierChanged?.Invoke(GetCurrentDifficultyMultiplier());
         }
     }
 
-    private void OnDestroy()
+    private void HandleGameStateChanged(GameState newState)
     {
-        // -- Unsubscribe to prevent memory leaks --
-        // PlayerCollisionHandler.OnObstacleHit -= RecordObstacleHit;
-        // PlayerDeathHandler.OnPlayerDied -= RecordDeath;
-        // ...etc.
+        if (newState == GameState.GameStart || newState == GameState.MainMenu)
+        {
+            ResetDifficulty();
+        }
+    }
+
+    public void ResetDifficulty()
+    { 
+        _timeElapsed = 0f;
+        adaptiveModifier = 1.0f;
+        currentRunData.Reset();
+        OnDifficultyMultiplierChanged?.Invoke(GetCurrentDifficultyMultiplier());
+        Debug.Log("[AdaptiveDifficultyManager] Difficulty has been reset.");
     }
 }

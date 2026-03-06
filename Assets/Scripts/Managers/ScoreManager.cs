@@ -16,6 +16,9 @@ public class ScoreManager : Singleton<ScoreManager>
     private const string HIGH_SCORE_KEY = "PlayerHighScore";
     private float scoreUpdateTimer;
 
+    // ◈ REBIND: Reference to the supreme progression system.
+    private PlayerProgression progressionManager;
+
     protected override void Awake()
     {
         base.Awake();
@@ -24,6 +27,9 @@ public class ScoreManager : Singleton<ScoreManager>
 
     private void Start()
     {
+        // ◈ REBIND: Resolve dependency on the supreme progression manager.
+        progressionManager = PlayerProgression.Instance;
+
         // Subscribe to the new GameState event
         GameManager.OnGameStateChanged += HandleGameStateChanged;
         ResetScore();
@@ -64,8 +70,15 @@ public class ScoreManager : Singleton<ScoreManager>
     public void AddScore(int amount)
     {
         if (!GameManager.Instance.IsGameActive || amount <= 0) return;
+        
         CurrentScore += amount;
         OnScoreChanged?.Invoke(CurrentScore);
+
+        // ◈ REBIND: Grant XP using the supreme progression system, with a source.
+        if (progressionManager != null)
+        {
+            progressionManager.AddXP(amount, "Run");
+        }
     }
 
     private void CheckForNewHighScore()

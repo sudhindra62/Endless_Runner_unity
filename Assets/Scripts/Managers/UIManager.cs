@@ -34,9 +34,13 @@ public class UIManager : MonoBehaviour
             PowerUpFusionManager.Instance.OnFusionDeactivated += HandleFusionDeactivation;
         }
 
-        if(ghostToggle != null)
+        if (ghostToggle != null)
         {
             ghostToggle.onValueChanged.AddListener(OnGhostToggleChanged);
+            if (GhostRunManager.Instance != null && GhostRunManager.Instance.playback != null)
+            {
+                ghostToggle.isOn = GhostRunManager.Instance.playback.gameObject.activeSelf;
+            }
         }
 
         CreateFusionUI();

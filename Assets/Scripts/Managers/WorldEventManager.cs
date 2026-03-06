@@ -1,10 +1,35 @@
 using UnityEngine;
 
-/// <summary>
-/// DEPRECATED: This system has been replaced by the LiveEventManager.
-/// This file is kept to satisfy the NEVER DELETE rule, but its functionality is disabled.
-/// </summary>
 public class WorldEventManager : MonoBehaviour
 {
-    // All logic has been removed to prevent authority conflicts with LiveEventManager.
+    [SerializeField] private LiveEventManager liveEventManager;
+
+    private void Start()
+    {
+        // This would be driven by a server or configuration file in a real game
+        LiveEventData testEvent = new LiveEventData
+        {
+            EventID = "TestEvent01",
+            EventName = "Test Event",
+            StartTimeUTC = (ulong)System.DateTime.UtcNow.AddSeconds(-10).ToBinary(),
+            EndTimeUTC = (ulong)System.DateTime.UtcNow.AddDays(1).ToBinary(),
+        };
+
+        StartEvent(testEvent);
+    }
+
+    public void StartEvent(LiveEventData eventData)
+    {
+        if (liveEventManager != null)
+        {
+            liveEventManager.InitializeEvent(eventData);
+            Debug.Log($"Event {eventData.EventName} has started.");
+        }
+    }
+
+    public void EndEvent(LiveEventData eventData)
+    {
+        // Logic to finalize the event
+        Debug.Log($"Event {eventData.EventName} has ended.");
+    }
 }

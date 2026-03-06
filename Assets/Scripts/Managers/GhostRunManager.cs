@@ -1,6 +1,4 @@
-
 using UnityEngine;
-using System.Collections.Generic;
 
 public class GhostRunManager : Singleton<GhostRunManager>
 {
@@ -8,24 +6,32 @@ public class GhostRunManager : Singleton<GhostRunManager>
     [SerializeField] public GhostRunRecorder recorder;
     [SerializeField] public GhostRunPlayback playback;
 
-    private List<GhostDataPoint> bestRunData;
+    private byte[] bestRunData;
 
     private void Start()
     {
-        bestRunData = SaveManager.Instance.LoadBestGhostRun();
+        SaveManager.OnLoad += LoadBestGhostRun;
+    }
 
-        if (bestRunData != null)
+    private void OnDestroy()
+    {
+        SaveManager.OnLoad -= LoadBestGhostRun;
+    }
+
+    private void LoadBestGhostRun(SaveData data)
+    {
+        bestRunData = data.bestGhostRunData;
+        if (bestRunData != null && playback != null)
         {
-            playback.LoadGhostRun(bestRunData);
+            playback.StartPlayback(bestRunData);
         }
     }
 
-    public void SaveNewBestRun(List<GhostDataPoint> newRunData)
+    public void SaveNewBestRun(byte[] newRunData)
     {
-        // For simplicity, we're not comparing scores here. We'll just save the latest run.
         // In a full implementation, you'd compare the score of the new run with the saved run.
-        SaveManager.Instance.SaveBestGhostRun(newRunData);
         bestRunData = newRunData;
-        playback.LoadGhostRun(bestRunData);
+        SaveManager.Instance.GameData.bestGhostRunData = newRunData;
+        SaveManager.Instance.SaveGame();
     }
 }

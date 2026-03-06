@@ -18,10 +18,12 @@ namespace Core
         [SerializeField] private ObjectPooler _coinPooler;
 
         private EffectsManager _effectsManager;
+        private SpeedManager _speedManager;
 
         private void Awake()
         {
             _effectsManager = FindObjectOfType<EffectsManager>();
+            _speedManager = FindObjectOfType<SpeedManager>();
         }
 
         private void OnEnable()
@@ -73,9 +75,9 @@ namespace Core
             }
             
             // Production-ready code: Use the object pooler to spawn the obstacle.
-            // var spawnedObstacle = _obstaclePooler.Spawn(data.ObstacleID, parentTile.position + data.LocalPosition, Quaternion.identity);
-            // spawnedObstacle.transform.SetParent(parentTile);
-            // spawnedObstacle.transform.localScale = data.Scale;
+            var spawnedObstacle = _obstaclePooler.Spawn(data.ObstacleID, parentTile.position + data.LocalPosition, Quaternion.identity);
+            spawnedObstacle.transform.SetParent(parentTile);
+            spawnedObstacle.transform.localScale = data.Scale;
         }
 
         private void SpawnAsCoin(ObstaclePlacementData data, Transform parentTile)
@@ -93,7 +95,7 @@ namespace Core
             }
 
             // Production-ready code: Use the coin pooler.
-            // _coinPooler.Spawn("StandardCoin", parentTile.position + data.LocalPosition, Quaternion.identity);
+            _coinPooler.Spawn("StandardCoin", parentTile.position + data.LocalPosition, Quaternion.identity);
         }
     }
 }

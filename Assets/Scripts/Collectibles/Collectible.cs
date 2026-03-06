@@ -8,9 +8,19 @@ using PowerUps;
 /// </summary>
 public class Collectible : MonoBehaviour
 {
+    public enum CollectibleType { Coin, Gem, PowerUp, Special }
+
+    [Header("Configuration")]
+    [SerializeField] private CollectibleType type = CollectibleType.Coin;
+    [SerializeField] private int value = 1;
     [Tooltip("The tag used by the ObjectPooler for this collectible type.")]
     [SerializeField] protected string poolTag;
     [SerializeField] private float attractionSpeed = 15f;
+    [SerializeField] private float rotationSpeed = 100f;
+
+    [Header("Effects")]
+    [SerializeField] private GameObject collectionEffect;
+    [SerializeField] private AudioClip collectionSound;
 
     [Tooltip("The power-up to grant when collected. Can be null for simple collectibles like coins.")]
     [SerializeField] private PowerUp powerUpToGrant;
@@ -23,6 +33,11 @@ public class Collectible : MonoBehaviour
     protected virtual void Start()
     {
         objectPooler = ServiceLocator.Get<ObjectPooler>();
+    }
+
+    void Update()
+    {
+        transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -59,9 +74,33 @@ public class Collectible : MonoBehaviour
 
     protected virtual void OnCollect()
     {
-        if (powerUpToGrant != null)
+        switch (type)
         {
-            PowerUpManager.Instance.ActivatePowerUp(powerUpToGrant);
+            case CollectibleType.Coin:
+                CurrencyManager.Instance.AddCoins(value);
+                break;
+            case CollectibleType.Gem:
+                CurrencyManager.Instance.AddGems(value);
+                break;
+            case CollectibleType.PowerUp:
+                if (powerUpToGrant != null)
+                {
+                    PowerUpManager.Instance.ActivatePowerUp(powerUpToGrant);
+                }
+                break;
+            case CollectibleType.Special:
+                // Handled by subclasses like SpecialCollectible.cs
+                break;
+        }
+
+        // --- Visual & Audio Feedback ---
+        if (collectionEffect != null)
+        {
+            Instantiate(collectionEffect, transform.position, Quaternion.identity);
+        }
+        if (collectionSound != null)
+        {
+            AudioManager.Instance.PlaySound(collectionSound);
         }
     }
 
@@ -77,7 +116,7 @@ public class Collectible : MonoBehaviour
         }
 
         if (objectPooler != null)
-        { 
+        {
             objectPooler.ReturnToPool(poolTag, gameObject);
         }
         else

@@ -12,7 +12,7 @@ public class PlayerController : MonoBehaviour
     public float slideDuration = 1f;
 
     private CharacterController controller;
-    private Animator animator;
+    private AnimationController animationController;
     private Vector3 moveVector;
     private int currentLane = 1; // 0 = left, 1 = middle, 2 = right
     private bool isSliding = false;
@@ -20,7 +20,7 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        animator = GetComponent<Animator>();
+        animationController = GetComponent<AnimationController>();
     }
 
     void Update()
@@ -90,13 +90,13 @@ public class PlayerController : MonoBehaviour
     private void Jump()
     {
         moveVector.y = jumpForce;
-        animator.SetTrigger("Jump");
+        animationController.Jump();
     }
 
     private void Slide()
     {
         isSliding = true;
-        animator.SetTrigger("Slide");
+        animationController.Slide();
         controller.height = 1f; // Adjust collider height for slide
         controller.center = new Vector3(controller.center.x, 0.5f, controller.center.z);
         Invoke("StopSliding", slideDuration);
@@ -105,7 +105,7 @@ public class PlayerController : MonoBehaviour
     private void StopSliding()
     {
         isSliding = false;
-        animator.SetTrigger("Run");
+        animationController.Run();
         controller.height = 2f; // Reset collider height
         controller.center = new Vector3(controller.center.x, 1f, controller.center.z);
     }

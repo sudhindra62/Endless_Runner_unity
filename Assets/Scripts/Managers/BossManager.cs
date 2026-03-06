@@ -1,28 +1,30 @@
-
 using UnityEngine;
-using System;
 
-public class BossManager : Singleton<BossManager>
+public class BossManager : MonoBehaviour
 {
-    public static event Action OnBossDefeated;
+    [Header("Boss Prefab")]
+    [SerializeField] private GameObject bossPrefab;
 
-    private PlayerAnalyticsManager analyticsManager;
+    private Boss currentBoss;
 
-    private void Awake()
+    public void SpawnBoss()
     {
-        analyticsManager = PlayerAnalyticsManager.Instance;
-    }
-
-    public void BossEncounterEnded(bool playerWon)
-    {
-        if (analyticsManager != null)
+        if (bossPrefab != null)
         {
-            analyticsManager.TrackBossEncounter(playerWon);
-        }
-
-        if (playerWon)
-        {
-            OnBossDefeated?.Invoke();
+            GameObject bossObject = Instantiate(bossPrefab, Vector3.zero, Quaternion.identity);
+            currentBoss = bossObject.GetComponent<Boss>();
+            Debug.Log("Boss has been spawned!");
         }
     }
+
+    public void DespawnBoss()
+    {
+        if (currentBoss != null)
+        { 
+            Destroy(currentBoss.gameObject);
+            currentBoss = null;
+        }
+    }
+
+    // Add methods to trigger boss attacks, check its status, etc.
 }

@@ -1,113 +1,103 @@
 
-using System;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using System;
 
+/// <summary>
+/// Defines the different states of the game.
+/// </summary>
 public enum GameState
 {
     MainMenu,
-    Gameplay,
+    Playing,
     Paused,
-    GameOver,
-    Revive,
-    RunSummary
+    GameOver
 }
 
+/// <summary>
+/// The master Singleton for managing the core game state and flow.
+/// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    public GameState CurrentState { get; private set; }
     public static event Action<GameState> OnGameStateChanged;
 
-    public GameState CurrentState { get; private set; }
-
-    public bool IsGameActive => CurrentState == GameState.Gameplay;
+    public bool IsGameActive => CurrentState == GameState.Playing;
 
     private void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return;
         }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     private void Start()
     {
         // Set the initial state of the game
-        SetState(GameState.MainMenu);
+        UpdateGameState(GameState.MainMenu);
     }
 
-    public void SetState(GameState newState)
+    public void UpdateGameState(GameState newState)
     {
         if (CurrentState == newState) return;
 
         CurrentState = newState;
-        OnGameStateChanged?.Invoke(newState);
 
         switch (newState)
         {
             case GameState.MainMenu:
+                // Logic for main menu
                 Time.timeScale = 1f;
                 break;
-            case GameState.Gameplay:
+            case GameState.Playing:
+                // Logic for starting the game
                 Time.timeScale = 1f;
                 break;
             case GameState.Paused:
+                // Logic for pausing the game
                 Time.timeScale = 0f;
                 break;
             case GameState.GameOver:
-                // Actions to take when the game is over, before showing revive or summary
+                // Logic for game over
+                Time.timeScale = 0f; // Or a slow-mo effect
                 break;
-            case GameState.Revive:
-                Time.timeScale = 0f;
-                break;
-            case GameState.RunSummary:
-                Time.timeScale = 0f;
-                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
         }
+
+        // Notify all listeners that the game state has changed.
+        OnGameStateChanged?.Invoke(newState);
+        Debug.Log($"Game state changed to: {newState}");
     }
 
+    // Example methods to be called by UI buttons or other managers
     public void StartGame()
     {
-        SetState(GameState.Gameplay);
+        UpdateGameState(GameState.Playing);
     }
 
     public void PauseGame()
     {
-        if (CurrentState == GameState.Gameplay)
-        {
-            SetState(GameState.Paused);
-        }
+        UpdateGameState(GameState.Paused);
     }
 
     public void ResumeGame()
     {
-        if (CurrentState == GameState.Paused)
-        {
-            SetState(GameState.Gameplay);
-        }
+        UpdateGameState(GameState.Playing);
     }
 
-    public void PlayerDied()
+    public void EndGame()
     {
-        SetState(GameState.GameOver);
-        // Here you can decide whether to go to Revive or RunSummary
-        // For now, let's assume we always offer a revive.
-        SetState(GameState.Revive);
+        UpdateGameState(GameState.GameOver);
     }
 
-    public void RestartGame()
+    public void ReturnToMenu()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-    }
-
-    public void GoToMainMenu()
-    {
-        SetState(GameState.MainMenu);
+        UpdateGameState(GameState.MainMenu);
     }
 }
