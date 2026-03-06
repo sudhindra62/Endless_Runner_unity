@@ -41,9 +41,7 @@ public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
 
     private void Start()
     {
-        // This subscription is commented out as GameManager.OnGameStateChanged is not defined.
-        // To make this functional, GameManager needs to define a static event 'OnGameStateChanged'.
-        // GameManager.OnGameStateChanged += HandleGameStateChanged;
+        GameManager.OnGameStateChanged += HandleGameStateChanged;
 
         ResetDifficulty();
         InvokeRepeating(nameof(AnalyzePerformance), ANALYSIS_INTERVAL_SECONDS, ANALYSIS_INTERVAL_SECONDS);
@@ -51,12 +49,10 @@ public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
 
     private void Update()
     {
-        // We only increase time-based difficulty when the game is active.
-        // This check requires a functional GameManager with an IsGameActive property.
-        // if (GameManager.Instance != null && GameManager.Instance.IsGameActive)
-        // {
-        //     _timeElapsed += Time.deltaTime;
-        // }
+        if (GameManager.Instance != null && GameManager.Instance.IsGameActive)
+        {
+            _timeElapsed += Time.deltaTime;
+        }
     }
 
     // --- Public API for calculating final difficulty ---
@@ -95,8 +91,7 @@ public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
 
     private void AnalyzePerformance()
     {
-        // This check requires a functional GameManager.
-        // if (GameManager.Instance == null || !GameManager.Instance.IsGameActive) return;
+        if (GameManager.Instance == null || !GameManager.Instance.IsGameActive) return;
         if (currentRunData.DodgeSuccessHistory.Count == 0) return;
 
         float successRate = (float)currentRunData.DodgeSuccessHistory.Count(s => s) / currentRunData.DodgeSuccessHistory.Count;
@@ -129,7 +124,7 @@ public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
 
     private void HandleGameStateChanged(GameState newState)
     {
-        if (newState == GameState.GameStart || newState == GameState.MainMenu)
+        if (newState == GameState.Playing || newState == GameState.MainMenu)
         {
             ResetDifficulty();
         }

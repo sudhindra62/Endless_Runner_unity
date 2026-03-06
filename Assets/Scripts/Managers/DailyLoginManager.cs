@@ -11,8 +11,8 @@ public struct DailyReward
 }
 
 /// <summary>
-/// Manages daily login rewards and streaks. It is the authority for determining when a daily reward should be granted.
-/// It includes protection against time manipulation by checking against the last saved login time.
+/// The SUPREME manager for daily login rewards. It handles streaks, anti-cheat, and reward granting.
+/// This script has absorbed all functionality from the redundant DailyLoginRewardManager and RewardManager.
 /// </summary>
 public class DailyLoginManager : Singleton<DailyLoginManager>
 {
@@ -35,14 +35,12 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
         DateTime lastLoginDate = GetLastLoginDate();
         DateTime currentDate = DateTime.UtcNow.Date;
 
-        // Anti-cheat: If the current time is earlier than the last recorded login, the user might be manipulating the system time.
         if (currentDate < lastLoginDate)
         {
             Debug.LogWarning("System time appears to have been wound back. Daily login reward will not be granted.");
             return;
         }
 
-        // Check if a reward has already been claimed for the current date.
         if (IsRewardClaimedForDate(currentDate))
         {
             Debug.Log("Daily reward for today has already been claimed.");
@@ -53,7 +51,6 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
         {
             int streak = PlayerPrefs.GetInt(LoginStreakKey, 0);
 
-            // If the last login was yesterday, continue the streak. Otherwise, reset it.
             if ((currentDate - lastLoginDate).TotalDays == 1.0)
             {
                 streak++;
@@ -65,16 +62,13 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
 
             OnLoginStreakChanged?.Invoke(streak);
 
-            // Grant reward
             GrantStreakReward(streak);
 
-            // Reset daily spins
             if (SpinWheelManager.Instance != null)
             {
                 SpinWheelManager.Instance.ResetDailySpins();
             }
 
-            // Save state
             PlayerPrefs.SetString(LastLoginKey, currentDate.ToString("o"));
             PlayerPrefs.SetInt(LoginStreakKey, streak);
             MarkRewardAsClaimedForDate(currentDate);
@@ -90,12 +84,22 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
             return;
         }
 
-        // The streak cycles through the available rewards.
         int rewardIndex = (streak - 1) % streakRewards.Length;
         DailyReward reward = streakRewards[rewardIndex];
 
-        RewardManager.Instance.GrantDailyLoginReward(streak, reward.Coins, reward.Gems, reward.Xp);
-        Debug.Log($"Daily login reward granted for streak day {streak}.");
+        // ◈ MERGED: Directly grant rewards to the relevant managers ◈
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.AddCoins(reward.Coins);
+            CurrencyManager.Instance.AddGems(reward.Gems);
+        }
+
+        if (PlayerProgression.Instance != null)
+        {
+            PlayerProgression.Instance.AddXP(reward.Xp, "DailyLogin");
+        }
+
+        Debug.Log($"Daily login reward granted for streak day {streak}: {reward.Coins} coins, {reward.Gems} gems, {reward.Xp} XP.");
     }
 
     private DateTime GetLastLoginDate()

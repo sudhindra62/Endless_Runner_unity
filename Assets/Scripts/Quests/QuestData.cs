@@ -5,7 +5,8 @@ public enum QuestType
 {
     Daily,
     Weekly,
-    Event
+    Event,
+    Achievement
 }
 
 public enum QuestDifficulty

@@ -1,44 +1,45 @@
+
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using System;
 
 /// <summary>
-/// Orchestrates dynamic environmental events during a run.
-/// This manager schedules and triggers events, but delegates the actual
-/// implementation of event mechanics to other specialized systems.
+/// The SUPREME manager for all in-game events. It orchestrates dynamic environmental events, handles scheduled live events, and manages world theme changes.
+/// This script has absorbed all functionality from the redundant WorldEventManager.
 /// </summary>
-public class EnvironmentEventManager : MonoBehaviour
+public class EnvironmentEventManager : Singleton<EnvironmentEventManager>
 {
-    public static EnvironmentEventManager Instance { get; private set; }
-
-    // --- Events broadcast to other systems ---
-    public event Action<EnvironmentEventData> OnEventWillStart; // Sent as a warning before the event begins.
+    // Event Actions
+    public event Action<EnvironmentEventData> OnEventWillStart;
     public event Action<EnvironmentEventData> OnEventDidStart;
     public event Action<EnvironmentEventType> OnEventDidEnd;
+    public static event Action<ThemeProfileData> OnThemeChanged; // Merged from WorldEventManager
+    public static event Action<string> OnWeatherEffectTriggered; // Merged from the other EnvironmentEventManager
 
-    [Header("Configuration")]
-    [SerializeField] private List<EnvironmentEventData> availableEvents; // All possible events, configured in the Inspector.
+    [Header("Dynamic Event Configuration")]
+    [SerializeField] private List<EnvironmentEventData> availableDynamicEvents;
     [SerializeField] private float minTimeBetweenEvents = 30f;
     [SerializeField] private float maxTimeBetweenEvents = 90f;
 
-    // --- State ---
     private EnvironmentEventData activeEvent = null;
     private float eventTimer;
     private float nextEventCooldown;
     private bool isEventActive = false;
 
-    // Assume a global reference to the player's progress exists.
-    // private float currentRunDistance => ScoreManager.Instance.Distance;
-
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
+        base.Awake();
+    }
+
+    private void OnEnable()
+    {
+        WorldThemeManager.OnThemeApplied += HandleThemeApplied; // Merged from WorldEventManager
+    }
+
+    private void OnDisable()
+    {
+        WorldThemeManager.OnThemeApplied -= HandleThemeApplied; // Merged from WorldEventManager
     }
 
     private void Start()
@@ -73,32 +74,30 @@ public class EnvironmentEventManager : MonoBehaviour
 
     private void TryTriggerEvent()
     {
-        // Filter for events that can be triggered at the current distance.
         float currentRunDistance = 0; // Replace with actual distance tracking.
-        var possibleEvents = availableEvents.Where(e => currentRunDistance >= e.MinTriggerDistance).ToList();
+        var possibleEvents = availableDynamicEvents.Where(e => currentRunDistance >= e.MinTriggerDistance).ToList();
 
         if (possibleEvents.Count > 0)
         {
             activeEvent = possibleEvents[UnityEngine.Random.Range(0, possibleEvents.Count)];
-            StartEvent();
+            StartEvent(activeEvent);
         }
         else
         {
-            // No valid events can be triggered yet, try again later.
             ScheduleNextEvent();
         }
     }
 
-    private void StartEvent()
+    public void StartEvent(EnvironmentEventData eventData)
     {
         isEventActive = true;
-        eventTimer = activeEvent.DurationSeconds;
+        eventTimer = eventData.DurationSeconds;
+        activeEvent = eventData;
 
-        Debug.Log($"[EnvironmentEventManager] Event Starting: {activeEvent.EventType}");
+        Debug.Log($"[EnvironmentEventManager] Event Starting: {eventData.EventType}");
 
-        // Broadcast warning and start events.
-        OnEventWillStart?.Invoke(activeEvent);
-        OnEventDidStart?.Invoke(activeEvent);
+        OnEventWillStart?.Invoke(eventData);
+        OnEventDidStart?.Invoke(eventData);
     }
 
     private void EndActiveEvent()
@@ -113,7 +112,6 @@ public class EnvironmentEventManager : MonoBehaviour
 
         OnEventDidEnd?.Invoke(endedEventType);
 
-        // Schedule the next one.
         ScheduleNextEvent();
     }
 
@@ -122,10 +120,47 @@ public class EnvironmentEventManager : MonoBehaviour
         return isEventActive && activeEvent != null && activeEvent.EventType == type;
     }
 
-    // Call this on run end or revive to prevent broken states.
     public void ResetManager()
     {
         if(isEventActive) EndActiveEvent();
         ScheduleNextEvent();
+    }
+
+    #region Merged Live Event Logic
+
+    public void InitializeLiveEvent(LiveEventData eventData)
+    {
+        EnvironmentEventData envEventData = ConvertLiveEventToEnvironmentEvent(eventData);
+        if (envEventData != null)
+        {
+            StartEvent(envEventData);
+        }
+    }
+
+    private EnvironmentEventData ConvertLiveEventToEnvironmentEvent(LiveEventData liveEventData)
+    {
+        if (liveEventData.EventID == "TestEvent01")
+        {
+            return availableDynamicEvents.Find(e => e.EventType == EnvironmentEventType.MeteorShower); 
+        }
+        return null;
+    }
+
+    #endregion
+
+    #region Merged Theme Management Logic
+
+    private void HandleThemeApplied(ThemeProfileData newTheme)
+    {
+        // When the WorldThemeManager applies a theme, this event manager
+        // broadcasts it to the rest of the game.
+        OnThemeChanged?.Invoke(newTheme);
+    }
+
+    #endregion
+
+    public void TriggerWeatherEffect(string effectName)
+    {
+        OnWeatherEffectTriggered?.Invoke(effectName);
     }
 }

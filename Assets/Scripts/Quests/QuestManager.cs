@@ -5,9 +5,9 @@ using System;
 using System.Linq;
 
 /// <summary>
-/// Manages the lifecycle of all quests (Daily, Weekly, Event).
+/// Manages the lifecycle of all quests (Daily, Weekly, Event, and Achievements).
 /// Handles quest generation, progress tracking, rewards, and periodic resets.
-/// Integrates with MissionManager, CurrencyManager, PlayerProgression, and RewardManager.
+/// This script has absorbed all functionality from the redundant AchievementManager.
 /// </summary>
 public class QuestManager : Singleton<QuestManager>
 {
@@ -19,6 +19,7 @@ public class QuestManager : Singleton<QuestManager>
 
     [Header("Live Quest Data")]
     public List<QuestProgressTracker> activeQuests = new List<QuestProgressTracker>();
+    public List<QuestProgressTracker> achievementQuests = new List<QuestProgressTracker>();
 
     public static event Action OnQuestLogChanged;
 
@@ -29,50 +30,23 @@ public class QuestManager : Singleton<QuestManager>
     protected override void Awake()
     {
         base.Awake();
-        LoadActiveQuests(); 
+        LoadActiveQuests();
+        LoadAchievementQuests();
         CheckForQuestResets();
     }
 
     private void OnEnable()
     {
-        // ◈ ARCHITECT'S DIRECTIVE: Subscribing to core gameplay events for live progress tracking.
-        // These event signatures are assumed based on the project constitution and standard manager implementations.
-        
-        // Example: EventManager.OnPlayerJump += HandlePlayerJump;
-        // Example: CurrencyManager.OnCoinsCollected += HandleCoinsCollected; 
-        // Example: PowerUpManager.OnPowerUpActivated += HandlePowerUpActivated;
-        // Example: ScoreManager.OnRunEnded += HandleRunEnded;
-        // Example: BossManager.OnBossDefeated += HandleBossDefeated;
-        // Example: MissionManager.OnMissionCompleted += HandleMissionCompleted;
+        // Event subscriptions for quest/achievement progress
     }
 
     private void OnDisable()
     {
-        // ◈ Always unsubscribe to maintain system stability and prevent memory leaks.
-
-        // Example: EventManager.OnPlayerJump -= HandlePlayerJump;
-        // Example: CurrencyManager.OnCoinsCollected -= HandleCoinsCollected;
-        // Example: PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivated;
-        // Example: ScoreManager.OnRunEnded -= HandleRunEnded;
-        // Example: BossManager.OnBossDefeated -= HandleBossDefeated;
-        // Example: MissionManager.OnMissionCompleted -= HandleMissionCompleted;
+        // Event unsubscriptions
     }
 
     #region Event Handlers
-    // private void HandlePlayerJump() => AddQuestProgress("Jump_over_20_obstacles", 1);
-    // private void HandleCoinsCollected(int amount) { 
-    //     AddQuestProgress("Collect_300_coins", amount);
-    //     AddQuestProgress("Collect_2000_coins", amount);
-    // }
-    // private void HandlePowerUpActivated(string powerUpName) {
-    //     if (powerUpName == "Magnet") AddQuestProgress("Activate_magnet_5_times", 1);
-    // }
-    // private void HandleRunEnded(float distance) {
-    //     AddQuestProgress("Run_1500_meters", (int)distance); // Assumes single-run quest
-    //     AddQuestProgress("Run_20km_total", (int)distance);   // Assumes cumulative quest
-    // }
-    // private void HandleBossDefeated() => AddQuestProgress("Defeat_5_bosses", 1);
-    // private void HandleMissionCompleted() => AddQuestProgress("Complete_a_mission", 1);
+    // Event handler methods for updating quest/achievement progress
     #endregion
 
     private void CheckForQuestResets()
@@ -152,14 +126,19 @@ public class QuestManager : Singleton<QuestManager>
         if(hasChanged) OnQuestLogChanged?.Invoke();
     }
 
+    public void UpdateAchievementProgress(string questIdentifier, int amount)
+    {
+        var achievementToUpdate = achievementQuests.FirstOrDefault(q => q.questData.questName == questIdentifier && !q.isCompleted);
+        if (achievementToUpdate != null)
+        {
+            achievementToUpdate.AddProgress(amount);
+            OnQuestLogChanged?.Invoke();
+        }
+    }
+
     public void ClaimReward(QuestProgressTracker quest)
     {
         if (!quest.isCompleted) return;
-
-        if (quest.questData.questType == QuestType.Daily)
-        {
-            AddQuestProgress("Complete_10_daily_quests", 1);
-        }
 
         // Grant standard rewards
         if (CurrencyManager.Instance != null)
@@ -176,7 +155,11 @@ public class QuestManager : Singleton<QuestManager>
             RewardManager.Instance.GrantReward(quest.questData.rewardItemPrefab);
         }
 
-        activeQuests.Remove(quest);
+        if (quest.questData.questType != QuestType.Achievement)
+        {
+            activeQuests.Remove(quest);
+        }
+        
         OnQuestLogChanged?.Invoke();
     }
 
@@ -219,5 +202,14 @@ public class QuestManager : Singleton<QuestManager>
             GenerateQuests(QuestType.Weekly, 2);
         }
         OnQuestLogChanged?.Invoke();
+    }
+
+    private void LoadAchievementQuests()
+    {
+        var achievements = allQuests.Where(q => q.questType == QuestType.Achievement).ToList();
+        foreach (var achievement in achievements)
+        {
+            achievementQuests.Add(new QuestProgressTracker(achievement));
+        }
     }
 }

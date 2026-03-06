@@ -1,59 +1,53 @@
 
 using UnityEngine;
+using System.Collections.Generic;
+using System;
 
-public class RewardManager : MonoBehaviour
+/// <summary>
+/// The SUPREME manager for all player rewards. It handles end-of-run rewards, challenges, and a sophisticated chest opening system.
+/// This script has absorbed all functionality from the redundant ChestManager.
+/// </summary>
+public class RewardManager : Singleton<RewardManager>
 {
-    public static RewardManager Instance { get; private set; }
+    [Header("Chest Configuration")]
+    public List<ChestData> availableChests;
 
-    private void Awake()
+    private PlayerDataManager _playerDataManager;
+
+    protected override void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        base.Awake();
     }
 
-    /// <summary>
-    /// This is the master function to call at the end of a run to process all rewards.
-    /// </summary>
+    private void Start()
+    {
+        _playerDataManager = ServiceLocator.Get<PlayerDataManager>(); // Assuming a ServiceLocator
+    }
+
     public void ProcessEndOfRunRewards(RunSessionData runData, bool bossDefeated)
     {
-        // Step 1: Calculate and award standard rewards (currency, XP, etc.)
-        int coinsEarned = (int)(runData.distance / 10); // 1 coin for every 10 meters
+        int coinsEarned = (int)(runData.distance / 10);
         Award("COINS", coinsEarned);
 
-        // Step 2: Trigger the rare drop evaluation AFTER standard rewards are calculated.
-        // This fulfills the requirement: "After reward calculation. Before reward display."
         if (RareDropManager.Instance != null)
         {
             RareDropManager.Instance.EvaluateRareDrop(runData, bossDefeated);
         }
-
-        // Step 3: Display all rewards to the player in the UI
-        // (This would trigger the UI animation sequences for all collected rewards)
     }
 
     public void Award(string itemID, int quantity)
     {
-        // INTEGRATION: Validate the reward before granting it.
         if (IntegrityManager.Instance != null && !IntegrityManager.Instance.GrantReward(itemID))
         {
             IntegrityManager.Instance.ReportError($"Duplicate reward detected: {itemID}");
             return;
         }
 
-        // This method is the designated authority for granting items.
-        // It is called by RareDropManager and other systems.
         Debug.Log($"REWARD_MANAGER: Awarding {quantity} of {itemID}");
 
         if (itemID.StartsWith("SHARD_"))
         {
-            // Note: RareDropManager now calls ShardInventoryManager directly for shard awards.
-            // This route can be maintained for other shard sources (e.g., chests).
-            if (ShardInventoryManager.Instance != null) ShardInventoryManager.Instance.AddShards(itemID, quantity); // Ensure correct method name
+            if (ShardInventoryManager.Instance != null) ShardInventoryManager.Instance.AddShards(itemID, quantity);
         }
         else if (itemID.StartsWith("SKIN_"))
         {
@@ -76,13 +70,58 @@ public class RewardManager : MonoBehaviour
     public void AwardChallengeReward()
     {
         int coinReward = 500;
-        // Double rewards during events
         if (LiveOpsManager.Instance != null && LiveOpsManager.Instance.IsEventActive("Friend Rivalry Week"))
         {
             coinReward *= 2;
         }
         Award("COINS", coinReward);
-        // In a real game, we would award challenge tokens and chests here.
         Debug.Log("Awarding challenge reward!");
     }
+
+    #region Merged Chest Logic
+
+    public bool IsChestReady(string chestId)
+    {
+        PlayerChestState chestState = _playerDataManager.GetChestState(chestId);
+        if (chestState == null) return true;
+
+        ChestData chestData = availableChests.Find(c => c.chestId == chestId);
+        if (chestData == null) return false;
+
+        TimeSpan timeSinceLastOpened = DateTime.UtcNow - chestState.lastOpenedTime;
+        return timeSinceLastOpened.TotalHours >= chestData.cooldownHours;
+    }
+
+    public void OpenChest(string chestId)
+    {
+        if (!IsChestReady(chestId)) return;
+
+        ChestData chestToOpen = availableChests.Find(c => c.chestId == chestId);
+        if (chestToOpen == null)
+        {
+            Debug.LogError($"ChestData not found for ID: {chestId}");
+            return;
+        }
+
+        Debug.Log($"Opening chest: {chestToOpen.chestName}");
+
+        List<KeyValuePair<string, int>> rewards = chestToOpen.GetRewards();
+
+        if (rewards.Count == 0)
+        {
+            Debug.LogWarning("Chest opened, but no rewards were granted based on drop chances. Granting a pity reward.");
+            Award("COINS", 50); // Pity reward
+            return;
+        }
+
+        foreach (var reward in rewards)
+        {
+            Award(reward.Key, reward.Value);
+        }
+
+        _playerDataManager.UpdateChestState(chestId);
+        // UIManager.Instance.ShowRewardScreen(rewards); // This would show the player what they won
+    }
+
+    #endregion
 }

@@ -6,9 +6,16 @@ public class CosmeticEffectManager : Singleton<CosmeticEffectManager>
 {
     private Dictionary<CosmeticEffectType, GameObject> activeEffects = new Dictionary<CosmeticEffectType, GameObject>();
     private Dictionary<string, ObjectPool> effectPools = new Dictionary<string, ObjectPool>();
+    private HashSet<string> unlockedEffects = new HashSet<string>();
 
     // This would be linked to the player character in the scene
     public Transform playerCharacter;
+
+    protected override void Awake()
+    {
+        base.Awake();
+        LoadUnlockedEffects();
+    }
 
     public void OnCosmeticEquipped(string effectID, CosmeticEffectType effectType)
     {
@@ -20,7 +27,7 @@ public class CosmeticEffectManager : Singleton<CosmeticEffectManager>
 
         // Activate the new effect
         CosmeticEffectData effectData = GetCosmeticData(effectID); // Assume this method exists to get data
-        if (effectData != null)
+        if (effectData != null && IsEffectUnlocked(effectID))
         {
             GameObject effectInstance = GetPooledEffect(effectID, effectData.effectPrefab);
             effectInstance.transform.SetParent(playerCharacter, false);
@@ -43,6 +50,32 @@ public class CosmeticEffectManager : Singleton<CosmeticEffectManager>
                 // The effect should have a script to disable itself after playing
             }
         }
+    }
+
+    public void UnlockEffect(string effectID)
+    {
+        if (unlockedEffects.Add(effectID))
+        {
+            Debug.Log($"Cosmetic Effect Unlocked: {effectID}");
+            SaveUnlockedEffects();
+        }
+    }
+
+    public bool IsEffectUnlocked(string effectID)
+    {
+        return unlockedEffects.Contains(effectID);
+    }
+
+    private void LoadUnlockedEffects()
+    {
+        // In a real implementation, this would load from a SaveManager
+        // For this example, we'll just initialize an empty set.
+        unlockedEffects = new HashSet<string>();
+    }
+
+    private void SaveUnlockedEffects()
+    {
+        // In a real implementation, this would save to a SaveManager
     }
 
     private GameObject GetPooledEffect(string effectID, GameObject prefab)
@@ -83,7 +116,7 @@ public class ObjectPool
             }
         }
 
-        GameObject newObj = Instantiate(prefab);
+        GameObject newObj = MonoBehaviour.Instantiate(prefab);
         pooledObjects.Add(newObj);
         return newObj;
     }

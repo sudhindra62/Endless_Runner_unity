@@ -7,10 +7,8 @@ using System.Threading.Tasks;
 /// It fetches, validates, and caches configs, providing safe access to other managers.
 /// Adheres to IRONCLAD rules: NO direct mutation, ONLY applies reversible modifiers.
 /// </summary>
-public class LiveOpsManager : MonoBehaviour
+public class LiveOpsManager : Singleton<LiveOpsManager>
 {
-    public static LiveOpsManager Instance { get; private set; }
-
     [Header("Configuration Profiles")]
     [SerializeField]
     [Tooltip("A baked-in, guaranteed-safe config profile to use as a last resort.")]
@@ -30,15 +28,9 @@ public class LiveOpsManager : MonoBehaviour
 
     public static event System.Action OnLiveOpsConfigUpdated;
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        base.Awake();
 
         // Initialize with safe defaults to prevent null issues on startup
         ApplyConfigProfile(_safeDefaultProfile);
