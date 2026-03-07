@@ -1,49 +1,124 @@
+
 using UnityEngine;
+using UnityEngine.Advertisements;
 using System;
 
-/// <summary>
-/// Manages rewarded video ads.
-/// Provides a simple API to check ad availability and show ads.
-/// This is a placeholder for a real ad network SDK.
-/// </summary>
-public class AdManager : Singleton<AdManager>
+public class AdManager : MonoBehaviour, IUnityAdsInitializationListener, IUnityAdsLoadListener, IUnityAdsShowListener
 {
-    public static event Action OnRewardedAdCompleted;
+    public static AdManager Instance { get; private set; }
 
-    private bool isAdReady = true; // Mock ad readiness
+    [Header("Unity Ads Game IDs")]
+    [SerializeField] private string androidGameId = "4494341"; // Example ID
+    [SerializeField] private string iosGameId = "4494340"; // Example ID
 
-    /// <summary>
-    /// Checks if a rewarded ad is available to be shown.
-    /// </summary>
-    /// <returns>True if an ad is ready, false otherwise.</returns>
-    public bool IsRewardedAdReady()
+    [Header("Ad Unit IDs")]
+    [SerializeField] private string androidInterstitialId = "Interstitial_Android";
+    [SerializeField] private string iosInterstitialId = "Interstitial_iOS";
+    [SerializeField] private string androidRewardedId = "Rewarded_Android";
+    [SerializeField] private string iosRewardedId = "Rewarded_iOS";
+
+    private string gameId;
+    private string interstitialId;
+    private string rewardedId;
+    private int gamesPlayedSinceAd = 0;
+    [SerializeField] private int gamesPerInterstitial = 3;
+
+    private Action currentRewardCallback;
+
+    public static event Action OnReviveAdCompleted;
+
+    private void Awake()
     {
-        // In a real implementation, this would check the ad network's SDK.
-        return isAdReady;
-    }
-
-    /// <summary>
-    /// Shows a rewarded video ad.
-    /// </summary>
-    public void ShowRewardedAd()
-    {
-        if (IsRewardedAdReady())
+        if (Instance == null)
         {
-            Debug.Log("Showing Rewarded Ad...");
-            // Simulate the ad playing
-            Invoke(nameof(OnAdCompleted), 2f); // Simulate 2-second ad
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+            InitializeAds();
         }
         else
         {
-            Debug.LogWarning("ShowRewardedAd called, but no ad was ready.");
+            Destroy(gameObject);
         }
     }
 
-    private void OnAdCompleted()
+    private void InitializeAds()
     {
-        Debug.Log("Rewarded Ad Completed.");
-        OnRewardedAdCompleted?.Invoke();
+        gameId = (Application.platform == RuntimePlatform.IPhonePlayer)
+            ? iosGameId
+            : androidGameId;
 
-        // In a real implementation, you might request the next ad here.
+        interstitialId = (Application.platform == RuntimePlatform.IPhonePlayer)
+            ? iosInterstitialId
+            : androidInterstitialId;
+
+        rewardedId = (Application.platform == RuntimePlatform.IPhonePlayer)
+            ? iosRewardedId
+            : androidRewardedId;
+
+        if (!Advertisement.isInitialized && Advertisement.isSupported)
+        {
+            Advertisement.Initialize(gameId, true, this);
+        }
+    }
+
+    public void ShowInterstitialAdAfterRun()
+    {
+        gamesPlayedSinceAd++;
+        if (gamesPlayedSinceAd >= gamesPerInterstitial)
+        {
+            if (Advertisement.isInitialized)
+            {
+                Advertisement.Show(interstitialId, this);
+                gamesPlayedSinceAd = 0;
+            }
+        }
+    }
+
+    public void ShowRewardedAd(Action onComplete)
+    {
+        if (Advertisement.isInitialized)
+        {
+            currentRewardCallback = onComplete;
+            Advertisement.Show(rewardedId, this);
+        }
+    }
+
+    public void ShowReviveAd()
+    {
+        ShowRewardedAd(() => OnReviveAdCompleted?.Invoke());
+    }
+
+    public void OnInitializationComplete()
+    {
+        Debug.Log("Unity Ads initialization complete.");
+        Advertisement.Load(interstitialId, this);
+        Advertisement.Load(rewardedId, this);
+    }
+
+    public void OnInitializationFailed(UnityAdsInitializationError error, string message)
+    {
+        Debug.LogError($"Unity Ads Initialization Failed: {error.ToString()} - {message}");
+    }
+
+    public void OnUnityAdsAdLoaded(string adUnitId) {}
+
+    public void OnUnityAdsFailedToLoad(string adUnitId, UnityAdsLoadError error, string message) {}
+
+    public void OnUnityAdsShowFailure(string adUnitId, UnityAdsShowError error, string message) {}
+
+    public void OnUnityAdsShowStart(string adUnitId) {}
+
+    public void OnUnityAdsShowClick(string adUnitId) {}
+
+    public void OnUnityAdsShowComplete(string adUnitId, UnityAdsShowCompletionState showCompletionState)
+    {
+        if (adUnitId.Equals(rewardedId) && showCompletionState == UnityAdsShowCompletionState.COMPLETED)
+        {
+            currentRewardCallback?.Invoke();
+        }
+        currentRewardCallback = null;
+
+        // Reload the ad after it has been shown
+        Advertisement.Load(adUnitId, this);
     }
 }

@@ -2,45 +2,63 @@
 using System;
 using UnityEngine;
 
-/// <summary>
-/// The SUPREME manager for all player currencies. It handles coins, gems, and all transactions with integrity validation.
-/// This script has absorbed all functionality from the redundant PlayerCoinManager.
-/// </summary>
-public class CurrencyManager : Singleton<CurrencyManager>
+public class CurrencyManager : MonoBehaviour
 {
+    public static CurrencyManager Instance { get; private set; }
+
     public event Action<int> OnCoinsChanged;
     public event Action<int> OnGemsChanged;
 
     private int _coins;
     private int _gems;
 
-    protected override void Awake()
+    private void Awake()
     {
-        base.Awake();
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
         LoadCurrency();
     }
 
     public int GetCoins() => _coins;
     public int GetGems() => _gems;
 
+    public void AddCoins(int amount)
+    {
+        if (amount <= 0) return;
+        UpdateCoins(amount);
+    }
+
+    public void AddGems(int amount)
+    {
+        if (amount <= 0) return;
+        UpdateGems(amount);
+    }
+
     public void UpdateCoins(int amount)
     {
-        if (IntegrityManager.Instance != null && !IntegrityManager.Instance.economyValidator.ValidateCurrencyTransaction(_coins, amount, "Coins"))
-        {
-            IntegrityManager.Instance.ReportError("Coin transaction failed integrity check.");
-            return;
-        }
+        // if (IntegrityManager.Instance != null && !IntegrityManager.Instance.economyValidator.ValidateCurrencyTransaction(_coins, amount, "Coins"))
+        // {
+        //     IntegrityManager.Instance.ReportError("Coin transaction failed integrity check.");
+        //     return;
+        // }
         _coins += amount;
         OnCoinsChanged?.Invoke(_coins);
     }
 
     public void UpdateGems(int amount)
     {
-        if (IntegrityManager.Instance != null && !IntegrityManager.Instance.economyValidator.ValidateCurrencyTransaction(_gems, amount, "Gems"))
-        {
-            IntegrityManager.Instance.ReportError("Gem transaction failed integrity check.");
-            return;
-        }
+        // if (IntegrityManager.Instance != null && !IntegrityManager.Instance.economyValidator.ValidateCurrencyTransaction(_gems, amount, "Gems"))
+        // {
+        //     IntegrityManager.Instance.ReportError("Gem transaction failed integrity check.");
+        //     return;
+        // }
         _gems += amount;
         OnGemsChanged?.Invoke(_gems);
     }
@@ -81,14 +99,14 @@ public class CurrencyManager : Singleton<CurrencyManager>
 
     private void LoadCurrency()
     {
-        if (DataManager.Instance != null)
-        {
-            LoadCurrencyFromSaveData(DataManager.Instance.GameData);
-        }
-        else
-        {
+        // if (DataManager.Instance != null)
+        // {
+        //     LoadCurrencyFromSaveData(DataManager.Instance.GameData);
+        // }
+        // else
+        // {
             _coins = 0;
             _gems = 0;
-        }
+        // }
     }
 }

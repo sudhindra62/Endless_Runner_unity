@@ -1,28 +1,30 @@
 
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class TutorialUI : MonoBehaviour
 {
-    [SerializeField] private GameObject tutorialPanel;
-    [SerializeField] private TextMeshProUGUI tutorialText;
+    [SerializeField] private TextMeshProUGUI titleText;
+    [SerializeField] private TextMeshProUGUI descriptionText;
+    [SerializeField] private Image tutorialImage;
     [SerializeField] private Button continueButton;
 
-    private void Awake()
+    private void Start()
     {
         continueButton.onClick.AddListener(TutorialManager.Instance.OnContinueClicked);
     }
 
     public void ShowTutorialStep(TutorialStep step)
     {
-        tutorialPanel.SetActive(true);
-        tutorialText.text = step.message;
-        // Logic to highlight UI elements would go here
+        titleText.text = step.title;
+        descriptionText.text = step.description;
+        tutorialImage.sprite = step.image;
+        gameObject.SetActive(true);
     }
 
     public void HideTutorial()
     {
-        tutorialPanel.SetActive(false);
+        gameObject.SetActive(false);
     }
 }

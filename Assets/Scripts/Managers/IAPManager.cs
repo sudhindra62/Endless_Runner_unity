@@ -1,35 +1,54 @@
 
 using UnityEngine;
 using UnityEngine.Purchasing;
+using System;
 
-public class IAPManager : Singleton<IAPManager>, IStoreListener
+public class IAPManager : MonoBehaviour, IStoreListener
 {
-    private IStoreController _storeController;
-    private IExtensionProvider _storeExtensionProvider;
+    public static IAPManager Instance { get; private set; }
 
-    void Start()
+    private IStoreController storeController;
+    private IExtensionProvider storeExtensionProvider;
+
+    public static event Action<string> OnPurchaseCompleted;
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void Start()
     {
         InitializeIAP();
     }
 
-    void InitializeIAP()
+    private void InitializeIAP()
     {
         var builder = ConfigurationBuilder.Instance(StandardPurchasingModule.Instance());
 
-        // Add products from the prompt
+        // Add products 
         builder.AddProduct("com.gamestudio.remove_ads", ProductType.NonConsumable);
-        builder.AddProduct("com.gamestudio.revive_tokens_5", ProductType.Consumable);
-        builder.AddProduct("com.gamestudio.gem_pack_1", ProductType.Consumable);
-        builder.AddProduct("com.gamestudio.coin_pack_1", ProductType.Consumable);
-        builder.AddProduct("com.gamestudio.premium_subscription", ProductType.Subscription);
+        builder.AddProduct("com.gamestudio.gem_pack_1", ProductType.Consumable, new IDs
+        {
+            { "com.gamestudio.gem_pack_1_google", GooglePlay.Name },
+            { "com.gamestudio.gem_pack_1_apple", AppleAppStore.Name }
+        });
 
         UnityPurchasing.Initialize(this, builder);
     }
 
     public void OnInitialized(IStoreController controller, IExtensionProvider extensions)
     {
-        _storeController = controller;
-        _storeExtensionProvider = extensions;
+        storeController = controller;
+        storeExtensionProvider = extensions;
         Debug.Log("IAPManager Initialized.");
     }
 
@@ -41,14 +60,36 @@ public class IAPManager : Singleton<IAPManager>, IStoreListener
     public PurchaseProcessingResult ProcessPurchase(PurchaseEventArgs args)
     {
         string productId = args.purchasedProduct.definition.id;
-        string transactionId = args.purchasedProduct.transactionID;
 
-        // Instead of resolving the purchase directly, we now go through the ShopManager
-        // This creates a cleaner, more authoritative flow.
-        ShopManager.Instance.ProcessPurchase(productId, transactionId);
+        // TODO: Add receipt validation
+        bool isValid = true; 
 
-        // The EntitlementResolver will now be responsible for confirming the transaction
-        return PurchaseProcessingResult.Pending;
+        if (isValid)
+        {
+            GrantPurchase(productId);
+            OnPurchaseCompleted?.Invoke(productId);
+            return PurchaseProcessingResult.Complete;
+        }
+        else
+        {   
+            return PurchaseProcessingResult.Pending;
+        }
+    }
+
+    private void GrantPurchase(string productId)
+    {
+        switch (productId)
+        {
+            case "com.gamestudio.remove_ads":
+                // AdManager.Instance.RemoveAds();
+                break;
+            case "com.gamestudio.gem_pack_1":
+                // CurrencyManager.Instance.AddGems(100);
+                break;
+            default:
+                Debug.LogWarning($"Unknown product ID: {productId}");
+                break;
+        }
     }
 
     public void OnPurchaseFailed(Product product, PurchaseFailureReason failureReason)
@@ -58,24 +99,19 @@ public class IAPManager : Singleton<IAPManager>, IStoreListener
 
     public void InitiatePurchase(string productId)
     {
-        if (_storeController == null)
+        if (storeController == null)
         {
             Debug.LogError("IAP not initialized.");
             return;
         }
-        _storeController.InitiatePurchase(productId);
+        storeController.InitiatePurchase(productId);
     }
 
-    public void ConfirmPurchase(string productId)
-    {
-        _storeController.ConfirmPendingPurchase(_storeController.products.WithID(productId));
-    }
-    
     public void RestorePurchases()
     {
         if (Application.platform == RuntimePlatform.IPhonePlayer || Application.platform == RuntimePlatform.OSXPlayer)
         {
-            var apple = _storeExtensionProvider.GetExtension<IAppleExtensions>();
+            var apple = storeExtensionProvider.GetExtension<IAppleExtensions>();
             apple.RestoreTransactions(result =>
             {
                 Debug.Log("Restore purchases result: " + result);

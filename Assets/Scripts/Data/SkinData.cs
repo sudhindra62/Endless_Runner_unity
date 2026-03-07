@@ -1,24 +1,27 @@
+
 using UnityEngine;
 
-public enum CurrencyType { Coins, Gems }
-public enum SkinRarity { Common, Rare, Epic, Legendary }
-public enum UnlockType { Skin, Item, Character }
-
-[CreateAssetMenu(fileName = "NewSkin", menuName = "Gameplay/Skins/New Skin")]
+[CreateAssetMenu(fileName = "New Skin", menuName = "Endless Runner/Skin Data")]
 public class SkinData : ScriptableObject
 {
-    [Header("Skin Details")]
-    public string skinName;
-    public string skinID; // Must be unique
+    [Tooltip("Unique identifier for this skin.")]
+    public string skinID;
+
+    [Tooltip("The player prefab with the visual representation of this skin.")]
     public GameObject playerPrefab;
-    public Sprite skinIcon;
-    public SkinRarity rarity;
-    public UnlockType unlockType;
 
+    [Tooltip("The name of the skin to be displayed in the UI.")]
+    public string skinName;
 
-    [Header("Purchase Details")]
-    public bool isDefault;
-    public bool isPremium;
-    public CurrencyType currencyType;
-    public int price;
+    [Tooltip("The description of the skin to be displayed in the UI.")]
+    public string skinDescription;
+
+    [Tooltip("The cost of the skin in coins.")]
+    public int coinCost;
+
+    [Tooltip("The cost of the skin in gems.")]
+    public int gemCost;
+
+    [Tooltip("Is this the default skin? There should only be one.")]
+    public bool isDefault = false;
 }

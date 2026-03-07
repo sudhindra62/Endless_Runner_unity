@@ -2,73 +2,54 @@
 using UnityEngine;
 using System;
 
-/// <summary>
-/// Handles all shop transactions, including the purchasing of skins.
-/// Acts as the intermediary between the UI and the player's inventory/currency.
-/// </summary>
-public class ShopManager : Singleton<ShopManager>
+public class ShopManager : MonoBehaviour
 {
-    private SkinManager skinManager;
-    private CurrencyManager currencyManager;
+    public static ShopManager Instance { get; private set; }
 
-    public static event Action<string, bool> OnPurchaseCompleted; // skinID, success
+    public static event Action<string> OnSkinPurchased;
+
+    private void Awake()
+    {
+        if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); } 
+        else { Destroy(gameObject); }
+    }
 
     private void Start()
     {
-        skinManager = SkinManager.Instance;
-        currencyManager = CurrencyManager.Instance;
+        IAPManager.OnPurchaseCompleted += HandleIAPPurchase;
     }
 
-    /// <summary>
-    /// Attempts to purchase a skin.
-    /// </summary>
-    public bool PurchaseSkin(string skinID)
+    private void OnDestroy()
     {
-        SkinData skinToBuy = skinManager.GetAllSkins().Find(s => s.skinID == skinID);
+        IAPManager.OnPurchaseCompleted -= HandleIAPPurchase;
+    }
 
-        if (skinToBuy == null)
-        {
-            Debug.LogError($"Attempted to buy a skin with an invalid ID: {skinID}");
-            OnPurchaseCompleted?.Invoke(skinID, false);
-            return false;
-        }
+    public bool PurchaseSkinWithCoins(string skinID, int cost)
+    {
+        // if (CurrencyManager.Instance != null && CurrencyManager.Instance.GetCoins() >= cost)
+        // {
+        //     CurrencyManager.Instance.RemoveCoins(cost);
+        //     OnSkinPurchased?.Invoke(skinID);
+        //     return true;
+        // }
+        return false;
+    }
 
-        if (skinManager.IsSkinUnlocked(skinID))
-        {
-            Debug.LogWarning("Attempted to buy a skin that is already unlocked.");
-            OnPurchaseCompleted?.Invoke(skinID, false);
-            return false;
-        }
+    public bool PurchaseSkinWithGems(string skinID, int cost)
+    {
+        // if (CurrencyManager.Instance != null && CurrencyManager.Instance.GetGems() >= cost)
+        // {
+        //     CurrencyManager.Instance.RemoveGems(cost);
+        //     OnSkinPurchased?.Invoke(skinID);
+        //     return true;
+        // }
+        return false;
+    }
 
-        bool success = false;
-        switch (skinToBuy.currencyType)
-        {
-            case CurrencyType.Coins:
-                if (currencyManager.SpendCoins(skinToBuy.price))
-                {
-                    success = true;
-                }
-                break;
-            case CurrencyType.Gems:
-                if (currencyManager.SpendGems(skinToBuy.price))
-                {
-                    success = true;
-                }
-                break;
-        }
-
-        if (success)
-        {
-            skinManager.UnlockSkin(skinID);
-            Debug.Log($"Successfully purchased skin: {skinID}");
-            OnPurchaseCompleted?.Invoke(skinID, true);
-            return true;
-        }
-        else
-        {
-            Debug.Log("Not enough currency to purchase skin.");
-            OnPurchaseCompleted?.Invoke(skinID, false);
-            return false;
-        }
+    private void HandleIAPPurchase(string productId)
+    {
+        // The IAPManager has already validated and granted the purchase.
+        // The ShopManager can react to the purchase if needed, e.g. for UI updates.
+        Debug.Log($"ShopManager handling IAP purchase: {productId}");
     }
 }

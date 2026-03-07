@@ -2,12 +2,12 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
-/// <summary>
-/// Manages the player's owned skins and which skin is currently equipped.
-/// </summary>
-public class SkinManager : Singleton<SkinManager>
+public class SkinManager : MonoBehaviour
 {
+    public static SkinManager Instance { get; private set; }
+
     [Header("Skin Database")]
     [SerializeField] private List<SkinData> allSkins = new List<SkinData>();
 
@@ -17,10 +17,30 @@ public class SkinManager : Singleton<SkinManager>
     private const string UNLOCKED_SKINS_KEY = "UnlockedSkins";
     private const string EQUIPPED_SKIN_KEY = "EquippedSkin";
 
-    protected override void Awake()
+    public static event Action<SkinData> OnSkinEquipped;
+
+    private void Awake()
     {
-        base.Awake();
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
         LoadState();
+    }
+
+    private void Start()
+    {
+        ShopManager.OnSkinPurchased += UnlockSkin;
+    }
+
+    private void OnDestroy()
+    {
+        ShopManager.OnSkinPurchased -= UnlockSkin;
     }
 
     public void UnlockSkin(string skinID)
@@ -40,19 +60,26 @@ public class SkinManager : Singleton<SkinManager>
             equippedSkinID = skinID;
             SaveState();
             Debug.Log($"Equipped skin: {skinID}");
-            // ApplySkin(skinID); // This would call a method on the Player to change their appearance
+            
+            SkinData skinToApply = GetSkinData(skinID);
+            if (skinToApply != null)
+            {
+                OnSkinEquipped?.Invoke(skinToApply);
+            }
         }
     }
 
     public bool IsSkinUnlocked(string skinID) => unlockedSkinIDs.Contains(skinID);
     public string GetEquippedSkinID() => equippedSkinID;
-    public SkinData GetEquippedSkinData() => allSkins.FirstOrDefault(s => s.skinID == equippedSkinID);
+    public SkinData GetEquippedSkinData() => GetSkinData(equippedSkinID);
     public List<SkinData> GetAllSkins() => allSkins;
+    public SkinData GetSkinData(string skinID) => allSkins.FirstOrDefault(s => s.skinID == skinID);
 
     private void SaveState()
     {
         PlayerPrefs.SetString(UNLOCKED_SKINS_KEY, string.Join(",", unlockedSkinIDs));
         PlayerPrefs.SetString(EQUIPPED_SKIN_KEY, equippedSkinID);
+        PlayerPrefs.Save();
     }
 
     private void LoadState()
@@ -63,28 +90,19 @@ public class SkinManager : Singleton<SkinManager>
             unlockedSkinIDs = unlocked.Split(',').ToList();
         }
 
-        // Ensure all default skins are unlocked
-        foreach (var skin in allSkins.Where(s => s.isDefault))
+        // Ensure default skins are always unlocked
+        foreach (var skin in allSkins.Where(s => s.isDefault && !unlockedSkinIDs.Contains(s.skinID)))
         {
-            if (!unlockedSkinIDs.Contains(skin.skinID))
-            {
-                unlockedSkinIDs.Add(skin.skinID);
-            }
+            unlockedSkinIDs.Add(skin.skinID);
         }
 
-        equippedSkinID = PlayerPrefs.GetString(EQUIPPED_SKIN_KEY, allSkins.FirstOrDefault(s => s.isDefault)?.skinID);
-    }
+        equippedSkinID = PlayerPrefs.GetString(EQUIPPED_SKIN_KEY, allSkins.FirstOrDefault(s => s.isDefault)?.skinID ?? "");
 
-    /*
-    private void ApplySkin(string skinID)
-    {
-        SkinData skinToApply = allSkins.FirstOrDefault(s => s.skinID == skinID);
+        // Equip the skin at startup
+        SkinData skinToApply = GetSkinData(equippedSkinID);
         if (skinToApply != null)
         {
-            // Example: Find the player and swap its model prefab
-            // PlayerController player = FindObjectOfType<PlayerController>();
-            // if (player != null) { player.SetSkin(skinToApply.playerPrefab); }
+            OnSkinEquipped?.Invoke(skinToApply);
         }
     }
-    */
 }

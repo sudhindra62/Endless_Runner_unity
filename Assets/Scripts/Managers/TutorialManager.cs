@@ -26,18 +26,23 @@ public class TutorialManager : MonoBehaviour
 
     private void Start()
     {
-        // Check if the tutorial has been completed before
         if (PlayerPrefs.GetInt("TutorialCompleted", 0) == 0)
         {
-            tutorialUI = Instantiate(tutorialUIPrefab);
-            StartTutorial();
+            if (tutorialUIPrefab != null)
+            {
+                tutorialUI = Instantiate(tutorialUIPrefab);
+                StartTutorial();
+            }
         }
     }
 
     public void StartTutorial()
     {
         currentStep = 0;
-        ShowCurrentStep();
+        if (tutorialUI != null)
+        {
+            ShowCurrentStep();
+        }
     }
 
     public void OnContinueClicked()
@@ -45,7 +50,10 @@ public class TutorialManager : MonoBehaviour
         currentStep++;
         if (currentStep < tutorialSteps.Length)
         {
-            ShowCurrentStep();
+            if (tutorialUI != null)
+            {
+                ShowCurrentStep();
+            }
         }
         else
         {
@@ -60,7 +68,10 @@ public class TutorialManager : MonoBehaviour
 
     private void EndTutorial()
     {
-        tutorialUI.HideTutorial();
+        if (tutorialUI != null)
+        {
+            tutorialUI.HideTutorial();
+        }
         PlayerPrefs.SetInt("TutorialCompleted", 1);
     }
 }
