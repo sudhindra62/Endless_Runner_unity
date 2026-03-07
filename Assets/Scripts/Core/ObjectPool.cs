@@ -1,58 +1,51 @@
 
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
-public class ObjectPool : MonoBehaviour
+/// <summary>
+/// A generic object pool for recycling and reusing GameObjects.
+/// Reconstructed by OMNI_LOGIC_COMPLETION_v1 for a modular, event-driven architecture.
+/// </summary>
+public class ObjectPool : Singleton<ObjectPool>
 {
-    public static ObjectPool Instance { get; private set; }
+    private Dictionary<GameObject, Queue<GameObject>> pool = new Dictionary<GameObject, Queue<GameObject>>();
 
-    [SerializeField] private GameObject objectToPool;
-    [SerializeField] private int poolSize = 20;
-
-    private List<GameObject> pooledObjects;
-
-    private void Awake()
+    public GameObject GetObject(GameObject prefab, Vector3 position, Quaternion rotation)
     {
-        if (Instance == null)
+        if (!pool.ContainsKey(prefab) || pool[prefab].Count == 0)
         {
-            Instance = this;
+            return Instantiate(prefab, position, rotation);
         }
-        else
-        {
-            Destroy(gameObject);
-        }
+
+        GameObject obj = pool[prefab].Dequeue();
+        obj.transform.position = position;
+        obj.transform.rotation = rotation;
+        obj.SetActive(true);
+        return obj;
     }
 
-    void Start()
+    public void ReturnObject(GameObject obj)
     {
-        pooledObjects = new List<GameObject>();
-        for (int i = 0; i < poolSize; i++)
-        {
-            GameObject obj = Instantiate(objectToPool);
-            obj.SetActive(false);
-            pooledObjects.Add(obj);
-        }
-    }
-
-    public GameObject GetPooledObject()
-    {
-        for (int i = 0; i < pooledObjects.Count; i++)
-        {
-            if (!pooledObjects[i].activeInHierarchy)
-            {
-                return pooledObjects[i];
-            }
+        GameObject prefab = obj.GetComponent<PooledObject>()?.Prefab;
+        if (prefab == null) {
+            // Fallback for objects without a PooledObject component
+            prefab = obj;
         }
 
-        // Optionally, expand the pool if all objects are in use
-        GameObject newObj = Instantiate(objectToPool);
-        newObj.SetActive(false);
-        pooledObjects.Add(newObj);
-        return newObj;
-    }
+        if (!pool.ContainsKey(prefab))
+        {
+            pool[prefab] = new Queue<GameObject>();
+        }
 
-    public void ReturnObjectToPool(GameObject obj)
-    {
+        pool[prefab].Enqueue(obj);
         obj.SetActive(false);
     }
+}
+
+/// <summary>
+/// A helper component to associate a pooled object with its original prefab.
+/// </summary>
+public class PooledObject : MonoBehaviour
+{
+    public GameObject Prefab { get; set; }
 }

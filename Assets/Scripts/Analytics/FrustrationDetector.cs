@@ -1,118 +1,81 @@
 using UnityEngine;
 
-public class FrustrationDetector : MonoBehaviour
+/// <summary>
+/// A plain C# class that analyzes session data to detect player frustration.
+/// </summary>
+public class FrustrationDetector
 {
-    public static FrustrationDetector Instance { get; private set; }
-
-    private int quickDeathCounter;
+    private int quickDeathCounter;      // Deaths within a short time window
     private float lastDeathTime;
+    private int reviveCounter;
 
     private const int QUICK_DEATH_THRESHOLD = 3;
-    private const float QUICK_DEATH_WINDOW = 60f; // 1 minute
+    private const float QUICK_DEATH_WINDOW_SECONDS = 45f;
+    private const int REVIVE_THRESHOLD = 2;
 
-    public bool IsPlayerFrustrated { get; private set; }
-
-    private void Awake()
+    /// <summary>
+    /// Resets the state for a new session.
+    /// </summary>
+    public void Reset()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        quickDeathCounter = 0;
+        reviveCounter = 0;
+        lastDeathTime = -1;
     }
 
-    public void ReportPlayerDeath()
+    /// <summary>
+    /// Tracks a death event.
+    /// </summary>
+    public void TrackDeath()
     {
-        if (Time.time - lastDeathTime < QUICK_DEATH_WINDOW)
+        if (Time.time - lastDeathTime < QUICK_DEATH_WINDOW_SECONDS)
         {
             quickDeathCounter++;
-            if (quickDeathCounter >= QUICK_DEATH_THRESHOLD)
-            {
-                IsPlayerFrustrated = true;
-                FlagForSoftEasing();
-            }
         }
         else
         {
-            quickDeathCounter = 1;
+            quickDeathCounter = 1; // Reset counter if window has passed
         }
         lastDeathTime = Time.time;
     }
 
-    public void AnalyzeSession(SessionAnalyticsData sessionData)
+    /// <summary>
+    /// Tracks a revive event.
+    /// </summary>
+    public void TrackRevive()
     {
-        if (sessionData == null) return;
+        reviveCounter++;
+    }
+    
+    /// <summary>
+    /// Processes the final session data.
+    /// (Currently unused, GetFrustrationScore is the primary output)
+    /// </summary>
+    public void ProcessSession(SessionAnalyticsData sessionData)
+    {
+        // This method can be used for more complex, post-session analysis if needed.
+    }
 
-        IsPlayerFrustrated = false; // Reset at the start of analysis
+    /// <summary>
+    /// Calculates a normalized frustration score from 0.0 to 1.0.
+    /// </summary>
+    /// <returns>A float representing the player's frustration level.</returns>
+    public float GetFrustrationScore()
+    {
+        float score = 0f;
 
-        // 1. Quick Deaths
+        // Weight quick deaths heavily
         if (quickDeathCounter >= QUICK_DEATH_THRESHOLD)
         {
-            IsPlayerFrustrated = true;
+            score += 0.8f;
         }
 
-        // 2. High deaths, low distance
-        if (sessionData.deaths.Count > 5)
+        // Add weight for revives
+        if (reviveCounter >= REVIVE_THRESHOLD)
         {
-            float totalDistance = 0;
-            foreach (var death in sessionData.deaths)
-            {
-                totalDistance += death.distance;
-            }
-            float avgDistance = totalDistance / sessionData.deaths.Count;
-            if (avgDistance < 200f)
-            {
-                IsPlayerFrustrated = true;
-                Debug.Log("Frustration Detected: High death count with low average distance.");
-            }
+            score += 0.5f;
         }
 
-        // 3. Low dodge success rate
-        if (sessionData.dodges.total > 10)
-        {
-            float successRate = (float)sessionData.dodges.successful / sessionData.dodges.total;
-            if (successRate < 0.3f)
-            {
-                IsPlayerFrustrated = true;
-                Debug.Log("Frustration Detected: Low dodge success rate.");
-            }
-        }
-
-        // 4. Consistently failing boss encounters
-        int failedBossEncounters = 0;
-        foreach (var encounter in sessionData.bossEncounters)
-        {
-            if (!encounter.survived)
-            {
-                failedBossEncounters++;
-            }
-        }
-        if (failedBossEncounters >= 2)
-        {
-            IsPlayerFrustrated = true;
-            Debug.Log("Frustration Detected: Consistently failing boss encounters.");
-        }
-
-
-        if (IsPlayerFrustrated)
-        {
-            FlagForSoftEasing();
-        }
-    }
-
-    public void OnSessionEnd(SessionAnalyticsData sessionData)
-    {
-        Debug.Log("Session End Analysis. Player frustrated state: " + IsPlayerFrustrated);
-    }
-
-
-    private void FlagForSoftEasing()
-    {
-        if (AdaptiveDifficultyManager.Instance != null)
-        {
-            AdaptiveDifficultyManager.Instance.ApplySoftEasing();
-        }
+        return Mathf.Clamp01(score);
     }
 }

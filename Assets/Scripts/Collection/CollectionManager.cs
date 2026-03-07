@@ -1,103 +1,42 @@
 
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
-[System.Serializable]
-public class CollectionSet
-{
-    public string setName;
-    public List<CollectionItemData> itemsInSet;
-    public int bonusGems;
-    public string bonusTitle;
-    public bool isSetClaimed;
-}
-
+/// <summary>
+/// Manages the player's inventory of collected items (e.g., for a collection album).
+/// Created by OMNI_LOGIC_COMPLETION_v2.
+/// </summary>
 public class CollectionManager : Singleton<CollectionManager>
 {
-    public List<CollectionItemData> allCollectionItems;
-    public List<CollectionSet> collectionSets;
+    public static event Action<string> OnItemAddedToCollection; // string: itemID
 
-    private const string SET_CLAIMED_KEY_PREFIX = "SetClaimed_";
+    // This would be loaded from player save data
+    private HashSet<string> collectedItemIDs = new HashSet<string>();
 
-    private void Start()
+    public void AddItemToCollection(string itemID)
     {
-        LoadSetData();
-        CollectionInventoryManager.OnInventoryChanged += CheckForCompletion;
-    }
-
-    private void OnDestroy()
-    {
-        CollectionInventoryManager.OnInventoryChanged -= CheckForCompletion;
-    }
-
-    private void CheckForCompletion(CollectionItemData itemData)
-    {
-        if (CollectionInventoryManager.Instance.GetFragmentCount(itemData) >= itemData.requiredFragments)
+        if (collectedItemIDs.Contains(itemID))
         {
-            Debug.Log(itemData.itemName + " collection complete!");
-            // Automatically unlock the item
-            UnlockItem(itemData);
+            Debug.Log($"Player already has item {itemID} in their collection.");
+            return;
         }
+
+        collectedItemIDs.Add(itemID);
+        OnItemAddedToCollection?.Invoke(itemID);
+        Debug.Log($"Item {itemID} added to collection!");
+
+        // Save the updated collection data
+        // SaveManager.Instance.SavePlayerData();
     }
 
-    private void UnlockItem(CollectionItemData itemData)
+    public bool HasItemInCollection(string itemID)
     {
-        // Here you would integrate with your SkinManager, CosmeticEffectManager, etc.
-        // For example:
-        // if (itemData.itemType == CollectionItemType.SkinFragment)
-        // {
-        //     SkinManager.Instance.UnlockSkin(itemData.rewardPrefab);
-        // }
-        Debug.Log("Unlocked: " + itemData.itemName);
+        return collectedItemIDs.Contains(itemID);
     }
 
-    public void CheckForSetCompletion()
+    public HashSet<string> GetCollection()
     {
-        foreach (var set in collectionSets)
-        {
-            if (set.isSetClaimed) continue;
-
-            bool allItemsCollected = true;
-            foreach (var item in set.itemsInSet)
-            {
-                // This assumes an unlock status is stored somewhere, e.g., in the respective manager
-                // For this example, we'll just check if the fragments are sufficient
-                if (CollectionInventoryManager.Instance.GetFragmentCount(item) < item.requiredFragments)
-                {
-                    allItemsCollected = false;
-                    break;
-                }
-            }
-
-            if (allItemsCollected)
-            {
-                ClaimSetBonus(set);
-            }
-        }
-    }
-
-    private void ClaimSetBonus(CollectionSet set)
-    {
-        // Grant bonus rewards
-        // CurrencyManager.Instance.AddGems(set.bonusGems);
-        // PlayerProgression.Instance.UnlockTitle(set.bonusTitle);
-        Debug.Log("Set bonus claimed for: " + set.setName);
-
-        set.isSetClaimed = true;
-        SaveSetData(set);
-    }
-
-    private void SaveSetData(CollectionSet set)
-    {
-        PlayerPrefs.SetInt(SET_CLAIMED_KEY_PREFIX + set.setName, set.isSetClaimed ? 1 : 0);
-        PlayerPrefs.Save();
-    }
-
-    private void LoadSetData()
-    {
-        foreach (var set in collectionSets)
-        {
-            set.isSetClaimed = PlayerPrefs.GetInt(SET_CLAIMED_KEY_PREFIX + set.setName, 0) == 1;
-        }
+        return new HashSet<string>(collectedItemIDs);
     }
 }

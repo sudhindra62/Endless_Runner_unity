@@ -1,9 +1,8 @@
 
 using UnityEngine;
 using System;
-using TMPro; // Required for UI elements
+using TMPro;
 
-// Defines a rank based on player level
 [Serializable]
 public struct PlayerRank
 {
@@ -14,14 +13,14 @@ public struct PlayerRank
 
 /// <summary>
 /// The supreme singleton for managing player experience (XP), levels, ranks, and skill points.
-/// This script has absorbed all functionality from the redundant XPManager.
+/// This script now integrates with MilestoneManager to check for milestone completions.
 /// </summary>
 public class PlayerProgression : Singleton<PlayerProgression>
 {
     [Header("XP & Leveling")]
     [SerializeField] private int currentLevel = 1;
     [SerializeField] private long currentXP = 0;
-    [SerializeField] private AnimationCurve xpToNextLevelCurve; // Defines XP needed for each level
+    [SerializeField] private AnimationCurve xpToNextLevelCurve;
 
     [Header("Ranks")]
     [SerializeField] private PlayerRank[] playerRanks;
@@ -31,7 +30,7 @@ public class PlayerProgression : Singleton<PlayerProgression>
     [SerializeField] private UnityEngine.UI.Image xpBar;
 
     public static event Action<int> OnLevelUp;
-    public static event Action<long, long> OnXPChanged; // ◈ MERGED: More descriptive XP event
+    public static event Action<long, long> OnXPChanged;
     public static event Action<PlayerRank> OnRankUp;
 
     private long xpForNextLevel;
@@ -49,19 +48,16 @@ public class PlayerProgression : Singleton<PlayerProgression>
     {
         CalculateXPForNextLevel();
         UpdateUI();
-        PlayerPrefs.DeleteKey(LastRunXpKey); // ◈ MERGED: Clear last run XP on start
+        PlayerPrefs.DeleteKey(LastRunXpKey);
     }
 
     /// <summary>
-    /// Adds XP to the player's total and checks for level-ups.
+    /// Adds XP to the player's total, checks for level-ups, and updates milestones.
     /// </summary>
-    /// <param name="amount">The amount of XP to grant.</param>
-    /// <param name="source">The source of the XP, used for duplicate checks.</param>
-    public void AddXP(long amount, string source = "General") // ◈ MERGED: Source parameter added
+    public void AddXP(long amount, string source = "General")
     {
         if (amount <= 0) return;
 
-        // ◈ MERGED: Safeguard against duplicate XP from a single run.
         if (source == "RunComplete")
         {
             if (PlayerPrefs.HasKey(LastRunXpKey))
@@ -73,6 +69,13 @@ public class PlayerProgression : Singleton<PlayerProgression>
         }
 
         currentXP += amount;
+
+        // ◈ ARCHITECT_OMEGA INTEGRATION: Check for XP-based milestones
+        if (MilestoneManager.Instance != null)
+        {
+            MilestoneManager.Instance.CheckMilestones(MilestoneType.TotalXP, currentXP);
+        }
+
         OnXPChanged?.Invoke(currentXP, xpForNextLevel);
 
         while (currentXP >= xpForNextLevel && xpForNextLevel > 0)
@@ -92,7 +95,12 @@ public class PlayerProgression : Singleton<PlayerProgression>
         Debug.Log($"Leveled up to Level {currentLevel}!");
         OnLevelUp?.Invoke(currentLevel);
 
-        // ◈ MERGED: Grant Skill Point on level up
+        // ◈ ARCHITECT_OMEGA INTEGRATION: Check for level-based milestones
+        if (MilestoneManager.Instance != null)
+        {
+            MilestoneManager.Instance.CheckMilestones(MilestoneType.PlayerLevel, currentLevel);
+        }
+
         if (SkillTreeManager.Instance != null)
         {
             SkillTreeManager.Instance.AddSkillPoints(1);
@@ -118,6 +126,12 @@ public class PlayerProgression : Singleton<PlayerProgression>
             {
                 Debug.Log($"New Rank Achieved: {rank.rankName}!");
                 OnRankUp?.Invoke(rank);
+                // ◈ ARCHITECT_OMEGA INTEGRATION: Check for rank-based milestones
+                if (MilestoneManager.Instance != null)
+                {
+                    // Assuming rankName is unique. A better approach would be a RankID.
+                    MilestoneManager.Instance.CheckMilestones(MilestoneType.Rank, currentLevel); 
+                }
                 break; 
             }
         }
@@ -125,14 +139,12 @@ public class PlayerProgression : Singleton<PlayerProgression>
     
     private void CalculateXPForNextLevel()
     {
-        // Ensure the curve has keys before evaluating
         if (xpToNextLevelCurve != null && xpToNextLevelCurve.length > 0)
         {
             xpForNextLevel = (long)xpToNextLevelCurve.Evaluate(currentLevel);
         }
         else
         {
-            // If no curve, fallback to a default calculation to prevent division by zero
             xpForNextLevel = currentLevel * 100;
             Debug.LogWarning("XPToNextLevelCurve is not set. Using default calculation.");
         }
@@ -147,22 +159,19 @@ public class PlayerProgression : Singleton<PlayerProgression>
         }
     }
     
-    // ◈ MERGED: PlayerPrefs saving from XPManager
     private void SaveProgression()
     {
         PlayerPrefs.SetInt(CurrentLevelKey, currentLevel);
-        PlayerPrefs.SetString(CurrentXPKey, currentXP.ToString()); // Use string for long
+        PlayerPrefs.SetString(CurrentXPKey, currentXP.ToString());
         PlayerPrefs.Save();
     }
 
-    // ◈ MERGED: PlayerPrefs loading from XPManager
     private void LoadProgression()
     {
         currentLevel = PlayerPrefs.GetInt(CurrentLevelKey, 1);
         currentXP = long.Parse(PlayerPrefs.GetString(CurrentXPKey, "0"));
     }
 
-    // ◈ MERGED: Debug tool for resetting progress
     [ContextMenu("Reset Player Progression")]
     public void ResetProgression()
     {

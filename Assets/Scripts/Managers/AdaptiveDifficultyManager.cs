@@ -5,31 +5,27 @@ using System.Linq;
 /// <summary>
 /// The SUPREME singleton for difficulty. It analyzes player performance, incorporates a time-based scalar,
 /// and integrates a LiveOps multiplier to generate the final difficulty value.
-/// This script has absorbed all functionality from the redundant DifficultyManager.
+/// This script now accepts external analytics data to adjust difficulty.
 /// </summary>
 public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
 {
-    // --- Events ---
     public event Action<float> OnDifficultyMultiplierChanged;
     public event Action<ObstacleType> OnPlayerStrugglingWithObstacle;
 
-    // --- Configuration: Time-Based (from old DifficultyManager) ---
     [Header("Time-Based Scaling")]
     [SerializeField] private float _baseDifficulty = 1.0f;
     [SerializeField] private float _difficultyIncreaseRate = 0.005f;
     private float _timeElapsed;
 
-    // --- Configuration: Adaptive (Player Performance) ---
     [Header("Adaptive Configuration")]
     [SerializeField] private float ANALYSIS_INTERVAL_SECONDS = 10f;
-    [SerializeField] private float MODIFIER_MIN = 0.8f;   // Max easing
-    [SerializeField] private float MODIFIER_MAX = 1.3f;   // Max difficulty increase
+    [SerializeField] private float MODIFIER_MIN = 0.8f;
+    [SerializeField] private float MODIFIER_MAX = 1.3f;
     [SerializeField] private float MODIFIER_STEP = 0.05f;
     [SerializeField] private float HIGH_PERFORMANCE_DODGE_RATE = 0.9f;
     [SerializeField] private float LOW_PERFORMANCE_DODGE_RATE = 0.4f;
     [SerializeField] private int OBSTACLE_HIT_THRESHOLD_FOR_STRUGGLE = 3;
 
-    // --- State ---
     private RunSessionData currentRunData;
     private float adaptiveModifier = 1.0f;
 
@@ -42,7 +38,6 @@ public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
     private void Start()
     {
         GameManager.OnGameStateChanged += HandleGameStateChanged;
-
         ResetDifficulty();
         InvokeRepeating(nameof(AnalyzePerformance), ANALYSIS_INTERVAL_SECONDS, ANALYSIS_INTERVAL_SECONDS);
     }
@@ -55,27 +50,25 @@ public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
         }
     }
 
-    // --- Public API for calculating final difficulty ---
-
-    /// <summary>
-    /// Calculates the final, combined difficulty multiplier from all sources.
-    /// </summary>
-    /// <returns>The final difficulty multiplier.</returns>
     public float GetCurrentDifficultyMultiplier()
     {
-        // 1. Calculate time-based progression
         float timeBasedDifficulty = _baseDifficulty + (_timeElapsed * _difficultyIncreaseRate);
-
-        // 2. Get LiveOps multiplier
         float liveOpsMultiplier = (LiveOpsManager.Instance != null) ? LiveOpsManager.Instance.DifficultyMultiplier : 1.0f;
-
-        // 3. Combine all factors: Time * LiveOps * Adaptive
         float finalDifficulty = timeBasedDifficulty * liveOpsMultiplier * adaptiveModifier;
-
         return finalDifficulty;
     }
 
-    // --- Event Handlers & Data Recording ---
+    // ◈ ARCHITECT_OMEGA INTEGRATION: Allows external analytics to influence difficulty.
+    public void ApplyFrustrationPenalty(float frustrationScore) // Score is 0.0 to 1.0
+    {
+        if (frustrationScore <= 0) return;
+        Debug.Log($"[AdaptiveDifficultyManager] Frustration penalty received: {frustrationScore}. Applying immediate difficulty reduction.");
+        // Apply a penalty proportional to the frustration score.
+        float penalty = (MODIFIER_STEP * 2) * frustrationScore;
+        adaptiveModifier -= penalty;
+        adaptiveModifier = Mathf.Clamp(adaptiveModifier, MODIFIER_MIN, MODIFIER_MAX);
+        OnDifficultyMultiplierChanged?.Invoke(GetCurrentDifficultyMultiplier());
+    }
 
     public void RecordObstacleHit(ObstacleType type)
     {
@@ -117,7 +110,6 @@ public class AdaptiveDifficultyManager : Singleton<AdaptiveDifficultyManager>
         if (!Mathf.Approximately(oldModifier, adaptiveModifier))
         {
             Debug.Log($"[AdaptiveDifficultyManager] Adaptive modifier updated to: {adaptiveModifier}");
-            // Broadcast the change of the final, combined multiplier
             OnDifficultyMultiplierChanged?.Invoke(GetCurrentDifficultyMultiplier());
         }
     }

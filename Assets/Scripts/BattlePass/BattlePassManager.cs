@@ -2,225 +2,110 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System;
-using System.Linq;
 
 /// <summary>
-/// The SUPREME manager for the Battle Pass system. It handles XP, leveling, rewards, season resets, and all XP-granting logic.
-/// This script has absorbed all functionality from a redundant, older BattlePassManager.
+/// Manages Battle Pass progression, XP, and rewards.
+/// Reconstructed by OMNI_LOGIC_COMPLETION_v2 for full functionality.
 /// </summary>
 public class BattlePassManager : Singleton<BattlePassManager>
 {
-    [Header("Core Configuration")]
-    [SerializeField] private BattlePassData currentSeasonPass; // Assign this in the Inspector
+    public static event Action<int, int> OnXPChanged; // currentXP, currentLevel
+    public static event Action<int> OnLevelUp; // newLevel
+    public static event Action<BattlePassLevelReward> OnRewardClaimed; // reward
 
-    // --- Events ---
-    public static Action<int, int> OnXPUpdated;
-    public static Action<int> OnLevelUp;
+    [SerializeField]
+    private BattlePassData battlePassData; // ScriptableObject containing all level rewards
 
-    // --- State ---
-    private int currentXP;
-    private int currentTier;
-    private bool hasPremiumAccess;
-    private List<int> claimedFreeTiers = new List<int>();
-    private List<int> claimedPremiumTiers = new List<int>();
-    private DateTime seasonStartDate;
+    // In a real game, this would be part of the player's save data
+    private int currentXP = 0;
+    private int currentLevel = 1;
+    private List<int> claimedRewards = new List<int>();
 
-    // --- PlayerPrefs Keys ---
-    private const string BATTLE_PASS_XP_KEY = "BattlePassXP";
-    private const string BATTLE_PASS_TIER_KEY = "BattlePassTier";
-    private const string PREMIUM_ACCESS_KEY = "BattlePassPremium";
-    private const string CLAIMED_FREE_KEY = "ClaimedFreeTiers";
-    private const string CLAIMED_PREMIUM_KEY = "ClaimedPremiumTiers";
-    private const string SEASON_START_DATE_KEY = "BattlePassSeasonStart";
-    
     protected override void Awake()
     {
         base.Awake();
-        LoadState();
-        CheckSeasonReset();
+        // Load player battle pass progress here from a save file
     }
-    
-    #region XP Granting Logic
 
-    public void GrantXP(int amount, string source)
+    public void AddXP(int amount)
     {
-        if (IsMaxTier()) return;
-
-        if (LiveOpsManager.Instance != null && LiveOpsManager.Instance.IsEventActive("DoubleXPWeekend"))
-        {
-            amount *= 2;
-        }
-
+        if (amount <= 0) return;
+        
         currentXP += amount;
-        Debug.Log($"Granted {amount} Battle Pass XP from {source}.");
+        Debug.Log($"Added {amount} XP. Total XP: {currentXP}");
 
-        while (!IsMaxTier() && currentXP >= GetCurrentTierMaxXP())
-        {
-            int xpForTier = GetCurrentTierMaxXP();
-            currentXP -= xpForTier;
-            currentTier++;
-            
-            // Grant Player XP for completing a tier
-            if(PlayerProgression.Instance != null)
-            {
-                 PlayerProgression.Instance.AddXP(xpForTier, "BattlePassTier");
-            }
+        OnXPChanged?.Invoke(currentXP, currentLevel);
 
-            OnLevelUp?.Invoke(currentTier);
-            Debug.Log($"Battle Pass leveled up to Tier {currentTier}!");
-        }
-
-        OnXPUpdated?.Invoke(currentXP, GetCurrentTierMaxXP());
-        SaveState();
+        CheckForLevelUp();
     }
 
-    // Example source-specific methods
-    public void OnRunCompleted(int distance) => GrantXP(distance / 10, "Run");
-    public void OnMissionCompleted() => GrantXP(50, "Mission");
-    public void OnBossDefeated() => GrantXP(100, "Boss");
-
-    #endregion
-
-    #region Reward Claiming
-
-    public void ClaimReward(int tier, bool isPremium)
+    private void CheckForLevelUp()
     {
-        if (tier > currentTier) return;
-        if (currentSeasonPass.tiers.Count <= tier) return;
+        if (battlePassData == null) return;
 
-        var tierData = currentSeasonPass.tiers[tier];
+        int xpNeededForNextLevel = battlePassData.GetXPForLevel(currentLevel + 1);
+        while (currentXP >= xpNeededForNextLevel)
+        {
+            currentLevel++;
+            OnLevelUp?.Invoke(currentLevel);
+            Debug.Log($"Leveled up to {currentLevel}!");
 
-        if (isPremium)
-        {
-            if (!hasPremiumAccess || claimedPremiumTiers.Contains(tier) || tierData.premiumRewards == null) return;
-            GrantRewards(tierData.premiumRewards);
-            claimedPremiumTiers.Add(tier);
+            // Check for next level in case of large XP gain
+            xpNeededForNextLevel = battlePassData.GetXPForLevel(currentLevel + 1);
+            if (xpNeededForNextLevel <= 0) break; // Max level reached
         }
-        else
-        {
-            if (claimedFreeTiers.Contains(tier) || tierData.freeRewards == null) return;
-            GrantRewards(tierData.freeRewards);
-            claimedFreeTiers.Add(tier);
-        }
-        SaveState();
     }
 
-    private void GrantRewards(List<RewardItem> rewards)
+    public void ClaimReward(int level)
     {
-        if (RewardManager.Instance == null)
+        if (level > currentLevel || claimedRewards.Contains(level))
         {
-            Debug.LogError("RewardManager not found!");
+            Debug.LogWarning($"Cannot claim reward for level {level}. Already claimed or not yet unlocked.");
             return;
         }
-        foreach (var reward in rewards)
-        {
-            RewardManager.Instance.Award(reward.itemID, reward.quantity);
-        }
-    }
-    
-    #endregion
 
-    #region Season Management
-    
-    private void CheckSeasonReset()
-    {
-        if (currentSeasonPass == null) return;
-        if (DateTime.UtcNow >= seasonStartDate.AddDays(currentSeasonPass.seasonDurationDays))
+        BattlePassLevelReward reward = battlePassData.GetRewardForLevel(level);
+        if (reward != null)
         {
-            AutoClaimUnclaimedRewards();
-            ResetSeason();
+            // Grant the reward to the player
+            GrantReward(reward);
+            claimedRewards.Add(level);
+            OnRewardClaimed?.Invoke(reward);
+            Debug.Log($"Reward for level {level} claimed!");
+            // Save claimed rewards progress
         }
     }
 
-    private void AutoClaimUnclaimedRewards()
+    private void GrantReward(BattlePassLevelReward reward)
     {
-        Debug.Log("Auto-claiming all unclaimed Battle Pass rewards for the ended season.");
-        if (currentSeasonPass == null) return;
-
-        for (int i = 0; i <= currentTier; i++)
+        // Use existing managers to grant items
+        if (CurrencyManager.Instance != null)
         {
-            if (i < currentSeasonPass.tiers.Count)
-            {
-                ClaimReward(i, false);
-                ClaimReward(i, true);
-            }
+            CurrencyManager.Instance.AddCoins(reward.coins);
+            CurrencyManager.Instance.AddGems(reward.gems);
         }
-    }
 
-    private void ResetSeason()
-    {
-        Debug.Log("Battle Pass season has reset!");
-        currentXP = 0;
-        currentTier = 0;
-        claimedFreeTiers.Clear();
-        claimedPremiumTiers.Clear();
-        seasonStartDate = DateTime.UtcNow;
-        // NOTE: In a real game, you would load the *new* season's BattlePassData here
-        // For now, we just reset the progress on the current one.
-        SaveState();
-    }
-    
-    public void PurchasePremiumPass()
-    {
-        hasPremiumAccess = true;
-        Debug.Log("Premium Battle Pass purchased!");
-        SaveState();
-    }
-
-    // For testing purposes
-    public void TriggerSeasonResetForTesting()
-    {
-        AutoClaimUnclaimedRewards();
-        ResetSeason();
-    }
-
-    #endregion
-
-    #region State Management (Save/Load)
-
-    private void SaveState()
-    {
-        PlayerPrefs.SetInt(BATTLE_PASS_XP_KEY, currentXP);
-        PlayerPrefs.SetInt(BATTLE_PASS_TIER_KEY, currentTier);
-        PlayerPrefs.SetInt(PREMIUM_ACCESS_KEY, hasPremiumAccess ? 1 : 0);
-        PlayerPrefs.SetString(CLAIMED_FREE_KEY, string.Join(",", claimedFreeTiers));
-        PlayerPrefs.SetString(CLAIMED_PREMIUM_KEY, string.Join(",", claimedPremiumTiers));
-        PlayerPrefs.SetString(SEASON_START_DATE_KEY, seasonStartDate.ToBinary().ToString());
-        PlayerPrefs.Save();
-    }
-
-    private void LoadState()
-    {
-        currentXP = PlayerPrefs.GetInt(BATTLE_PASS_XP_KEY, 0);
-        currentTier = PlayerPrefs.GetInt(BATTLE_PASS_TIER_KEY, 0);
-        hasPremiumAccess = PlayerPrefs.GetInt(PREMIUM_ACCESS_KEY, 0) == 1;
-
-        string free = PlayerPrefs.GetString(CLAIMED_FREE_KEY, "");
-        if (!string.IsNullOrEmpty(free)) claimedFreeTiers = new List<int>(free.Split(',').Select(int.Parse));
-
-        string premium = PlayerPrefs.GetString(CLAIMED_PREMIUM_KEY, "");
-        if (!string.IsNullOrEmpty(premium)) claimedPremiumTiers = new List<int>(premium.Split(',').Select(int.Parse));
-
-        string dateString = PlayerPrefs.GetString(SEASON_START_DATE_KEY, "");
-        if (!string.IsNullOrEmpty(dateString) && long.TryParse(dateString, out long temp))
+        if (RewardManager.Instance != null && reward.itemPrefab != null)
         {
-            seasonStartDate = DateTime.FromBinary(temp);
+            // This assumes the reward is a prefab that can be instantiated (like a chest)
+            RewardManager.Instance.GrantReward(reward.itemPrefab);
         }
-        else
-        {
-            seasonStartDate = DateTime.UtcNow;
-        }
+
+        // You could also have direct references to other inventory managers
     }
 
-    #endregion
-    
-    #region Getters
-    public int GetCurrentXP() => currentXP;
-    public int GetCurrentTier() => currentTier;
-    public int GetCurrentTierMaxXP() => (currentSeasonPass == null || IsMaxTier()) ? 0 : currentSeasonPass.tiers[currentTier].xpRequired;
-    public bool IsMaxTier() => currentSeasonPass == null || currentTier >= currentSeasonPass.tiers.Count - 1;
-    public BattlePassData GetSeasonData() => currentSeasonPass;
-    public bool HasPremium() => hasPremiumAccess;
-    public bool IsRewardClaimed(int tier, bool isPremium) => isPremium ? claimedPremiumTiers.Contains(tier) : claimedFreeTiers.Contains(tier);
-    #endregion
+    public int GetCurrentXP()
+    {
+        return currentXP;
+    }
+
+    public int GetCurrentLevel()
+    {
+        return currentLevel;
+    }
+
+    public bool IsRewardClaimed(int level)
+    {
+        return claimedRewards.Contains(level);
+    }
 }

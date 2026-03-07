@@ -1,33 +1,63 @@
+
+using System.Collections.Generic;
 using UnityEngine;
 
-public class LevelGenerator : MonoBehaviour
+/// <summary>
+/// Procedurally generates the level by spawning and recycling track segments.
+/// Reconstructed by OMNI_LOGIC_COMPLETION_v1 for a modular, event-driven architecture.
+/// </summary>
+public class LevelGenerator : Singleton<LevelGenerator>
 {
-    public GameObject[] trackPrefabs;
-    public int initialTracks = 10;
-    public float trackLength = 30f;
-    public Transform player;
+    [Header("Track Segments")]
+    [SerializeField] private GameObject[] trackPrefabs;
+    [SerializeField] private float trackSegmentLength = 50f;
+    [SerializeField] private int initialTrackSegments = 5;
+    [SerializeField] private Transform playerTransform; // Assign in inspector
 
-    private float spawnZ = 0f;
+    private Queue<GameObject> activeTrackSegments = new Queue<GameObject>();
+    private float lastSpawnZ = 0f;
 
-    void Start()
+    private void Start()
     {
-        for (int i = 0; i < initialTracks; i++)
+        if(playerTransform == null)
         {
-            SpawnTrack();
+            playerTransform = FindObjectOfType<PlayerController>()?.transform;
+        }
+
+        for (int i = 0; i < initialTrackSegments; i++)
+        {
+            SpawnTrackSegment();
         }
     }
 
-    void Update()
+    private void Update()
     {
-        if (player.position.z > spawnZ - (initialTracks * trackLength) + (trackLength * 2))
+        // Check if the player has advanced far enough to spawn a new segment
+        if (playerTransform.position.z > lastSpawnZ - (initialTrackSegments * trackSegmentLength) + (2 * trackSegmentLength))
         {
-            SpawnTrack();
+            SpawnTrackSegment();
+            DespawnTrackSegment();
         }
     }
 
-    void SpawnTrack()
+    private void SpawnTrackSegment()
     {
-        GameObject track = Instantiate(trackPrefabs[Random.Range(0, trackPrefabs.Length)], transform.forward * spawnZ, transform.rotation);
-        spawnZ += trackLength;
+        int randomIndex = Random.Range(0, trackPrefabs.Length);
+        GameObject trackPrefab = trackPrefabs[randomIndex];
+
+        Vector3 spawnPosition = new Vector3(0, 0, lastSpawnZ);
+        GameObject newSegment = ObjectPool.Instance.GetObject(trackPrefab, spawnPosition, Quaternion.identity);
+        
+        activeTrackSegments.Enqueue(newSegment);
+        lastSpawnZ += trackSegmentLength;
+    }
+
+    private void DespawnTrackSegment()
+    {
+        if (activeTrackSegments.Count > initialTrackSegments)
+        {
+            GameObject oldSegment = activeTrackSegments.Dequeue();
+            ObjectPool.Instance.ReturnObject(oldSegment);
+        }
     }
 }

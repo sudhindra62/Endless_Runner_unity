@@ -1,129 +1,73 @@
 
-using UnityEngine;
 using System;
+using UnityEngine;
 
-public class ScoreManager : MonoBehaviour
+/// <summary>
+/// Manages the player's score and other gameplay metrics.
+/// Reconstructed by OMNI_LOGIC_COMPLETION_v1 for a modular, event-driven architecture.
+/// </summary>
+public class ScoreManager : Singleton<ScoreManager>
 {
-    public static ScoreManager Instance { get; private set; }
-
+    // --- EVENTS ---
     public static event Action<int> OnScoreChanged;
-    public static event Action<int> OnCoinsChangedThisRun;
-    public static event Action<int> OnMultiplierChanged;
 
-    [SerializeField] private int scorePerCoin = 100;
-    [SerializeField] private float scorePerMeter = 1f;
+    // --- STATE ---
+    public int CurrentScore { get; private set; }
+    private float scoreMultiplier = 1f;
+    private bool isScoringEnabled = false;
 
-    private int currentScore;
-    private int highScore;
-    private int coinsCollectedThisRun;
-    private int scoreMultiplier = 1;
-    private bool isCoinDoublerActive = false;
-
-    private float distanceTraveled;
-    private Transform playerTransform;
-
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); } 
-        else { Destroy(gameObject); }
+        base.Awake();
+        DontDestroyOnLoad(gameObject);
     }
 
-    private void Start()
+    private void OnEnable()
     {
         GameManager.OnGameStateChanged += OnGameStateChanged;
-        LoadHighScore();
+        // More event subscriptions here, e.g., for collecting coins
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
         GameManager.OnGameStateChanged -= OnGameStateChanged;
     }
 
     private void Update()
     {
-        if (GameManager.Instance.GetCurrentState() == GameManager.GameState.Playing && playerTransform != null)
+        if (isScoringEnabled)
         {
-            distanceTraveled = playerTransform.position.z;
-            int distanceScore = (int)(distanceTraveled * scorePerMeter * scoreMultiplier);
-            if (distanceScore > currentScore) // Only update if score increases
-            {
-                currentScore = distanceScore;
-                OnScoreChanged?.Invoke(currentScore);
-            }
+            // Increase score over time
+            AddScore(Mathf.RoundToInt(Time.deltaTime * 10 * scoreMultiplier));
         }
     }
+
+    // --- PUBLIC API ---
+
+    public void AddScore(int amount)
+    {
+        if (amount <= 0) return;
+        
+        CurrentScore += amount;
+        OnScoreChanged?.Invoke(CurrentScore);
+    }
+
+    public void SetScoreMultiplier(float multiplier)
+    {
+        scoreMultiplier = multiplier;
+    }
+
+    // --- PRIVATE METHODS ---
 
     private void OnGameStateChanged(GameManager.GameState newState)
     {
-        if (newState == GameManager.GameState.Playing)
+        isScoringEnabled = (newState == GameManager.GameState.Playing);
+
+        if (newState == GameManager.GameState.MainMenu)
         {
-            ResetRunStats();
-            // Find player when game starts
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null) playerTransform = player.transform;
-        }
-        else if (newState == GameManager.GameState.GameOver)
-        {
-            CheckHighScore();
-            // Transfer coins to wallet
-            // if (CurrencyManager.Instance != null) { CurrencyManager.Instance.AddCoins(coinsCollectedThisRun); }
+            // Reset score when returning to the main menu
+            CurrentScore = 0;
+            OnScoreChanged?.Invoke(CurrentScore);
         }
     }
-
-    public void AddCoin(int amount = 1)
-    {
-        if (GameManager.Instance.GetCurrentState() != GameManager.GameState.Playing) return;
-
-        int coinsToAdd = isCoinDoublerActive ? amount * 2 : amount;
-        coinsCollectedThisRun += coinsToAdd;
-        currentScore += scorePerCoin * coinsToAdd * scoreMultiplier;
-
-        OnCoinsChangedThisRun?.Invoke(coinsCollectedThisRun);
-        OnScoreChanged?.Invoke(currentScore);
-    }
-
-    public void AddMultiplier(int amount)
-    {
-        scoreMultiplier += amount;
-        OnMultiplierChanged?.Invoke(scoreMultiplier);
-    }
-
-    public void ResetMultiplier()
-    {
-        scoreMultiplier = 1;
-        OnMultiplierChanged?.Invoke(scoreMultiplier);
-    }
-
-    public void SetCoinDoubler(bool isActive)
-    {
-        isCoinDoublerActive = isActive;
-    }
-
-    private void ResetRunStats()
-    {
-        currentScore = 0;
-        coinsCollectedThisRun = 0;
-        distanceTraveled = 0f;
-        ResetMultiplier();
-        OnScoreChanged?.Invoke(currentScore);
-        OnCoinsChangedThisRun?.Invoke(coinsCollectedThisRun);
-    }
-
-    private void LoadHighScore()
-    {
-        highScore = PlayerPrefs.GetInt("HighScore", 0);
-    }
-
-    private void CheckHighScore()
-    {
-        if (currentScore > highScore)
-        {
-            highScore = currentScore;
-            PlayerPrefs.SetInt("HighScore", highScore);
-        }
-    }
-    
-    public int GetCurrentScore() => currentScore;
-    public int GetHighScore() => highScore;
-    public int GetCoinsCollectedThisRun() => coinsCollectedThisRun;
 }
