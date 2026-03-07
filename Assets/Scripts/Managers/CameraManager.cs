@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class ScoreManager : MonoBehaviour
+public class CameraManager : MonoBehaviour
 {
     void Start()
     {
