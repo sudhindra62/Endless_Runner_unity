@@ -16,9 +16,10 @@ Prefab:
     m_Component: 
     - component: {fileID: 1}
     - component: {fileID: 2}
-    m_Layer: 9
-    m_Name: Barrier
-    m_TagString: Untagged
+    - component: {fileID: 3}
+    m_Layer: 8
+    m_Name: Player
+    m_TagString: Player
     m_IsActive: 1
     m_NavigationMode: 0
     m_NavigationLayer: 0
@@ -32,12 +33,27 @@ Transform:
   m_GameObject: {fileID: 0}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 0.5, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
 ---
-BoxCollider:
+Rigidbody:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+---
+CapsuleCollider:
   m_ObjectHideFlags: 1
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -46,4 +62,5 @@ BoxCollider:
   m_IsTrigger: 0
   m_Material: {fileID: 0}
   m_Center: {x: 0, y: 0, z: 0}
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Radius: 0.5
+  m_Height: 2

@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class AnimationController : MonoBehaviour
@@ -23,5 +22,10 @@ public class AnimationController : MonoBehaviour
     public void Run()
     {
         animator.SetTrigger("Run");
+    }
+
+    public void Die()
+    {
+        animator.SetTrigger("Die");
     }
 }

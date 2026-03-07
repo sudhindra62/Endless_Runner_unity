@@ -1,139 +1,25 @@
 
 using UnityEngine;
-using System.Collections;
-using PowerUps;
 
-/// <summary>
-/// A base class for all collectible items in the game.
-/// </summary>
-public class Collectible : MonoBehaviour
+public abstract class Collectible : MonoBehaviour
 {
-    public enum CollectibleType { Coin, Gem, PowerUp, Special }
-
-    [Header("Configuration")]
-    [SerializeField] private CollectibleType type = CollectibleType.Coin;
-    [SerializeField] private int value = 1;
-    [Tooltip("The tag used by the ObjectPooler for this collectible type.")]
-    [SerializeField] protected string poolTag;
-    [SerializeField] private float attractionSpeed = 15f;
-    [SerializeField] private float rotationSpeed = 100f;
-
-    [Header("Effects")]
-    [SerializeField] private GameObject collectionEffect;
-    [SerializeField] private AudioClip collectionSound;
-
-    [Tooltip("The power-up to grant when collected. Can be null for simple collectibles like coins.")]
-    [SerializeField] private PowerUp powerUpToGrant;
-
-    protected ObjectPooler objectPooler;
-    private Transform targetPlayer;
-    private bool isAttracted = false;
-    private Coroutine attractionCoroutine;
-
-    protected virtual void Start()
-    {
-        objectPooler = ServiceLocator.Get<ObjectPooler>();
-    }
-
-    void Update()
-    {
-        transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
-    }
+    [Header("Collectible")]
+    [SerializeField] private int scoreValue = 10;
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
             OnCollect();
-            ReturnToPool();
         }
-    }
-
-    public void Attract(Transform playerTransform)
-    {
-        if (!isAttracted)
-        {
-            targetPlayer = playerTransform;
-            isAttracted = true;
-            if (attractionCoroutine != null) StopCoroutine(attractionCoroutine);
-            attractionCoroutine = StartCoroutine(MoveTowardsPlayer());
-        }
-    }
-
-    private IEnumerator MoveTowardsPlayer()
-    {
-        while (targetPlayer != null && Vector3.Distance(transform.position, targetPlayer.position) > 0.1f)
-        {
-            transform.position = Vector3.Lerp(transform.position, targetPlayer.position, Time.deltaTime * attractionSpeed);
-            yield return null;
-        }
-        // Once close enough, snap to the player and collect
-        OnCollect();
-        ReturnToPool();
     }
 
     protected virtual void OnCollect()
     {
-        switch (type)
-        {
-            case CollectibleType.Coin:
-                CurrencyManager.Instance.AddCoins(value);
-                break;
-            case CollectibleType.Gem:
-                CurrencyManager.Instance.AddGems(value);
-                break;
-            case CollectibleType.PowerUp:
-                if (powerUpToGrant != null)
-                {
-                    PowerUpManager.Instance.ActivatePowerUp(powerUpToGrant);
-                }
-                break;
-            case CollectibleType.Special:
-                // Handled by subclasses like SpecialCollectible.cs
-                break;
-        }
+        // Add score
+        ScoreManager.Instance.AddScore(scoreValue);
 
-        // --- Visual & Audio Feedback ---
-        if (collectionEffect != null)
-        {
-            Instantiate(collectionEffect, transform.position, Quaternion.identity);
-        }
-        if (collectionSound != null)
-        {
-            AudioManager.Instance.PlaySound(collectionSound);
-        }
-    }
-
-    private void ReturnToPool()
-    {
-        // Reset state before returning to the pool
-        isAttracted = false;
-        targetPlayer = null;
-        if (attractionCoroutine != null)
-        {
-            StopCoroutine(attractionCoroutine);
-            attractionCoroutine = null;
-        }
-
-        if (objectPooler != null)
-        {
-            objectPooler.ReturnToPool(poolTag, gameObject);
-        }
-        else
-        {
-            gameObject.SetActive(false);
-        }
-    }
-
-    protected virtual void OnDisable()
-    {
-        // Ensure coroutine is stopped when the object is disabled (e.g., by the pool)
-        isAttracted = false;
-        targetPlayer = null;
-        if (attractionCoroutine != null)
-        {
-            StopCoroutine(attractionCoroutine);
-            attractionCoroutine = null;
-        }
+        // Deactivate the collectible
+        gameObject.SetActive(false);
     }
 }

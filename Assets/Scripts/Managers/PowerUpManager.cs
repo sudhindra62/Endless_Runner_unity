@@ -1,65 +1,31 @@
 
 using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-using System;
 
-/// <summary>
-/// Manages the activation and duration of power-ups.
-/// </summary>
-public class PowerUpManager : Singleton<PowerUpManager>
+public class PowerUpManager : MonoBehaviour
 {
-    public static event Action<PowerUp.PowerUpType, float> OnPowerUpActivated;
-    public static event Action<PowerUp.PowerUpType> OnPowerUpDeactivated;
+    public static PowerUpManager Instance { get; private set; }
 
-    // Track active power-ups and their timers
-    private Dictionary<PowerUp.PowerUpType, Coroutine> activePowerUps = new Dictionary<PowerUp.PowerUpType, Coroutine>();
-
-    public bool IsInvincible { get; private set; }
-    public bool IsMagnetActive { get; private set; }
-    public int ScoreMultiplier { get; private set; } = 1;
-
-    public void ActivatePowerUp(PowerUp.PowerUpType type, float duration)
+    private void Awake()
     {
-        // If a power-up of the same type is already active, reset its timer
-        if (activePowerUps.ContainsKey(type))
+        if (Instance == null)
         {
-            StopCoroutine(activePowerUps[type]);
-            activePowerUps.Remove(type);
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
-
-        Coroutine powerUpCoroutine = StartCoroutine(PowerUpCoroutine(type, duration));
-        activePowerUps.Add(type, powerUpCoroutine);
-
-        OnPowerUpActivated?.Invoke(type, duration);
-        Debug.Log($"{type} activated for {duration} seconds!");
-    }
-
-    private IEnumerator PowerUpCoroutine(PowerUp.PowerUpType type, float duration)
-    {
-        ApplyEffect(type, true);
-        yield return new WaitForSeconds(duration);
-        ApplyEffect(type, false);
-
-        activePowerUps.Remove(type);
-        OnPowerUpDeactivated?.Invoke(type);
-        Debug.Log($"{type} deactivated.");
-    }
-
-    private void ApplyEffect(PowerUp.PowerUpType type, bool activate)
-    {
-        switch (type)
+        else
         {
-            case PowerUp.PowerUpType.Invincibility:
-                IsInvincible = activate;
-                // You might want to visually indicate this on the player
-                break;
-            case PowerUp.PowerUpType.ScoreMultiplier:
-                ScoreMultiplier = activate ? 2 : 1;
-                break;
-            case PowerUp.PowerUpType.Magnet:
-                IsMagnetActive = activate;
-                break;
+            Destroy(gameObject);
+        }
+    }
+
+    public void ActivatePowerUp(PowerUp powerUp)
+    {
+        // In a real game, you would find the player and activate the power-up.
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            powerUp.Activate(player);
+            // You might want to start a coroutine to deactivate the power-up after its duration.
         }
     }
 }
