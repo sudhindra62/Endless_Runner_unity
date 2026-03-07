@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a29b43354b043449dae924a63a4901a8, type: 3}
+  m_Name: LootLocker
+  m_EditorClassIdentifier: 
+  apiKey: dev_fded3065c5a44803a651b92f101fdaff
+  game_version: 0.0.0.0
+  platform: Android
+  allowTokenRefresh: 1
+  player_identifier: Player
+  developmentMode: 0
+  current_domain: dm35d2s1
+  useDevelopmentDomain: 0
+  useStagingDomain: 0
+  maxConcurrentRequests: 6
+  date_created: 0
+  LootLockerConfigLabel: 

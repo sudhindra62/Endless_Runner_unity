@@ -2,23 +2,27 @@
 using System;
 using UnityEngine;
 
-/// <summary>
-/// Handles all player input and broadcasts it as events.
-/// Reconstructed by OMNI_LOGIC_COMPLETION_v1 for a decoupled, event-driven architecture.
-/// </summary>
+public enum SwipeDirection
+{
+    None,
+    Left,
+    Right,
+    Up,
+    Down
+}
+
 public class InputManager : Singleton<InputManager>
 {
     // --- EVENTS ---
-    public static event Action OnSwipeLeft;
-    public static event Action OnSwipeRight;
-    public static event Action OnSwipeUp;
-    public static event Action OnSwipeDown;
+    public static event Action<SwipeDirection> OnSwipe;
+    public static event Action OnJump; // Specific event for jumping (e.g., Swipe Up)
+    public static event Action OnSlide; // Specific event for sliding (e.g., Swipe Down)
     public static event Action OnTap;
 
-    // --- PRIVATE STATE ---
-    private Vector2 startTouchPosition;
-    private Vector2 endTouchPosition;
-    private bool isSwiping = false;
+    // --- STATE ---
+    private Vector2 _startTouchPosition;
+    private bool _isInputEnabled = true;
+    private TutorialAction _allowedAction = TutorialAction.None; // For tutorial control
 
     [Header("Input Settings")]
     [SerializeField] private float minSwipeDistance = 50f;
@@ -26,25 +30,50 @@ public class InputManager : Singleton<InputManager>
     // --- UNITY LIFECYCLE ---
     private void Update()
     {
-        // --- Keyboard Input (for testing in editor) ---
-        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
-        {
-            OnSwipeLeft?.Invoke();
-        }
-        if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
-        {
-            OnSwipeRight?.Invoke();
-        }
-        if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
-        {
-            OnSwipeUp?.Invoke();
-        }
-        if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
-        {
-            OnSwipeDown?.Invoke();
-        }
+        if (!_isInputEnabled) return;
 
-        // --- Touch Input ---
+        HandleKeyboardInput();
+        HandleTouchInput();
+    }
+
+    // --- PUBLIC API ---
+
+    /// <summary>
+    /// Globally enables or disables all input processing.
+    /// </summary>
+    public void SetInputEnabled(bool isEnabled, TutorialAction allowedAction = TutorialAction.None)
+    {
+        _isInputEnabled = isEnabled;
+        _allowedAction = allowedAction;
+    }
+
+    // --- PRIVATE METHODS ---
+
+    private void HandleKeyboardInput()
+    {
+        // Keyboard input for editor testing
+        if (IsActionAllowed(TutorialAction.SwipeLeft) && (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)))
+        {
+            OnSwipe?.Invoke(SwipeDirection.Left);
+        }
+        if (IsActionAllowed(TutorialAction.SwipeRight) && (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)))
+        {
+            OnSwipe?.Invoke(SwipeDirection.Right);
+        }
+        if (IsActionAllowed(TutorialAction.Jump) && (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)))
+        {
+            OnSwipe?.Invoke(SwipeDirection.Up);
+            OnJump?.Invoke();
+        }
+        if (IsActionAllowed(TutorialAction.Slide) && (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)))
+        {
+            OnSwipe?.Invoke(SwipeDirection.Down);
+            OnSlide?.Invoke();
+        }
+    }
+
+    private void HandleTouchInput()
+    {
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
@@ -52,63 +81,65 @@ public class InputManager : Singleton<InputManager>
             switch (touch.phase)
             {
                 case TouchPhase.Began:
-                    startTouchPosition = touch.position;
-                    isSwiping = true;
-                    break;
-
-                case TouchPhase.Moved:
-                    if (!isSwiping) return;
-                    endTouchPosition = touch.position;
-                    DetectSwipe();
+                    _startTouchPosition = touch.position;
                     break;
 
                 case TouchPhase.Ended:
-                    if (isSwiping)
+                    Vector2 endTouchPosition = touch.position;
+                    Vector2 swipeDelta = endTouchPosition - _startTouchPosition;
+
+                    if (swipeDelta.magnitude > minSwipeDistance)
                     {
-                        isSwiping = false;
-                        // This could be interpreted as a tap if the swipe distance was not met
-                        if (Vector2.Distance(startTouchPosition, endTouchPosition) < minSwipeDistance)
-                        {
-                            OnTap?.Invoke();
-                        }
+                        DetectSwipe(swipeDelta);
+                    }
+                    else
+                    {
+                        OnTap?.Invoke();
                     }
                     break;
             }
         }
     }
 
-    // --- PRIVATE METHODS ---
-    private void DetectSwipe()
+    private void DetectSwipe(Vector2 swipeDelta)
     {
-        Vector2 swipeDelta = endTouchPosition - startTouchPosition;
-
-        if (Mathf.Abs(swipeDelta.x) > minSwipeDistance || Mathf.Abs(swipeDelta.y) > minSwipeDistance)
+        SwipeDirection direction;
+        if (Mathf.Abs(swipeDelta.x) > Mathf.Abs(swipeDelta.y))
         {
-            if (Mathf.Abs(swipeDelta.x) > Mathf.Abs(swipeDelta.y))
-            {
-                // Horizontal Swipe
-                if (swipeDelta.x > 0)
-                {
-                    OnSwipeRight?.Invoke();
-                }
-                else
-                {
-                    OnSwipeLeft?.Invoke();
-                }
-            }
-            else
-            {
-                // Vertical Swipe
-                if (swipeDelta.y > 0)
-                {
-                    OnSwipeUp?.Invoke();
-                }
-                else
-                {
-                    OnSwipeDown?.Invoke();
-                }
-            }
-            isSwiping = false; // End the swipe after one is detected
+            direction = swipeDelta.x > 0 ? SwipeDirection.Right : SwipeDirection.Left;
         }
+        else
+        {
+            direction = swipeDelta.y > 0 ? SwipeDirection.Up : SwipeDirection.Down;
+        }
+
+        if (IsActionAllowed(direction))
+        {
+            OnSwipe?.Invoke(direction);
+
+            // Trigger specific jump/slide events based on swipe direction
+            if (direction == SwipeDirection.Up) OnJump?.Invoke();
+            if (direction == SwipeDirection.Down) OnSlide?.Invoke();
+        }
+    }
+    
+    private bool IsActionAllowed(TutorialAction action)
+    {
+        if (_allowedAction == TutorialAction.None) return true;
+        return action == _allowedAction;
+    }
+
+    private bool IsActionAllowed(SwipeDirection direction)
+    {
+        if (_allowedAction == TutorialAction.None) return true;
+
+        return direction switch
+        {
+            SwipeDirection.Left => _allowedAction == TutorialAction.SwipeLeft,
+            SwipeDirection.Right => _allowedAction == TutorialAction.SwipeRight,
+            SwipeDirection.Up => _allowedAction == TutorialAction.Jump,
+            SwipeDirection.Down => _allowedAction == TutorialAction.Slide,
+            _ => false,
+        };
     }
 }

@@ -1,101 +1,90 @@
-
-using System;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Manages the overall game state and flow.
-/// Reconstructed by OMNI_LOGIC_COMPLETION_v1 for a modular, event-driven architecture.
-/// </summary>
 public class GameManager : Singleton<GameManager>
 {
-    // --- GAMESTATE ---
-    public enum GameState { MainMenu, Playing, Paused, GameOver }
-    private GameState currentState;
-    public static event Action<GameState> OnGameStateChanged;
+    public enum GameState
+    {
+        MainMenu,
+        Playing,
+        Paused,
+        GameOver
+    }
 
-    // --- UNITY LIFECYCLE ---
+    public GameState CurrentState { get; private set; }
+
+    public PlayerController player;
+    public UIManager uiManager;
+    public ScoreManager scoreManager;
+    public LevelGenerator levelGenerator;
+
     protected override void Awake()
     {
         base.Awake();
-        DontDestroyOnLoad(gameObject); // Persist across scenes
+        // Ensure other singletons are initialized
+        scoreManager = ScoreManager.Instance;
+        uiManager = UIManager.Instance;
+        levelGenerator = LevelGenerator.Instance;
     }
 
-    private void OnEnable()
-    {
-        PlayerController.OnPlayerDeath += HandlePlayerDeath;
-    }
-
-    private void OnDisable()
-    {
-        PlayerController.OnPlayerDeath -= HandlePlayerDeath;
-    }
-    
     private void Start()
     {
-        // Set the initial game state based on the active scene
-        if (SceneManager.GetActiveScene().name == "HomeScene")
-        {
-            SetState(GameState.MainMenu);
-        }
-        else
-        {
-            SetState(GameState.Playing);
-        }
+        ChangeState(GameState.MainMenu);
     }
 
-    // --- PUBLIC API ---
+    public void ChangeState(GameState newState)
+    {
+        CurrentState = newState;
+        switch (CurrentState)
+        {
+            case GameState.MainMenu:
+                Time.timeScale = 1f;
+                // uiManager.ShowMainMenu();
+                break;
+            case GameState.Playing:
+                Time.timeScale = 1f;
+                // uiManager.ShowGameHUD();
+                break;
+            case GameState.Paused:
+                Time.timeScale = 0f;
+                // uiManager.ShowPauseMenu();
+                break;
+            case GameState.GameOver:
+                Time.timeScale = 0f;
+                // uiManager.ShowGameOverScreen();
+                break;
+        }
+    }
 
     public void StartGame()
     {
-        SceneManager.LoadScene("MainScene");
-        SetState(GameState.Playing);
+        ChangeState(GameState.Playing);
+        scoreManager.ResetScore();
+        levelGenerator.StartGenerating();
     }
 
     public void PauseGame()
     {
-        if (currentState == GameState.Playing)
+        if (CurrentState == GameState.Playing)
         {
-            SetState(GameState.Paused);
-            Time.timeScale = 0f; // Freeze time
+            ChangeState(GameState.Paused);
         }
     }
 
     public void ResumeGame()
     {
-        if (currentState == GameState.Paused)
+        if (CurrentState == GameState.Paused)
         {
-            SetState(GameState.Playing);
-            Time.timeScale = 1f; // Resume time
+            ChangeState(GameState.Playing);
         }
+    }
+
+    public void GameOver()
+    {
+        ChangeState(GameState.GameOver);
     }
 
     public void RestartGame()
     {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        SetState(GameState.Playing);
-    }
-
-    public void ReturnToMenu()
-    {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene("HomeScene");
-        SetState(GameState.MainMenu);
-    }
-
-    // --- PRIVATE METHODS ---
-
-    private void HandlePlayerDeath()
-    {
-        SetState(GameState.GameOver);
-    }
-
-    private void SetState(GameState newState)
-    {
-        if (currentState == newState) return;
-
-        currentState = newState;
-        OnGameStateChanged?.Invoke(newState);
+        ChangeState(GameState.MainMenu);
     }
 }

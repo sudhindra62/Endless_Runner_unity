@@ -25,7 +25,7 @@
   - [x] Verify that the ad-free IAP correctly disables all non-rewarded ads.
 - [x] **Privacy Policy:**
   - [x] A public URL hosting the game's privacy policy is available.
-  - [x] **DONE:** A placeholder privacy policy has been created.
+  - **ACTION REQUIRED:** A privacy policy needs to be written that discloses the use of Unity Ads, Unity Analytics, and Firebase.
 
 ### Pre-Launch Testing
 - [x] **Closed Alpha Test Track:** The build has been successfully deployed to a limited set of testers.

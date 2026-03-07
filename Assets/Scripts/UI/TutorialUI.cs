@@ -5,26 +5,46 @@ using TMPro;
 
 public class TutorialUI : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI titleText;
-    [SerializeField] private TextMeshProUGUI descriptionText;
-    [SerializeField] private Image tutorialImage;
-    [SerializeField] private Button continueButton;
+    [SerializeField] private GameObject tutorialPanel;
+    [SerializeField] private TextMeshProUGUI instructionText;
+
+    private void OnEnable()
+    {
+        TutorialManager.OnTutorialStepStart += ShowTutorialStep;
+        TutorialManager.OnTutorialStepComplete += HideTutorial;
+        TutorialManager.OnTutorialComplete += HideTutorial;
+    }
+
+    private void OnDisable()
+    {
+        TutorialManager.OnTutorialStepStart -= ShowTutorialStep;
+        TutorialManager.OnTutorialStepComplete -= HideTutorial;
+        TutorialManager.OnTutorialComplete -= HideTutorial;
+    }
 
     private void Start()
     {
-        continueButton.onClick.AddListener(TutorialManager.Instance.OnContinueClicked);
+        // Start with the panel hidden
+        if (tutorialPanel != null)
+        {
+            tutorialPanel.SetActive(false);
+        }
     }
 
-    public void ShowTutorialStep(TutorialStep step)
+    private void ShowTutorialStep(string instruction)
     {
-        titleText.text = step.title;
-        descriptionText.text = step.description;
-        tutorialImage.sprite = step.image;
-        gameObject.SetActive(true);
+        if (tutorialPanel != null && instructionText != null)
+        {
+            instructionText.text = instruction;
+            tutorialPanel.SetActive(true);
+        }
     }
 
-    public void HideTutorial()
+    private void HideTutorial()
     {
-        gameObject.SetActive(false);
+        if (tutorialPanel != null)
+        {
+            tutorialPanel.SetActive(false);
+        }
     }
 }
