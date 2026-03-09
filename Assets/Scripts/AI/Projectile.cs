@@ -28,14 +28,6 @@ public class Projectile : MonoBehaviour
             return;
         }
 
-        Shield shield = collision.gameObject.GetComponent<Shield>();
-        if (shield != null)
-        {
-            shield.TakeDamage(1);
-            Destroy(gameObject);
-            return;
-        }
-
         Health health = collision.gameObject.GetComponent<Health>();
         if (health != null)
         {

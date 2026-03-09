@@ -1,32 +1,27 @@
+using UnityEngine;
 
 /// <summary>
 /// This power-up doubles the value of all coins collected.
 /// It activates by setting the coin multiplier in the CurrencyManager to 2.
 /// </summary>
-public class CoinDoublerPowerUp : PowerUpEffect
+[CreateAssetMenu(menuName = "PowerUps/CoinDoubler")]
+public class CoinDoublerPowerUp : PowerUp
 {
-    private CurrencyManager currencyManager;
-
-    public CoinDoublerPowerUp(float duration) : base(duration)
+    public override void Activate(GameObject player)
     {
-        currencyManager = ServiceLocator.Get<CurrencyManager>();
-    }
-
-    public override void Activate()
-    {
-        base.Activate();
+        CurrencyManager currencyManager = ServiceLocator.Get<CurrencyManager>();
         if (currencyManager != null)
         {
-            currencyManager.SetCoinMultiplier(2);
+            currencyManager.ActivateCoinDoubler(true);
         }
     }
 
-    public override void Deactivate()
+    public override void Deactivate(GameObject player)
     {
-        base.Deactivate();
+        CurrencyManager currencyManager = ServiceLocator.Get<CurrencyManager>();
         if (currencyManager != null)
         {
-            currencyManager.SetCoinMultiplier(1); // Reset to default
+            currencyManager.ActivateCoinDoubler(false);
         }
     }
 }

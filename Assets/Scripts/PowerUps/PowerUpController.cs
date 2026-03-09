@@ -5,6 +5,7 @@ using PowerUps;
 public class PowerUpController : MonoBehaviour
 {
     private PlayerController playerController;
+    private Health playerHealth;
     private PlayerMovement playerMovement;
     private ScoreManager scoreManager;
     private CurrencyManager currencyManager;
@@ -13,6 +14,10 @@ public class PowerUpController : MonoBehaviour
     {
         // Resolve dependencies from the ServiceLocator
         playerController = ServiceLocator.Get<PlayerController>();
+        if (playerController != null)
+        {
+            playerHealth = playerController.GetComponent<Health>();
+        }
         playerMovement = ServiceLocator.Get<PlayerMovement>();
         scoreManager = ServiceLocator.Get<ScoreManager>();
         currencyManager = ServiceLocator.Get<CurrencyManager>();
@@ -36,7 +41,7 @@ public class PowerUpController : MonoBehaviour
         switch (powerUp.Type)
         {
             case PowerUpType.Shield:
-                playerController.SetShield(true);
+                if (playerHealth != null) playerHealth.SetShield(true);
                 break;
             case PowerUpType.CoinDoubler:
                 currencyManager?.ActivateCoinDoubler(true);
@@ -56,7 +61,7 @@ public class PowerUpController : MonoBehaviour
         switch (powerUp.Type)
         {
             case PowerUpType.Shield:
-                playerController.SetShield(false);
+                if (playerHealth != null) playerHealth.SetShield(false);
                 break;
             case PowerUpType.CoinDoubler:
                 currencyManager?.ActivateCoinDoubler(false);
