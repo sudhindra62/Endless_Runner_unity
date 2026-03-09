@@ -4,67 +4,60 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Manages the player's score, high score, and multipliers. Fully integrated with the GameManager.
-/// Consolidated and finalized by OMNI_ARCHITECT_v31 to be the single source of truth for scoring.
+/// Manages the player's score for a single game run and reports it to the appropriate systems.
+/// Architecturally rewritten by Supreme Guardian Architect v12 to enforce a single source of truth for scoring.
+/// This system is now a focused, efficient component of the core gameplay loop.
 /// </summary>
 public class ScoreManager : Singleton<ScoreManager>
 {
     // --- EVENTS ---
     public static event Action<int> OnScoreChanged;
-    public static event Action<int> OnHighScoreChanged;
 
-    // --- STATE ---
+    // --- PUBLIC PROPERTIES ---
     public int CurrentScore { get; private set; }
-    public int HighScore { get; private set; }
 
-    private float _distanceScore = 0f;
+    // --- PRIVATE STATE ---
+    private float _distanceScore;
     private float _scoreMultiplier = 1f;
-    private bool _isScoringEnabled = false;
+    private bool _isScoringEnabled;
     private Transform _playerTransform;
     private Coroutine _multiplierCoroutine;
 
-    protected override void Awake()
-    {
-        base.Awake();
-        DontDestroyOnLoad(gameObject);
-    }
-
-    void Start()
-    {
-        // Load HighScore from PlayerPrefs
-        HighScore = PlayerPrefs.GetInt("HighScore", 0);
-        OnHighScoreChanged?.Invoke(HighScore);
-    }
+    // --- UNITY LIFECYCLE & GAMESTATE INTEGRATION ---
 
     private void OnEnable()
     {
-        GameManager.OnGameStateChanged += OnGameStateChanged;
+        // --- A-TO-Z CONNECTIVITY: Subscribe to the master game flow controller. ---
+        GameManager.OnGameStateChanged += HandleGameStateChanged;
     }
 
     private void OnDisable()
     {
-        GameManager.OnGameStateChanged -= OnGameStateChanged;
+        // --- A-TO-Z CONNECTIVITY: Unsubscribe to prevent memory leaks. ---
+        GameManager.OnGameStateChanged -= HandleGameStateChanged;
     }
 
-    void Update()
+    private void Update()
     {
-        if (_isScoringEnabled && _playerTransform != null)
+        if (!_isScoringEnabled || _playerTransform == null) return;
+
+        // Increase score based on distance traveled forward.
+        if (_playerTransform.position.z > _distanceScore)
         {
-            // Increase score based on distance traveled forward
-            if (_playerTransform.position.z > _distanceScore)
+            _distanceScore = _playerTransform.position.z;
+            int newScore = Mathf.RoundToInt(_distanceScore * _scoreMultiplier);
+            if (newScore > CurrentScore)
             {
-                _distanceScore = _playerTransform.position.z;
-                int newScore = Mathf.RoundToInt(_distanceScore * _scoreMultiplier);
-                if (newScore > CurrentScore)
-                {
-                    SetScore(newScore);
-                }
+                SetScore(newScore);
             }
         }
     }
 
     // --- PUBLIC API ---
 
+    /// <summary>
+    /// Adds a discrete amount to the current run's score (e.g., for collecting items).
+    /// </summary>
     public void AddToScore(int amount)
     {
         if (amount <= 0 || !_isScoringEnabled) return;
@@ -72,10 +65,8 @@ public class ScoreManager : Singleton<ScoreManager>
     }
 
     /// <summary>
-    /// Applies a score multiplier for a specified duration.
+    /// Applies a temporary score multiplier.
     /// </summary>
-    /// <param name="multiplier">The multiplier to apply.</param>
-    /// <param name="duration">The duration in seconds.</param>
     public void ApplyScoreMultiplier(float multiplier, float duration)
     {
         if (_multiplierCoroutine != null)
@@ -85,7 +76,82 @@ public class ScoreManager : Singleton<ScoreManager>
         _multiplierCoroutine = StartCoroutine(MultiplierCoroutine(multiplier, duration));
     }
 
-    // --- COROUTINES ---
+    // --- PRIVATE METHODS & HANDLERS ---
+
+    private void HandleGameStateChanged(GameState newState)
+    {
+        switch (newState)
+        {
+            case GameState.Playing:
+                StartRun();
+                break;
+            case GameState.GameOver:
+                EndRun();
+                break;
+            case GameState.MainMenu:
+                ResetState();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Prepares the ScoreManager for a new game run.
+    /// </summary>
+    private void StartRun()
+    {
+        ResetState();
+        
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            _playerTransform = player.transform;
+            _isScoringEnabled = true;
+            Debug.Log("Guardian Architect: ScoreManager has started a new run.");
+        }
+        else
+        {
+            Debug.LogError("Guardian Architect FATAL_ERROR: ScoreManager could not find the Player. Scoring will be disabled.");
+            _isScoringEnabled = false;
+        }
+    }
+
+    /// <summary>
+    /// Finalizes the score at the end of a run and reports it to other systems.
+    /// </summary>
+    private void EndRun()
+    {
+        _isScoringEnabled = false;
+        Debug.Log($"Guardian Architect: Run ended with final score: {CurrentScore}");
+
+        // --- A-TO-Z CONNECTIVITY: Report final score to the authoritative HighScoreManager. ---
+        if (HighScoreManager.Instance != null)
+        {
+            HighScoreManager.Instance.ReportScore(CurrentScore);
+        }
+
+        // --- A-TO-Z CONNECTIVITY: Grant primary currency based on score. ---
+        if (CurrencyManager.Instance != null)
+        {
+            // Example: Grant 1 coin for every 100 points.
+            int earnedCurrency = CurrentScore / 100;
+            if (earnedCurrency > 0)
+            {
+                CurrencyManager.Instance.AddPrimaryCurrency(earnedCurrency);
+            }
+        }
+
+        if (_multiplierCoroutine != null)
+        {
+            StopCoroutine(_multiplierCoroutine);
+            _multiplierCoroutine = null;
+        }
+    }
+
+    private void SetScore(int newScore)
+    {
+        CurrentScore = newScore;
+        OnScoreChanged?.Invoke(CurrentScore);
+    }
 
     private IEnumerator MultiplierCoroutine(float multiplier, float duration)
     {
@@ -95,26 +161,10 @@ public class ScoreManager : Singleton<ScoreManager>
         _multiplierCoroutine = null;
     }
 
-    // --- PRIVATE METHODS ---
-
-    private void SetScore(int newScore)
-    {
-        CurrentScore = newScore;
-        OnScoreChanged?.Invoke(CurrentScore);
-    }
-
-    private void CheckForHighScore()
-    {
-        if (CurrentScore > HighScore)
-        {
-            HighScore = CurrentScore;
-            PlayerPrefs.SetInt("HighScore", HighScore);
-            PlayerPrefs.Save();
-            OnHighScoreChanged?.Invoke(HighScore);
-        }
-    }
-
-    private void ResetRunData()
+    /// <summary>
+    /// Resets all run-specific scoring data to its initial state.
+    /// </summary>
+    private void ResetState()
     {
         SetScore(0);
         _distanceScore = 0f;
@@ -124,44 +174,6 @@ public class ScoreManager : Singleton<ScoreManager>
         {
             StopCoroutine(_multiplierCoroutine);
             _multiplierCoroutine = null;
-        }
-    }
-
-    // --- Event Handlers ---
-
-    private void OnGameStateChanged(GameState newState)
-    {
-        _isScoringEnabled = (newState == GameState.Playing);
-
-        switch (newState)
-        {
-            case GameState.MainMenu:
-                ResetRunData();
-                break;
-            case GameState.Playing:
-                ResetRunData();
-                _isScoringEnabled = true;
-
-                GameObject player = GameObject.FindGameObjectWithTag("Player");
-                if (player != null)
-                {
-                    _playerTransform = player.transform;
-                }
-                else
-                {
-                    Debug.LogError("Guardian Architect ERROR: ScoreManager could not find Player. Scoring disabled.");
-                    _isScoringEnabled = false;
-                }
-                break;
-            case GameState.GameOver:
-                _isScoringEnabled = false;
-                CheckForHighScore();
-                if (_multiplierCoroutine != null)
-                {
-                    StopCoroutine(_multiplierCoroutine);
-                    _multiplierCoroutine = null;
-                }
-                break;
         }
     }
 }

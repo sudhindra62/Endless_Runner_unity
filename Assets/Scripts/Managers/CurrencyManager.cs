@@ -2,111 +2,149 @@
 using System;
 using UnityEngine;
 
-public class CurrencyManager : MonoBehaviour
+/// <summary>
+/// Manages all player currency, including persistence and transaction validation.
+/// Architecturally rewritten and fortified by Supreme Guardian Architect v12.
+/// This system is now the single source of truth for all economic interactions, fully integrated with the SaveManager.
+/// </summary>
+public class CurrencyManager : Singleton<CurrencyManager>
 {
-    public static CurrencyManager Instance { get; private set; }
+    // --- EVENTS ---
+    public static event Action<int> OnPrimaryCurrencyChanged;
+    public static event Action<int> OnPremiumCurrencyChanged;
 
-    public event Action<int> OnCoinsChanged;
-    public event Action<int> OnGemsChanged;
+    // --- PUBLIC PROPERTIES ---
+    public int PrimaryCurrency { get; private set; }
+    public int PremiumCurrency { get; private set; }
 
-    private int _coins;
-    private int _gems;
+    // --- UNITY LIFECYCLE & SAVE SYSTEM INTEGRATION ---
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance == null)
+        base.Awake();
+        // Initialize with default values to prevent null references before SaveManager loads.
+        PrimaryCurrency = 0;
+        PremiumCurrency = 0;
+    }
+
+    private void OnEnable()
+    {
+        // --- A-TO-Z CONNECTIVITY: Subscribe to the central persistence system. ---
+        SaveManager.OnLoad += HandleLoad;
+        SaveManager.OnBeforeSave += HandleBeforeSave;
+    }
+
+    private void OnDisable()
+    {
+        // --- A-TO-Z CONNECTIVITY: Unsubscribe to prevent memory leaks. ---
+        SaveManager.OnLoad -= HandleLoad;
+        SaveManager.OnBeforeSave -= HandleBeforeSave;
+    }
+
+    /// <summary>
+    /// Populates the CurrencyManager's state from the master save data.
+    /// </summary>
+    private void HandleLoad(SaveData data)
+    {
+        PrimaryCurrency = data.PrimaryCurrency;
+        PremiumCurrency = data.PremiumCurrency;
+        Debug.Log($"Guardian Architect: Currency state loaded. Primary: {PrimaryCurrency}, Premium: {PremiumCurrency}");
+
+        // Notify listeners that initial values have been loaded.
+        OnPrimaryCurrencyChanged?.Invoke(PrimaryCurrency);
+        OnPremiumCurrencyChanged?.Invoke(PremiumCurrency);
+    }
+
+    /// <summary>
+    /// Populates the master save data with the CurrencyManager's current state before saving.
+    /// </summary>
+    private void HandleBeforeSave(SaveData data)
+    {
+        data.PrimaryCurrency = PrimaryCurrency;
+        data.PremiumCurrency = PremiumCurrency;
+        Debug.Log("Guardian Architect: Currency state prepared for saving.");
+    }
+
+    // --- PUBLIC API ---
+
+    /// <summary>
+    /// Adds a specified amount of primary currency to the player's wallet.
+    /// </summary>
+    public void AddPrimaryCurrency(int amount)
+    {
+        if (amount <= 0)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            Debug.LogWarning($"Guardian Architect Warning: AddPrimaryCurrency called with a non-positive amount: {amount}");
+            return;
         }
-        else
+
+        PrimaryCurrency += amount;
+        OnPrimaryCurrencyChanged?.Invoke(PrimaryCurrency);
+        Debug.Log($"Guardian Architect: Added {amount} Primary Currency. New balance: {PrimaryCurrency}");
+    }
+
+    /// <summary>
+    /// Attempts to spend a specified amount of primary currency.
+    /// </summary>
+    /// <returns>True if the transaction was successful, false otherwise.</returns>
+    public bool SpendPrimaryCurrency(int amount)
+    {
+        if (amount <= 0)
         {
-            Destroy(gameObject);
-        }
-        LoadCurrency();
-    }
-
-    public int GetCoins() => _coins;
-    public int GetGems() => _gems;
-
-    public void AddCoins(int amount)
-    {
-        if (amount <= 0) return;
-        UpdateCoins(amount);
-    }
-
-    public void AddGems(int amount)
-    {
-        if (amount <= 0) return;
-        UpdateGems(amount);
-    }
-
-    public void UpdateCoins(int amount)
-    {
-        // if (IntegrityManager.Instance != null && !IntegrityManager.Instance.economyValidator.ValidateCurrencyTransaction(_coins, amount, "Coins"))
-        // {
-        //     IntegrityManager.Instance.ReportError("Coin transaction failed integrity check.");
-        //     return;
-        // }
-        _coins += amount;
-        OnCoinsChanged?.Invoke(_coins);
-    }
-
-    public void UpdateGems(int amount)
-    {
-        // if (IntegrityManager.Instance != null && !IntegrityManager.Instance.economyValidator.ValidateCurrencyTransaction(_gems, amount, "Gems"))
-        // {
-        //     IntegrityManager.Instance.ReportError("Gem transaction failed integrity check.");
-        //     return;
-        // }
-        _gems += amount;
-        OnGemsChanged?.Invoke(_gems);
-    }
-
-    public bool SpendCoins(int amount)
-    {
-        if (amount <= 0 || _coins < amount)
-        {
+            Debug.LogWarning($"Guardian Architect Warning: SpendPrimaryCurrency called with a non-positive amount: {amount}");
             return false;
         }
-        UpdateCoins(-amount);
+
+        if (PrimaryCurrency < amount)
+        {
+            Debug.Log("Guardian Architect: Insufficient Primary Currency for transaction.");
+            return false;
+        }
+
+        PrimaryCurrency -= amount;
+        OnPrimaryCurrencyChanged?.Invoke(PrimaryCurrency);
+        Debug.Log($"Guardian Architect: Spent {amount} Primary Currency. New balance: {PrimaryCurrency}");
         return true;
     }
 
-    public bool SpendGems(int amount)
+    /// <summary>
+    /// Adds a specified amount of premium currency to the player's wallet.
+    /// Typically called by IAPManager or RewardManager.
+    /// </summary>
+    public void AddPremiumCurrency(int amount)
     {
-        if (amount <= 0 || _gems < amount)
+        if (amount <= 0)
         {
+            Debug.LogWarning($"Guardian Architect Warning: AddPremiumCurrency called with a non-positive amount: {amount}");
+            return;
+        }
+
+        PremiumCurrency += amount;
+        OnPremiumCurrencyChanged?.Invoke(PremiumCurrency);
+        Debug.Log($"Guardian Architect: Added {amount} Premium Currency. New balance: {PremiumCurrency}");
+    }
+
+    /// <summary>
+    /// Attempts to spend a specified amount of premium currency.
+    /// </summary>
+    /// <returns>True if the transaction was successful, false otherwise.</returns>
+    public bool SpendPremiumCurrency(int amount)
+    {
+        if (amount <= 0)
+        {
+            Debug.LogWarning($"Guardian Architect Warning: SpendPremiumCurrency called with a non-positive amount: {amount}");
             return false;
         }
-        UpdateGems(-amount);
+
+        if (PremiumCurrency < amount)
+        {
+            Debug.Log("Guardian Architect: Insufficient Premium Currency for transaction.");
+            return false;
+        }
+
+        PremiumCurrency -= amount;
+        OnPremiumCurrencyChanged?.Invoke(PremiumCurrency);
+        Debug.Log($"Guardian Architect: Spent {amount} Premium Currency. New balance: {PremiumCurrency}");
         return true;
-    }
-
-    public void LoadCurrencyFromSaveData(GameData data)
-    {
-        _coins = data.playerCoins;
-        _gems = data.playerGems;
-        OnCoinsChanged?.Invoke(_coins);
-        OnGemsChanged?.Invoke(_gems);
-    }
-
-    public void PopulateSaveData(GameData data)
-    {
-        data.playerCoins = _coins;
-        data.playerGems = _gems;
-    }
-
-    private void LoadCurrency()
-    {
-        // if (DataManager.Instance != null)
-        // {
-        //     LoadCurrencyFromSaveData(DataManager.Instance.GameData);
-        // }
-        // else
-        // {
-            _coins = 0;
-            _gems = 0;
-        // }
     }
 }

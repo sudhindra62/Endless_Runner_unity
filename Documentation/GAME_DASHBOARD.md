@@ -1,33 +1,25 @@
 # GAME_DASHBOARD.md: The Bridge
 
-**ROLE:** Central command for all gameplay balance variables.
-**AUTO-UPDATING LOGIC:** AI Guardian will read this file to inform code-level decisions and update it to reflect the latest state of the project.
+**ROLE:** A live dashboard showing the game's core metrics and design values.
+**AUTO-UPDATING LOGIC:** AI Guardian will update these values whenever a design change is made in a relevant manager or data script.
 
 ---
 
-| Variable                           | Value                                |
-| ---------------------------------- | ------------------------------------ |
-| **Player Speed (Initial)**         | 10                                   |
-| **Player Speed (Max)**             | 30                                   |
-| **Lane Width**                     | 4.0                                  |
-| **Lane Change Speed**              | 15.0                                 |
-| **Jump Force**                     | 10.0                                 |
-| **Slide Duration**                 | 0.8                                  |
-| **Revive Immunity Duration**       | 2.0                                  |
-| **Coin Value**                     | 1                                    |
-| **Powerup Duration**               | 10s                                  |
-| **Run Seed (Current)**             | `DYNAMIC (from RunSessionData)`      |
-| **Max Regeneration Attempts**      | 20                                   |
-| **Max Reaction Time (ms)**         | 1200ms                               |
-| **Min Reaction Time (ms)**         | 200ms                                |
-| **Min Obstacle Density**           | 0.1                                  |
-| **Max Obstacle Density**           | 0.85                                 |
-| **Min Safe Path Width (m)**        | 1.5m                                 |
-| **Assumed Player Jump Height (m)** | 2.0m                                 |
-| **Boss Mode Reaction Reduction**   | 50ms                                 |
-| **Density Increase on Dodge**      | 0.005                                |
-| **Maximum Unfairness Cap**         | 0.95                                 |
-| **Global Difficulty Curve**        | `Linear (0,0 to 1,1)`                |
-| **Active Theme Engine**            | `AAA Rotating World Theme Engine`    |
-| **Theme Rotation**                 | `Weekly`                             |
-| **Event Override**                 | `Enabled`                            |
+### Core Gameplay Loop
+- **Player Speed (Base):** `15.0f`
+- **Score Multiplier (Default):** `1.0x`
+- **Run Start Delay:** `1.0s`
+
+### Economy & Monetization
+- **Primary Currency Name:** `Coins`
+- **Premium Currency Name:** `Gems`
+- **Initial Primary Currency:** `0`
+- **Initial Premium Currency:** `0`
+- **Score-to-Coin Conversion:** `100 score = 1 Coin`
+
+### IAP Products (Google Play / Apple App Store)
+- **Remove Ads:** `com.gamestudio.remove_ads` (Non-Consumable)
+- **Gem Pack 1 (100 Gems):** `com.gamestudio.gem_pack_1`
+- **Gem Pack 2 (550 Gems):** `com.gamestudio.gem_pack_2`
+- **Gem Pack 3 (1200 Gems):** `com.gamestudio.gem_pack_3`
+- **Starter Bundle (200 Gems + Items):** `com.gamestudio.starter_bundle`
