@@ -4,63 +4,82 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 
-/// <summary>
-/// Manages the activation, deactivation, and timing of all player power-ups.
-/// Surgically rewritten by Supreme Guardian Architect v12 to align with project architecture.
-/// </summary>
+public enum PowerUpType
+{
+    CoinMagnet,
+    ScoreMultiplier,
+    Invincibility,
+    SpeedBoost,
+    DoubleJump
+}
+
+[Serializable]
+public class PowerUp
+{
+    public PowerUpType type;
+    public float duration;
+    public float value; // For ScoreMultiplier, this is the multiplier amount. For others, it might be unused.
+}
+
 public class PowerUpManager : Singleton<PowerUpManager>
 {
-    public event Action<PowerUp, float> OnPowerUpActivated;
-    public event Action<PowerUp> OnPowerUpExpired;
+    public event Action<PowerUp> OnPowerUpActivated;
+    public event Action<PowerUp> OnPowerUpDeactivated;
 
-    private readonly Dictionary<PowerUp, Coroutine> _activePowerUps = new Dictionary<PowerUp, Coroutine>();
+    private readonly Dictionary<PowerUpType, Coroutine> _activePowerUps = new Dictionary<PowerUpType, Coroutine>();
+    private readonly Dictionary<PowerUpType, PowerUp> _powerUpData = new Dictionary<PowerUpType, PowerUp>();
 
-    public void ActivatePowerUp(PowerUp powerUp, float duration)
+    public void ActivatePowerUp(PowerUp powerUp)
     {
         if (powerUp == null)
         {
-            Debug.LogWarning("Guardian Architect Warning: A null PowerUp was provided to ActivatePowerUp.");
+            Debug.LogWarning("Null PowerUp provided to ActivatePowerUp.");
             return;
         }
 
-        if (_activePowerUps.TryGetValue(powerUp, out Coroutine existingCoroutine))
+        if (_activePowerUps.TryGetValue(powerUp.type, out Coroutine existingCoroutine))
         {
             StopCoroutine(existingCoroutine);
-            _activePowerUps.Remove(powerUp);
         }
 
-        Coroutine powerUpCoroutine = StartCoroutine(PowerUpRoutine(powerUp, duration));
-        _activePowerUps.Add(powerUp, powerUpCoroutine);
+        Coroutine powerUpCoroutine = StartCoroutine(PowerUpRoutine(powerUp));
+        _activePowerUps[powerUp.type] = powerUpCoroutine;
+        _powerUpData[powerUp.type] = powerUp;
 
-        OnPowerUpActivated?.Invoke(powerUp, duration);
-        Debug.Log($"Guardian Architect: {powerUp.name} activated for {duration} seconds.");
+        OnPowerUpActivated?.Invoke(powerUp);
+        Debug.Log($"{powerUp.type} activated for {powerUp.duration} seconds.");
     }
 
-    private IEnumerator PowerUpRoutine(PowerUp powerUp, float duration)
+    private IEnumerator PowerUpRoutine(PowerUp powerUp)
     {
-        yield return new WaitForSeconds(duration);
-        DeactivatePowerUp(powerUp);
+        yield return new WaitForSeconds(powerUp.duration);
+        DeactivatePowerUp(powerUp.type);
     }
 
-    public void DeactivatePowerUp(PowerUp powerUp)
+    public void DeactivatePowerUp(PowerUpType powerUpType)
     {
-        if (powerUp == null)
+        if (_activePowerUps.ContainsKey(powerUpType))
         {
-            Debug.LogWarning("Guardian Architect Warning: A null PowerUp was provided to DeactivatePowerUp.");
-            return;
-        }
-        
-        if (_activePowerUps.ContainsKey(powerUp))
-        {
-            StopCoroutine(_activePowerUps[powerUp]);
-            _activePowerUps.Remove(powerUp);
-            OnPowerUpExpired?.Invoke(powerUp);
-            Debug.Log($"Guardian Architect: {powerUp.name} expired.");
+            StopCoroutine(_activePowerUps[powerUpType]);
+            _activePowerUps.Remove(powerUpType);
+            
+            if (_powerUpData.TryGetValue(powerUpType, out PowerUp powerUp))
+            {
+                OnPowerUpDeactivated?.Invoke(powerUp);
+                _powerUpData.Remove(powerUpType);
+                Debug.Log($"{powerUpType} deactivated.");
+            }
         }
     }
-    
-    public bool IsPowerUpActive(PowerUp powerUp)
+
+    public bool IsPowerUpActive(PowerUpType powerUpType)
     {
-        return _activePowerUps.ContainsKey(powerUp);
+        return _activePowerUps.ContainsKey(powerUpType);
+    }
+
+    public PowerUp GetPowerUpData(PowerUpType powerUpType)
+    {
+        _powerUpData.TryGetValue(powerUpType, out PowerUp powerUp);
+        return powerUp;
     }
 }

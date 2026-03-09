@@ -1,18 +1,40 @@
 
 using UnityEngine;
 
-public abstract class PowerUp : ScriptableObject
+/// <summary>
+/// The base class for all power-up collectibles.
+/// Defines the type, duration, and the activation/deactivation logic.
+/// Synthesized by Supreme Guardian Architect v12.
+/// </summary>
+public abstract class PowerUp : MonoBehaviour
 {
-    public PowerUpType Type;
-    public float duration = 5f;
+    [Header("Power-Up Configuration")]
+    [SerializeField] protected PowerUpType powerUpType;
+    [SerializeField] protected float duration = 10f;
 
-    public virtual void Activate(GameObject player)
-    {
-        // Activate the power-up
-    }
+    public PowerUpType GetPowerUpType() => powerUpType;
+    public float GetDuration() => duration;
 
-    public virtual void Deactivate(GameObject player)
-    {
-        // Deactivate the power-up
-    }
+    /// <summary>
+    /// Abstract method to be implemented by each specific power-up type.
+    /// This is called by the PowerupManager when the power-up is collected.
+    /// </summary>
+    /// <param name="player">The player who collected the power-up.</param>
+    public abstract void TriggerActivation(PlayerController player);
+
+    /// <summary>
+    /// Abstract method to be implemented by each specific power-up type.
+    /// This is called by the PowerupManager when the power-up duration expires.
+    /// </summary>
+    /// <param name="player">The player who had the power-up.</param>
+    public abstract void TriggerDeactivation(PlayerController player);
+}
+
+// Enum to define all possible power-up types
+public enum PowerUpType
+{
+    Shield,
+    SpeedBoost,
+    ScoreMultiplier,
+    CoinMagnet
 }

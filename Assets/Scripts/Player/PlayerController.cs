@@ -2,21 +2,15 @@
 using UnityEngine;
 using System.Collections;
 
-/// <summary>
-/// Manages all aspects of player behavior including movement, input, collision, and state.
-/// Logic fully restored, power-up enabled, and fortified by Supreme Guardian Architect v12.
-/// </summary>
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(CapsuleCollider))]
 public class PlayerController : MonoBehaviour
 {
-    // --- PUBLIC STATE ---
-    public bool IsInvincible { get; private set; } = false;
+    public float BaseMoveSpeed { get; private set; }
+    public float CurrentMoveSpeed { get; set; }
 
-    // --- EVENTS ---
     public static event System.Action OnPlayerDeath;
 
-    // --- PRIVATE STATE ---
     private Rigidbody _rb;
     private CapsuleCollider _capsuleCollider;
     private Animator _animator;
@@ -24,13 +18,11 @@ public class PlayerController : MonoBehaviour
     private bool _isGrounded = true;
     private Coroutine _slideCoroutine;
     private bool _isSliding = false;
-    private bool _isMagnetActive = false;
-    private float _magnetRadius = 0f;
-    private float _baseMoveSpeed;
+    private int _jumpCount = 0;
+    private const int MAX_JUMPS = 2;
 
-    // Inspector-assigned properties
     [Header("Core Movement")]
-    [SerializeField] private float moveSpeed = 15f;
+    [SerializeField] private float initialMoveSpeed = 15f;
     [SerializeField] private float laneDistance = 3.5f;
     [SerializeField] private float laneChangeSpeed = 20f;
 
@@ -46,9 +38,12 @@ public class PlayerController : MonoBehaviour
         _rb = GetComponent<Rigidbody>();
         _capsuleCollider = GetComponent<CapsuleCollider>();
         _animator = GetComponentInChildren<Animator>();
+
         _originalColliderHeight = _capsuleCollider.height;
         _originalColliderCenter = _capsuleCollider.center;
-        _baseMoveSpeed = moveSpeed;
+
+        BaseMoveSpeed = initialMoveSpeed;
+        CurrentMoveSpeed = initialMoveSpeed;
     }
 
     void Start()
@@ -59,26 +54,56 @@ public class PlayerController : MonoBehaviour
     private void OnEnable()
     {
         InputManager.OnSwipe += HandleSwipe;
+        PowerUpManager.Instance.OnPowerUpActivated += HandlePowerUpActivated;
+        PowerUpManager.Instance.OnPowerUpDeactivated += HandlePowerUpDeactivated;
     }
 
     private void OnDisable()
     {
         InputManager.OnSwipe -= HandleSwipe;
+        if (PowerUpManager.Instance != null)
+        {
+            PowerUpManager.Instance.OnPowerUpActivated -= HandlePowerUpActivated;
+            PowerUpManager.Instance.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
+        }
     }
 
     void Update()
     {
         if (GameManager.Instance.GetCurrentState() != GameManager.GameState.Playing) return;
 
-        transform.Translate(Vector3.forward * moveSpeed * Time.deltaTime);
+        transform.Translate(Vector3.forward * CurrentMoveSpeed * Time.deltaTime);
 
         Vector3 targetPosition = new Vector3((_currentLane - 1) * laneDistance, _rb.position.y, _rb.position.z);
         _rb.MovePosition(Vector3.Lerp(_rb.position, targetPosition, Time.deltaTime * laneChangeSpeed));
 
-        if (_animator != null) _animator.SetFloat("MoveSpeed", moveSpeed);
+        if (_animator != null) _animator.SetFloat("MoveSpeed", CurrentMoveSpeed);
 
         CheckIfGrounded();
-        HandleMagnet();
+        HandleMagnetAttraction();
+    }
+
+    private void HandlePowerUpActivated(PowerUp powerUp)
+    {
+        switch (powerUp.type)
+        {
+            case PowerUpType.SpeedBoost:
+                CurrentMoveSpeed *= powerUp.value;
+                break;
+            case PowerUpType.DoubleJump:
+                _jumpCount = 0; // Reset jump count
+                break;
+        }
+    }
+
+    private void HandlePowerUpDeactivated(PowerUp powerUp)
+    {
+        switch (powerUp.type)
+        {
+            case PowerUpType.SpeedBoost:
+                CurrentMoveSpeed = BaseMoveSpeed;
+                break;
+        }
     }
 
     void OnCollisionEnter(Collision collision)
@@ -89,24 +114,24 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.gameObject.CompareTag("Coin"))
-        {
-            // The Coin script now handles its own collection logic.
-        }
-    }
-
     private void HandleSwipe(SwipeDirection direction)
     {
         if (GameManager.Instance.GetCurrentState() != GameManager.GameState.Playing) return;
 
         switch (direction)
         {
-            case SwipeDirection.Left: ChangeLane(-1); break;
-            case SwipeDirection.Right: ChangeLane(1); break;
-            case SwipeDirection.Up: Jump(); break;
-            case SwipeDirection.Down: Slide(); break;
+            case SwipeDirection.Left:
+                ChangeLane(-1);
+                break;
+            case SwipeDirection.Right:
+                ChangeLane(1);
+                break;
+            case SwipeDirection.Up:
+                Jump();
+                break;
+            case SwipeDirection.Down:
+                Slide();
+                break;
         }
     }
 
@@ -117,10 +142,20 @@ public class PlayerController : MonoBehaviour
 
     private void Jump()
     {
+        bool canDoubleJump = PowerUpManager.Instance.IsPowerUpActive(PowerUpType.DoubleJump);
+        
         if (_isGrounded)
+        {
+            _jumpCount = 0;
+            _rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            if (_animator != null) _animator.SetTrigger("Jump");
+            _jumpCount++;
+        }
+        else if (canDoubleJump && _jumpCount < MAX_JUMPS)
         {
             _rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             if (_animator != null) _animator.SetTrigger("Jump");
+            _jumpCount++;
         }
     }
 
@@ -149,28 +184,18 @@ public class PlayerController : MonoBehaviour
 
     private void HandleObstacleCollision(Obstacle obstacle)
     {
-        if (IsInvincible) return;
-        
-        // --- POWER-UP HOOK: Check for active shield --- 
-        if (PowerupManager.Instance.IsShieldActive())
+        if (PowerUpManager.Instance.IsPowerUpActive(PowerUpType.Invincibility))
         {
-            Debug.Log("Guardian Architect Log: Shield absorbed the hit!");
-            PowerupManager.Instance.CollectPowerUp(null); // This is a placeholder to deactivate the shield
-            if(obstacle != null) obstacle.Shatter();
+            if (obstacle != null) obstacle.Shatter();
             return;
         }
 
-        moveSpeed = 0;
+        CurrentMoveSpeed = 0;
         enabled = false;
         if (_animator != null) _animator.SetTrigger("Death");
 
         GameManager.Instance.ChangeState(GameManager.GameState.GameOver);
         OnPlayerDeath?.Invoke();
-    }
-
-    public void CollectCoin(int value)
-    {
-        ScoreManager.Instance.AddCoins(value);
     }
 
     private void CheckIfGrounded()
@@ -179,41 +204,23 @@ public class PlayerController : MonoBehaviour
         _isGrounded = Physics.Raycast(transform.position, Vector3.down, raycastDistance);
         if (_animator != null) _animator.SetBool("isGrounded", _isGrounded);
     }
-    
-    // --- POWER-UP INTEGRATION ---
 
-    public void SetInvincible(bool isInvincible)
+    private void HandleMagnetAttraction()
     {
-        this.IsInvincible = isInvincible;
-        Debug.Log($"Guardian Architect Log: Player invincibility set to {isInvincible}");
-    }
-
-    public void ApplySpeedBoost(float multiplier)
-    {
-        moveSpeed = _baseMoveSpeed * multiplier;
-        Debug.Log($"Guardian Architect Log: Player speed boost applied. New speed: {moveSpeed}");
-    }
-
-    public void SetMagnetActive(bool isActive, float radius = 0f)
-    {
-        _isMagnetActive = isActive;
-        _magnetRadius = radius;
-        Debug.Log($"Guardian Architect Log: Coin magnet set to {isActive} with radius {radius}");
-    }
-
-    private void HandleMagnet()
-    {
-        if (!_isMagnetActive) return;
-
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, _magnetRadius);
-        foreach (var hitCollider in hitColliders)
+        if (PowerUpManager.Instance.IsPowerUpActive(PowerUpType.CoinMagnet))
         {
-            if (hitCollider.CompareTag("Coin"))
+            PowerUp powerUp = PowerUpManager.Instance.GetPowerUpData(PowerUpType.CoinMagnet);
+            if (powerUp != null)
             {
-                Coin coin = hitCollider.GetComponent<Coin>();
-                if (coin != null)
+                float magnetRadius = powerUp.value;
+                Collider[] hitColliders = Physics.OverlapSphere(transform.position, magnetRadius);
+                foreach (var hitCollider in hitColliders)
                 {
-                    coin.AttractTo(transform);
+                    if (hitCollider.CompareTag("Coin"))
+                    {
+                        Coin coin = hitCollider.GetComponent<Coin>();
+                        if (coin != null) coin.AttractTo(transform);
+                    }
                 }
             }
         }

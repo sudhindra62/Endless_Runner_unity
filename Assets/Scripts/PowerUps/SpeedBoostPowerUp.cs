@@ -2,35 +2,31 @@
 using UnityEngine;
 
 /// <summary>
-/// Concrete implementation for the Speed Boost power-up.
-/// Increases the player's forward movement speed for a set duration.
-/// Engineered by the Supreme Guardian Architect v12.
+/// Implements the Speed Boost power-up, temporarily increasing the player's run speed.
+/// This script communicates with the PlayerController to modify its speed properties.
+/// Created and fortified by Supreme Guardian Architect v12.
 /// </summary>
-[RequireComponent(typeof(BoxCollider))] // For trigger detection
 public class SpeedBoostPowerUp : PowerUp
 {
-    [Header("Speed Boost Specifics")]
+    [Header("Speed Boost Settings")]
     [SerializeField] private float speedMultiplier = 1.5f;
-    
-    public SpeedBoostPowerUp()
+
+    void Awake()
     {
         powerUpType = PowerUpType.SpeedBoost;
-        duration = 7f;
     }
 
-    protected override void Activate(PlayerController player)
+    public override void TriggerActivation(PlayerController player)
     {
-        if (player != null)
-        {
-            player.ApplySpeedBoost(speedMultiplier);
-        }
+        if (player == null) return;
+        Debug.Log("Guardian Architect Log: Speed Boost Activated!");
+        player.CurrentMoveSpeed = player.BaseMoveSpeed * speedMultiplier;
     }
 
-    protected override void Deactivate(PlayerController player)
+    public override void TriggerDeactivation(PlayerController player)
     {
-        if (player != null)
-        {
-            player.ApplySpeedBoost(1f); // Reset to default speed
-        }
+        if (player == null) return;
+        Debug.Log("Guardian Architect Log: Speed Boost Deactivated.");
+        player.CurrentMoveSpeed = player.BaseMoveSpeed;
     }
 }

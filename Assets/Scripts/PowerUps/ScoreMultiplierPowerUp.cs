@@ -2,38 +2,31 @@
 using UnityEngine;
 
 /// <summary>
-/// Concrete implementation for the Score Multiplier power-up.
-/// Doubles the player's score acquisition for a set duration.
-/// Architected by the Supreme Guardian Architect v12.
+/// Implements the Score Multiplier power-up, temporarily boosting the rate of score accumulation.
+/// This script hooks into the ScoreManager to apply its effect.
+/// Created and fortified by Supreme Guardian Architect v12.
 /// </summary>
-[RequireComponent(typeof(BoxCollider))] // For trigger detection
 public class ScoreMultiplierPowerUp : PowerUp
 {
-    [Header("Multiplier Specifics")]
+    [Header("Score Multiplier Settings")]
     [SerializeField] private int multiplier = 2;
 
-    public ScoreMultiplierPowerUp()
+    void Awake()
     {
         powerUpType = PowerUpType.ScoreMultiplier;
-        duration = 10f;
     }
 
-    protected override void Activate(PlayerController player)
+    public override void TriggerActivation(PlayerController player)
     {
-        // This activation logic will likely be handled by the ScoreManager to avoid direct coupling.
-        if (ScoreManager.Instance != null)
-        {
-            // ScoreManager.Instance.SetScoreMultiplier(multiplier);
-            Debug.Log($"Guardian Architect Log: Score Multiplier x{multiplier} activated!");
-        }
+        if (ScoreManager.Instance == null) return;
+        Debug.Log("Guardian Architect Log: Score Multiplier Activated!");
+        ScoreManager.Instance.SetScoreMultiplier(multiplier);
     }
 
-    protected override void Deactivate(PlayerController player)
+    public override void TriggerDeactivation(PlayerController player)
     {
-        if (ScoreManager.Instance != null)
-        {
-            // ScoreManager.Instance.SetScoreMultiplier(1); // Reset to default
-            Debug.Log("Guardian Architect Log: Score Multiplier deactivated.");
-        }
+        if (ScoreManager.Instance == null) return;
+        Debug.Log("Guardian Architect Log: Score Multiplier Deactivated.");
+        ScoreManager.Instance.ResetScoreMultiplier();
     }
 }
