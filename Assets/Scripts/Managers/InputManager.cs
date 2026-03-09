@@ -11,12 +11,19 @@ public enum SwipeDirection
     Down
 }
 
+public enum TutorialAction
+{
+    None,
+    SwipeLeft,
+    SwipeRight,
+    Jump,
+    Slide
+}
+
 public class InputManager : Singleton<InputManager>
 {
     // --- EVENTS ---
     public static event Action<SwipeDirection> OnSwipe;
-    public static event Action OnJump; // Specific event for jumping (e.g., Swipe Up)
-    public static event Action OnSlide; // Specific event for sliding (e.g., Swipe Down)
     public static event Action OnTap;
 
     // --- STATE ---
@@ -63,12 +70,10 @@ public class InputManager : Singleton<InputManager>
         if (IsActionAllowed(TutorialAction.Jump) && (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)))
         {
             OnSwipe?.Invoke(SwipeDirection.Up);
-            OnJump?.Invoke();
         }
         if (IsActionAllowed(TutorialAction.Slide) && (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)))
         {
             OnSwipe?.Invoke(SwipeDirection.Down);
-            OnSlide?.Invoke();
         }
     }
 
@@ -116,10 +121,6 @@ public class InputManager : Singleton<InputManager>
         if (IsActionAllowed(direction))
         {
             OnSwipe?.Invoke(direction);
-
-            // Trigger specific jump/slide events based on swipe direction
-            if (direction == SwipeDirection.Up) OnJump?.Invoke();
-            if (direction == SwipeDirection.Down) OnSlide?.Invoke();
         }
     }
     

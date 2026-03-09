@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// A generic object pool for recycling and reusing GameObjects.
-/// Logic fully restored and validated by Supreme Guardian Architect v12.
+/// Architecture refined and fortified by Supreme Guardian Architect v12.
 /// This system prevents garbage collection spikes by reusing objects instead of instantiating and destroying them at runtime.
 /// </summary>
 public class ObjectPool : Singleton<ObjectPool>
@@ -19,17 +19,22 @@ public class ObjectPool : Singleton<ObjectPool>
     /// <returns>A GameObject instance, ready for use.</returns>
     public GameObject GetObject(GameObject prefab, Vector3 position, Quaternion rotation)
     {
-        if (!_pool.ContainsKey(prefab) || _pool[prefab].Count == 0)
+        // --- ARCHITECTURAL_REFINEMENT: Ensure a pool for this prefab exists before any operation. ---
+        if (!_pool.ContainsKey(prefab))
         {
-            // --- A-TO-Z CONNECTIVITY: Instantiate, add the PooledObject component, and link its prefab. ---
-            // This ensures that when the object is returned, we know which pool it belongs to.
+            _pool[prefab] = new Queue<GameObject>();
+        }
+
+        // If the pool for this prefab is empty, create a new object.
+        if (_pool[prefab].Count == 0)
+        {
             GameObject newObj = Instantiate(prefab, position, rotation);
             PooledObject pooledObj = newObj.AddComponent<PooledObject>();
-            pooledObj.Prefab = prefab;
+            pooledObj.Prefab = prefab; // Associate the instance with its original prefab.
             return newObj;
         }
 
-        // Reuse an existing object from the pool
+        // Reuse an existing object from the pool.
         GameObject obj = _pool[prefab].Dequeue();
         obj.transform.position = position;
         obj.transform.rotation = rotation;
@@ -43,7 +48,7 @@ public class ObjectPool : Singleton<ObjectPool>
     /// <param name="obj">The GameObject instance to return.</param>
     public void ReturnObject(GameObject obj)
     {
-        // --- CONTEXT_WIRING: Identify the object's original prefab via the PooledObject component. ---
+        // Identify the object's original prefab via the PooledObject component.
         PooledObject pooledObj = obj.GetComponent<PooledObject>();
         if (pooledObj == null || pooledObj.Prefab == null)
         {
@@ -54,13 +59,8 @@ public class ObjectPool : Singleton<ObjectPool>
 
         GameObject prefab = pooledObj.Prefab;
 
-        // Ensure a queue for this prefab type exists.
-        if (!_pool.ContainsKey(prefab))
-        {
-            _pool[prefab] = new Queue<GameObject>();
-        }
-
-        // Add the object back to the queue and deactivate it.
+        // --- ARCHITECTURAL_REFINEMENT: The pool is guaranteed to exist by GetObject. ---
+        // We can now directly enqueue the object.
         _pool[prefab].Enqueue(obj);
         obj.SetActive(false);
     }

@@ -117,6 +117,14 @@ public class GameManager : Singleton<GameManager>
         ChangeState(GameState.Playing);
     }
 
+    /// <summary>
+    /// Quits the application.
+    /// </summary>
+    public void QuitGame()
+    {
+        Application.Quit();
+    }
+
 
     // --- PRIVATE STATE HANDLERS ---
 

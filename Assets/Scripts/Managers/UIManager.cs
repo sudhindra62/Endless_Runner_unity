@@ -40,6 +40,10 @@ public class UIManager : Singleton<UIManager>
     [SerializeField] private Button restartButton_GameOver;
     [Tooltip("Button to restart the game from the pause menu.")]
     [SerializeField] private Button restartButton_Pause;
+    [Tooltip("Button to quit the game from the main menu.")]
+    [SerializeField] private Button quitButton_MainMenu;
+    [Tooltip("Button to quit the game from the game over screen.")]
+    [SerializeField] private Button quitButton_GameOver;
 
 
     protected override void Awake()
@@ -51,12 +55,14 @@ public class UIManager : Singleton<UIManager>
         resumeButton.onClick.AddListener(GameManager.Instance.ResumeGame);
         restartButton_GameOver.onClick.AddListener(GameManager.Instance.RestartGame);
         restartButton_Pause.onClick.AddListener(GameManager.Instance.RestartGame);
+        quitButton_MainMenu.onClick.AddListener(GameManager.Instance.QuitGame);
+        quitButton_GameOver.onClick.AddListener(GameManager.Instance.QuitGame);
     }
 
     private void OnEnable()
     {
         // --- A-TO-Z CONNECTIVITY: Subscribe to events from other managers ---
-        // GameManager.OnGameStateChanged += HandleGameStateChanged; // This assumes a static event. Let's use direct calls from GameManager for now.
+        GameManager.OnGameStateChanged += HandleGameStateChanged;
         ScoreManager.OnScoreChanged += UpdateScoreDisplay;
         ScoreManager.OnHighScoreChanged += UpdateHighScoreDisplay;
     }
@@ -64,7 +70,7 @@ public class UIManager : Singleton<UIManager>
     private void OnDisable()
     {
         // --- A-TO-Z CONNECTIVITY: Unsubscribe to prevent memory leaks ---
-        // GameManager.OnGameStateChanged -= HandleGameStateChanged;
+        GameManager.OnGameStateChanged -= HandleGameStateChanged;
         ScoreManager.OnScoreChanged -= UpdateScoreDisplay;
         ScoreManager.OnHighScoreChanged -= UpdateHighScoreDisplay;
     }
@@ -80,7 +86,7 @@ public class UIManager : Singleton<UIManager>
     /// <summary>
     /// Central handler for switching UI panels based on game state.
     /// </summary>
-    public void HandleGameStateChanged(GameManager.GameState newState)
+    private void HandleGameStateChanged(GameState newState)
     {
         // Deactivate all panels first to ensure a clean slate
         mainMenuPanel.SetActive(false);
@@ -91,16 +97,16 @@ public class UIManager : Singleton<UIManager>
         // Activate the correct panel for the new state
         switch (newState)
         {
-            case GameManager.GameState.MainMenu:
+            case GameState.MainMenu:
                 mainMenuPanel.SetActive(true);
                 break;
-            case GameManager.GameState.Playing:
+            case GameState.Playing:
                 gameHUDPanel.SetActive(true);
                 break;
-            case GameManager.GameState.Paused:
+            case GameState.Paused:
                 pauseMenuPanel.SetActive(true);
                 break;
-            case GameManager.GameState.GameOver:
+            case GameState.GameOver:
                 gameOverPanel.SetActive(true);
                 // Update final scores when game is over
                 finalScoreText_GameOver.text = "Score: " + ScoreManager.Instance.CurrentScore.ToString();

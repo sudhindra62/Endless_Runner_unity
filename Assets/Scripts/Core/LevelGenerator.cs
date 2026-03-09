@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Procedurally generates the level by spawning and recycling track segments in sync with the game state.
-/// Logic fully restored and integrated by Supreme Guardian Architect v12.
+/// Logic restored and fortified by Supreme Guardian Architect v12.
 /// This system ensures an endless and varied track for the player to traverse.
 /// </summary>
 public class LevelGenerator : Singleton<LevelGenerator>
@@ -42,12 +42,22 @@ public class LevelGenerator : Singleton<LevelGenerator>
     {
         if (!_isGenerating || _playerTransform == null) return;
 
-        // --- CORE LOGIC: Check if the player has advanced far enough to trigger the next segment. ---
-        // This maintains a buffer of track ahead of the player at all times.
+        // Proactively spawn new track segments well ahead of the player.
         if (_playerTransform.position.z > _lastSpawnZ - (segmentsToMaintain * trackSegmentLength))
         {
             SpawnTrackSegment();
-            DespawnTrackSegment();
+        }
+
+        // Continuously clean up segments that are far behind the player.
+        // This is more robust than simply maintaining a fixed number of segments.
+        if (_activeTrackSegments.Count > 0)
+        {
+            GameObject oldestSegment = _activeTrackSegments.Peek();
+            if (oldestSegment != null && _playerTransform.position.z > oldestSegment.transform.position.z + (trackSegmentLength * 1.5f))
+            {
+                GameObject segmentToDespawn = _activeTrackSegments.Dequeue();
+                ObjectPool.Instance.ReturnObject(segmentToDespawn);
+            }
         }
     }
 
@@ -84,6 +94,7 @@ public class LevelGenerator : Singleton<LevelGenerator>
         _playerTransform = playerObject.transform;
 
         // Pre-warm the level with the initial set of track segments.
+        _lastSpawnZ = 0f; // Reset spawn position
         for (int i = 0; i < segmentsToMaintain; i++)
         {
             SpawnTrackSegment();
@@ -106,7 +117,7 @@ public class LevelGenerator : Singleton<LevelGenerator>
         _lastSpawnZ = 0f;
     }
 
-    // --- SEGMENT SPAWNING & DESPAWNING ---
+    // --- SEGMENT SPAWNING ---
 
     private void SpawnTrackSegment()
     {
@@ -127,16 +138,5 @@ public class LevelGenerator : Singleton<LevelGenerator>
         // Add the new segment to our tracking queue and update the spawn position for the next one.
         _activeTrackSegments.Enqueue(newSegment);
         _lastSpawnZ += trackSegmentLength;
-    }
-
-    private void DespawnTrackSegment()
-    {
-        // We only despawn if we have more segments than we need to maintain.
-        // This keeps the scene clean and performance high.
-        if (_activeTrackSegments.Count > segmentsToMaintain)
-        {
-            GameObject oldSegment = _activeTrackSegments.Dequeue();
-            ObjectPool.Instance.ReturnObject(oldSegment);
-        }
     }
 }

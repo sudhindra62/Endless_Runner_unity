@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -20,6 +21,7 @@ public class ScoreManager : Singleton<ScoreManager>
     private float _scoreMultiplier = 1f;
     private bool _isScoringEnabled = false;
     private Transform _playerTransform;
+    private Coroutine _multiplierCoroutine;
 
     protected override void Awake()
     {
@@ -29,7 +31,7 @@ public class ScoreManager : Singleton<ScoreManager>
 
     void Start()
     {
-        // Load HighScore from PlayerPrefs or a save file
+        // Load HighScore from PlayerPrefs
         HighScore = PlayerPrefs.GetInt("HighScore", 0);
         OnHighScoreChanged?.Invoke(HighScore);
     }
@@ -48,12 +50,15 @@ public class ScoreManager : Singleton<ScoreManager>
     {
         if (_isScoringEnabled && _playerTransform != null)
         {
-            // Increase score based on distance traveled
-            _distanceScore = _playerTransform.position.z;
-            int newScore = Mathf.RoundToInt(_distanceScore * _scoreMultiplier);
-            if (newScore > CurrentScore)
+            // Increase score based on distance traveled forward
+            if (_playerTransform.position.z > _distanceScore)
             {
-                SetScore(newScore);
+                _distanceScore = _playerTransform.position.z;
+                int newScore = Mathf.RoundToInt(_distanceScore * _scoreMultiplier);
+                if (newScore > CurrentScore)
+                {
+                    SetScore(newScore);
+                }
             }
         }
     }
@@ -66,19 +71,32 @@ public class ScoreManager : Singleton<ScoreManager>
         SetScore(CurrentScore + amount);
     }
 
-    public void SetScoreMultiplier(float multiplier, float duration)
+    /// <summary>
+    /// Applies a score multiplier for a specified duration.
+    /// </summary>
+    /// <param name="multiplier">The multiplier to apply.</param>
+    /// <param name="duration">The duration in seconds.</param>
+    public void ApplyScoreMultiplier(float multiplier, float duration)
     {
-        _scoreMultiplier = multiplier;
-        // In a full implementation, a coroutine would reset this.
-        // For now, it's a persistent multiplier.
+        if (_multiplierCoroutine != null)
+        {
+            StopCoroutine(_multiplierCoroutine);
+        }
+        _multiplierCoroutine = StartCoroutine(MultiplierCoroutine(multiplier, duration));
     }
 
-    public void ResetScoreMultiplier()
+    // --- COROUTINES ---
+
+    private IEnumerator MultiplierCoroutine(float multiplier, float duration)
     {
+        _scoreMultiplier = multiplier;
+        yield return new WaitForSeconds(duration);
         _scoreMultiplier = 1f;
+        _multiplierCoroutine = null;
     }
 
     // --- PRIVATE METHODS ---
+
     private void SetScore(int newScore)
     {
         CurrentScore = newScore;
@@ -96,11 +114,17 @@ public class ScoreManager : Singleton<ScoreManager>
         }
     }
 
-    private void ResetScore()
+    private void ResetRunData()
     {
         SetScore(0);
         _distanceScore = 0f;
-        _playerTransform = null; // Clear player reference
+        _playerTransform = null;
+        _scoreMultiplier = 1f;
+        if (_multiplierCoroutine != null)
+        {
+            StopCoroutine(_multiplierCoroutine);
+            _multiplierCoroutine = null;
+        }
     }
 
     // --- Event Handlers ---
@@ -112,13 +136,12 @@ public class ScoreManager : Singleton<ScoreManager>
         switch (newState)
         {
             case GameState.MainMenu:
-                ResetScore();
+                ResetRunData();
                 break;
             case GameState.Playing:
-                ResetScore();
+                ResetRunData();
                 _isScoringEnabled = true;
 
-                // Find the player at the start of the game
                 GameObject player = GameObject.FindGameObjectWithTag("Player");
                 if (player != null)
                 {
@@ -126,13 +149,18 @@ public class ScoreManager : Singleton<ScoreManager>
                 }
                 else
                 {
-                    Debug.LogError("ScoreManager: Could not find Player object in scene. Make sure the player is tagged correctly.");
+                    Debug.LogError("Guardian Architect ERROR: ScoreManager could not find Player. Scoring disabled.");
                     _isScoringEnabled = false;
                 }
                 break;
             case GameState.GameOver:
                 _isScoringEnabled = false;
                 CheckForHighScore();
+                if (_multiplierCoroutine != null)
+                {
+                    StopCoroutine(_multiplierCoroutine);
+                    _multiplierCoroutine = null;
+                }
                 break;
         }
     }

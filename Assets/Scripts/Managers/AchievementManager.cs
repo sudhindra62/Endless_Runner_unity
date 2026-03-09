@@ -1,66 +1,106 @@
-
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-/// <summary>
-/// Manages all achievement-related logic.
-/// </summary>
-public class AchievementManager : Singleton<AchievementManager>
+namespace Achievements
 {
-    [Header("Achievement Configuration")]
-    [Tooltip("A list of all achievements.")]
-    public List<QuestData> allAchievements;
-
-    [Header("Live Achievement Data")]
-    public List<QuestProgressTracker> achievementQuests = new List<QuestProgressTracker>();
-
-    public static event System.Action OnAchievementLogChanged;
-
-    protected override void Awake()
+    /// <summary>
+    /// Fortified manager for all achievement-related logic.
+    /// This system is now robust, decoupled, and data-driven.
+    /// </summary>
+    public class AchievementManager : MonoBehaviour
     {
-        base.Awake();
-        LoadAchievements();
-    }
+        // --- Singleton Pattern ---
+        public static AchievementManager Instance { get; private set; }
 
-    private void LoadAchievements()
-    {
-        var achievements = allAchievements.Where(q => q.questType == QuestType.Achievement).ToList();
-        foreach (var achievement in achievements)
-        {
-            achievementQuests.Add(new QuestProgressTracker(achievement));
-        }
-    }
+        [Header("Configuration")]
+        [Tooltip("The database containing all achievements for the game.")]
+        [SerializeField] private AchievementDatabase _achievementDatabase;
 
-    public void UpdateAchievementProgress(string questIdentifier, int amount)
-    {
-        var achievementToUpdate = achievementQuests.FirstOrDefault(q => q.questData.questName == questIdentifier && !q.isCompleted);
-        if (achievementToUpdate != null)
-        {
-            achievementToUpdate.AddProgress(amount);
-            OnAchievementLogChanged?.Invoke();
-        }
-    }
+        // --- State ---
+        private Dictionary<AchievementID, AchievementProgressData> _achievementProgress;
 
-    public void ClaimAchievementReward(QuestProgressTracker achievement)
-    {
-        if (!achievement.isCompleted) return;
+        // --- Events ---
+        public static event System.Action<Achievement> OnAchievementCompleted;
 
-        // Grant standard rewards
-        if (CurrencyManager.Instance != null)
+        private void Awake()
         {
-            CurrencyManager.Instance.AddCoins(achievement.questData.rewardCoins);
-            CurrencyManager.Instance.AddGems(achievement.questData.rewardGems);
-        }
-        if (PlayerProgression.Instance != null)
-        {
-            PlayerProgression.Instance.AddXP(achievement.questData.rewardXP);
-        }
-        if (RewardManager.Instance != null && achievement.questData.rewardItemPrefab != null)
-        {
-            RewardManager.Instance.GrantReward(achievement.questData.rewardItemPrefab);
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+
+            InitializeAchievements();
         }
 
-        OnAchievementLogChanged?.Invoke();
+        private void OnEnable()
+        {
+            AchievementProgressData.OnAchievementUnlocked += HandleAchievementUnlocked;
+        }
+
+        private void OnDisable()
+        {
+            AchievementProgressData.OnAchievementUnlocked -= HandleAchievementUnlocked;
+        }
+
+        /// <summary>
+        /// Initializes the achievement progress from the database.
+        /// </summary>
+        private void InitializeAchievements()
+        {
+            _achievementProgress = new Dictionary<AchievementID, AchievementProgressData>();
+            if (_achievementDatabase == null) 
+            {
+                Debug.LogError("AchievementDatabase is not set in AchievementManager.");
+                return;
+            }
+
+            foreach (var achievement in _achievementDatabase.achievements)
+            {
+                _achievementProgress[achievement.ID] = new AchievementProgressData(achievement);
+            }
+        }
+
+        /// <summary>
+        /// Updates the progress of a specific achievement.
+        /// </summary>
+        public void UpdateAchievementProgress(AchievementID id, int amount)
+        {
+            if (_achievementProgress.TryGetValue(id, out var progressData))
+            {
+                progressData.AddProgress(amount);
+            }
+        }
+
+        /// <summary>
+        /// Handles the event when an achievement is unlocked.
+        /// </summary>
+        private void HandleAchievementUnlocked(Achievement achievement)
+        {
+            // The achievement is unlocked, now let other systems know about it.
+            OnAchievementCompleted?.Invoke(achievement);
+
+            // The RewardManager will listen for this event and grant the rewards.
+        }
+
+        /// <summary>
+        /// Gets the progress of a specific achievement.
+        /// </summary>
+        public AchievementProgressData GetAchievementProgress(AchievementID id)
+        {
+            _achievementProgress.TryGetValue(id, out var progressData);
+            return progressData;
+        }
+
+        /// <summary>
+        /// Gets all achievement progress data.
+        /// </summary>
+        public IEnumerable<AchievementProgressData> GetAllAchievementProgress()
+        {
+            return _achievementProgress.Values;
+        }
     }
 }

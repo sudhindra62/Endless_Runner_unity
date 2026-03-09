@@ -1,30 +1,128 @@
 using UnityEngine;
 
-public class BossManager : MonoBehaviour
+/// <summary>
+/// Defines the possible states of a boss encounter.
+/// </summary>
+public enum BossState
 {
-    [Header("Boss Prefab")]
-    [SerializeField] private GameObject bossPrefab;
+    Inactive,
+    Spawning,
+    Active,
+    Defeated
+}
 
-    private Boss currentBoss;
+/// <summary>
+/// Fortified singleton for managing boss encounters.
+/// This system is now stateful, uses object pooling, and is event-driven.
+/// </summary>
+public class BossManager : Singleton<BossManager>
+{
+    [Header("Boss Configuration")]
+    [Tooltip("The prefab for the boss. Must have a Boss component.")]
+    [SerializeField] private Boss _bossPrefab;
 
-    public void SpawnBoss()
+    // --- State ---
+    private Boss _currentBoss;
+    private BossState _bossState;
+
+    // --- Events ---
+    public static event System.Action<BossState> OnBossStateChanged;
+
+    protected override void Awake()
     {
-        if (bossPrefab != null)
+        base.Awake();
+    }
+
+    private void Start()
+    {
+        // In a full implementation, this manager would listen to a higher-level
+        // game flow or encounter manager to trigger the boss spawn.
+        // e.g., EncounterManager.OnBossEncounterStart += TriggerBossEncounter;
+    }
+
+    /// <summary>
+    /// Public method to initiate the boss encounter. Should be called by a game flow controller.
+    /// </summary>
+    public void TriggerBossEncounter()
+    {
+        if (_bossState != BossState.Inactive)
         {
-            GameObject bossObject = Instantiate(bossPrefab, Vector3.zero, Quaternion.identity);
-            currentBoss = bossObject.GetComponent<Boss>();
-            Debug.Log("Boss has been spawned!");
+            Debug.LogWarning("[BossManager] Tried to spawn a boss when one is already active or spawning.");
+            return;
         }
+        SpawnBoss();
     }
 
-    public void DespawnBoss()
+    private void SpawnBoss()
     {
-        if (currentBoss != null)
-        { 
-            Destroy(currentBoss.gameObject);
-            currentBoss = null;
+        if (_bossPrefab == null)
+        {
+            Debug.LogError("[BossManager] Boss Prefab is not set!");
+            return;
+        }
+
+        SetState(BossState.Spawning);
+        
+        // Use the PoolManager for efficient object instantiation.
+        GameObject bossObject = PoolManager.Instance.GetObject(_bossPrefab.gameObject, Vector3.zero, Quaternion.identity);
+        _currentBoss = bossObject.GetComponent<Boss>();
+
+        if (_currentBoss != null)
+        {
+            // The Boss script should be responsible for notifying the manager of its state changes.
+            _currentBoss.OnReady += HandleBossReady;
+            _currentBoss.OnDefeated += HandleBossDefeated;
+            Debug.Log("<color=orange>[BossManager]</color> Boss has been spawned via PoolManager.");
+        }
+        else
+        {
+            Debug.LogError("[BossManager] Spawned object is missing a Boss component!");
+            SetState(BossState.Inactive);
         }
     }
 
-    // Add methods to trigger boss attacks, check its status, etc.
+    private void DespawnBoss()
+    {
+        if (_currentBoss == null) return;
+
+        // Unsubscribe from events to prevent memory leaks.
+        _currentBoss.OnReady -= HandleBossReady;
+        _currentBoss.OnDefeated -= HandleBossDefeated;
+
+        // Return the object to the pool instead of destroying it.
+        PoolManager.Instance.ReturnObject(_currentBoss.gameObject);
+        _currentBoss = null;
+
+        Debug.Log("<color=orange>[BossManager]</color> Boss has been despawned and returned to the pool.");
+        SetState(BossState.Inactive);
+    }
+
+    // --- Event Handlers from the Boss instance ---
+
+    private void HandleBossReady()
+    {
+        SetState(BossState.Active);
+    }
+
+    private void HandleBossDefeated()
+    {
+        SetState(BossState.Defeated);
+        // In a real game, you might trigger a cinematic or delay before despawning.
+        DespawnBoss();
+    }
+
+    private void SetState(BossState newState)
+    {
+        if (_bossState == newState) return;
+        _bossState = newState;
+        OnBossStateChanged?.Invoke(_bossState);
+    }
+
+    /// <summary>
+    /// Returns the currently active boss instance.
+    /// </summary>
+    public Boss GetCurrentBoss()
+    {
+        return _currentBoss;
+    }
 }

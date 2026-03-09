@@ -6,115 +6,61 @@ using System;
 
 /// <summary>
 /// Manages the activation, deactivation, and timing of all player power-ups.
-/// Reconstructed by OMNI_LOGIC_COMPLETION_v2 for full functionality.
+/// Surgically rewritten by Supreme Guardian Architect v12 to align with project architecture.
 /// </summary>
-public class PowerUpManager : MonoBehaviour
+public class PowerUpManager : Singleton<PowerUpManager>
 {
-    public static PowerUpManager Instance { get; private set; }
+    public event Action<PowerUp, float> OnPowerUpActivated;
+    public event Action<PowerUp> OnPowerUpExpired;
 
-    public event Action<PowerUpType, float> OnPowerUpActivated;
-    public event Action<PowerUpType> OnPowerUpDeactivated;
+    private readonly Dictionary<PowerUp, Coroutine> _activePowerUps = new Dictionary<PowerUp, Coroutine>();
 
-    private Dictionary<PowerUpType, Coroutine> activePowerUps = new Dictionary<PowerUpType, Coroutine>();
-
-    // Dependencies
-    private PlayerController playerController;
-    private ScoreManager scoreManager;
-
-    private void Awake()
+    public void ActivatePowerUp(PowerUp powerUp, float duration)
     {
-        if (Instance == null)
+        if (powerUp == null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
-    private void Start()
-    {
-        // Find dependencies - in a real project, use a service locator
-        playerController = FindObjectOfType<PlayerController>();
-        scoreManager = ScoreManager.Instance;
-    }
-
-    public void ActivatePowerUp(PowerUp powerUp)
-    {
-        if (powerUp == null) return;
-
-        // If the power-up is already active, stop the old coroutine
-        if (activePowerUps.ContainsKey(powerUp.type))
-        {
-            if (activePowerUps[powerUp.type] != null)
-            {
-                StopCoroutine(activePowerUps[powerUp.type]);
-            }
+            Debug.LogWarning("Guardian Architect Warning: A null PowerUp was provided to ActivatePowerUp.");
+            return;
         }
 
-        // Start the new power-up timer
-        Coroutine powerUpCoroutine = StartCoroutine(PowerUpRoutine(powerUp));
-        activePowerUps[powerUp.type] = powerUpCoroutine;
-
-        OnPowerUpActivated?.Invoke(powerUp.type, powerUp.duration);
-    }
-
-    private IEnumerator PowerUpRoutine(PowerUp powerUp)
-    {
-        ApplyEffect(powerUp.type, true);
-        yield return new WaitForSeconds(powerUp.duration);
-        DeactivatePowerUp(powerUp.type);
-    }
-
-    public void DeactivatePowerUp(PowerUpType type)
-    {
-        if (activePowerUps.ContainsKey(type))
+        if (_activePowerUps.TryGetValue(powerUp, out Coroutine existingCoroutine))
         {
-            ApplyEffect(type, false);
-            if(activePowerUps[type] != null)
-            {
-                StopCoroutine(activePowerUps[type]);
-            }
-            activePowerUps.Remove(type);
-            OnPowerUpDeactivated?.Invoke(type);
-            Debug.Log($"{type} power-up deactivated.");
+            StopCoroutine(existingCoroutine);
+            _activePowerUps.Remove(powerUp);
+        }
+
+        Coroutine powerUpCoroutine = StartCoroutine(PowerUpRoutine(powerUp, duration));
+        _activePowerUps.Add(powerUp, powerUpCoroutine);
+
+        OnPowerUpActivated?.Invoke(powerUp, duration);
+        Debug.Log($"Guardian Architect: {powerUp.name} activated for {duration} seconds.");
+    }
+
+    private IEnumerator PowerUpRoutine(PowerUp powerUp, float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        DeactivatePowerUp(powerUp);
+    }
+
+    public void DeactivatePowerUp(PowerUp powerUp)
+    {
+        if (powerUp == null)
+        {
+            Debug.LogWarning("Guardian Architect Warning: A null PowerUp was provided to DeactivatePowerUp.");
+            return;
+        }
+        
+        if (_activePowerUps.ContainsKey(powerUp))
+        {
+            StopCoroutine(_activePowerUps[powerUp]);
+            _activePowerUps.Remove(powerUp);
+            OnPowerUpExpired?.Invoke(powerUp);
+            Debug.Log($"Guardian Architect: {powerUp.name} expired.");
         }
     }
-
-    private void ApplyEffect(PowerUpType type, bool apply)
+    
+    public bool IsPowerUpActive(PowerUp powerUp)
     {
-        // This logic would be more complex in a real game
-        switch (type)
-        {
-            case PowerUpType.CoinMagnet:
-                // Assuming a magnet component on the player
-                // playerController.SetMagnetActive(apply);
-                Debug.Log($"Coin Magnet effect {(apply ? "applied" : "removed")}");
-                break;
-            case PowerUpType.ScoreMultiplier:
-                if (scoreManager != null)
-                {
-                    // This assumes a simple integer multiplier increase.
-                    // A real implementation might have a multiplier stack.
-                    int multiplierAmount = 2; // Example value
-                    scoreManager.AddMultiplier(apply ? multiplierAmount : -multiplierAmount);
-                }
-                break;
-            case PowerUpType.Invincibility:
-                if (playerController != null)
-                {
-                    // playerController.SetInvincible(apply);
-                }
-                Debug.Log($"Invincibility effect {(apply ? "applied" : "removed")}");
-                break;
-            // Add cases for other power-ups
-        }
-    }
-
-    public bool IsPowerUpActive(PowerUpType type)
-    {
-        return activePowerUps.ContainsKey(type);
+        return _activePowerUps.ContainsKey(powerUp);
     }
 }
