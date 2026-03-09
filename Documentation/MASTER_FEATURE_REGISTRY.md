@@ -76,7 +76,7 @@
 
 13. **FEATURE: AAA Rotating World Theme Engine**
     -   **STATUS:** [COMPLETE]
-    -   **DESCRIPTION:** Manages the automated weekly rotation and event-based override of the game's visual and audio themes. The system is data-driven, using `ThemeProfileData` ScriptableObjects to define every aspect of a theme, from skybox and lighting to materials and music. It is optimized for performance by using a `ThemeMaterialRegistry` to prevent runtime material duplication and ensures theme swaps only occur at the start of a run to avoid mid-game hitches.
+    -   **DESCRIPTION:** Manages the automated weekly rotation and event-based override of the game'''s visual and audio themes. The system is data-driven, using `ThemeProfileData` ScriptableObjects to define every aspect of a theme, from skybox and lighting to materials and music. It is optimized for performance by using a `ThemeMaterialRegistry` to prevent runtime material duplication and ensures theme swaps only occur at the start of a run to avoid mid-game hitches.
     -   **GAPS:** None.
 
 ---
@@ -130,7 +130,7 @@
 
 ---
 
-### **TECHNICAL & UI (12 Features)**
+### **TECHNICAL & UI (13 Features)**
 
 23. **FEATURE: UI Management System**
     -   **STATUS:** [PARTIAL]
@@ -154,7 +154,7 @@
 
 27. **FEATURE: Input Management**
     -   **STATUS:** [COMPLETE]
-    -   **DESCRIPTION:** Uses Unity's Input System to handle swipe and touch controls. Foundational and stable.
+    -   **DESCRIPTION:** Uses Unity'''s Input System to handle swipe and touch controls. Foundational and stable.
     -   **GAPS:** None.
 
 28. **FEATURE: Remote Config Integration**
@@ -186,3 +186,8 @@
     -   **STATUS:** [PARTIAL]
     -   **DESCRIPTION:** Records player runs and allows for playback as a "ghost" in subsequent runs. The system serializes run data to a byte array for efficient storage and retrieval. The recorder and playback systems are self-contained and located in `Assets/Scripts/Multiplayer/GhostRunRecorder.cs` and `Assets/Scripts/Multiplayer/GhostRunPlayback.cs`.
     -   **GAPS:** The system is not yet integrated with the main game loop. The `StartRecording` and `StopRecordingAndGetData` methods are not yet called. There is no UI to trigger the recording or playback.
+    
+34. **FEATURE: Camera Shake System**
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** A centralized singleton (`CameraShakeController`) for creating and managing camera shake effects. It provides a simple `TriggerShake(duration, magnitude)` method that can be called from any other script. The system ensures that only one shake coroutine runs at a time, preventing conflicting effects. The shake offset is read by the `CameraController` in `LateUpdate` to ensure it is applied after all other camera movements.
+    -   **GAPS:** None.

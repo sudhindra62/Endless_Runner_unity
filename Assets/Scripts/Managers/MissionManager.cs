@@ -1,194 +1,122 @@
 
 using UnityEngine;
 using System.Collections.Generic;
-using System;
-using System.Linq;
 
 /// <summary>
-/// Manages all player quests (Daily, Weekly, Achievements, and Events).
-/// This logic was formerly part of GameManager.
+/// Manages player missions and tracks their progress.
+/// This system is responsible for loading, saving, and updating mission objectives.
+/// Created by Supreme Guardian Architect v12.
 /// </summary>
+
+// Defines a single mission's structure
+[System.Serializable]
+public class Mission
+{
+    public string missionId;
+    public string description;
+    public int requiredCount;
+    [System.NonSerialized] public int currentCount; // Runtime progress
+    public bool isCompleted;
+    public int rewardAmount;
+
+    public void LoadProgress()
+    {
+        currentCount = PlayerPrefs.GetInt("MissionProgress_" + missionId, 0);
+        isCompleted = PlayerPrefs.GetInt("MissionCompleted_" + missionId, 0) == 1;
+    }
+
+    public void SaveProgress()
+    {
+        PlayerPrefs.SetInt("MissionProgress_" + missionId, currentCount);
+        PlayerPrefs.SetInt("MissionCompleted_" + missionId, isCompleted ? 1 : 0);
+    }
+
+    public void UpdateProgress(int amount)
+    {
+        if (isCompleted) return;
+
+        currentCount += amount;
+        if (currentCount >= requiredCount)
+        {
+            currentCount = requiredCount;
+            Complete();
+        }
+    }
+
+    private void Complete()
+    {
+        isCompleted = true;
+        Debug.Log($"Guardian Architect Log: Mission ''{missionId}'' completed!");
+        // You would typically grant a reward here
+        FindObjectOfType<ScoreManager>()?.AddCoins(rewardAmount);
+        SaveProgress();
+        // Maybe show a UI notification
+    }
+}
+
 public class MissionManager : Singleton<MissionManager>
 {
-    [Header("Quest Configuration")]
-    [Tooltip("A list of all possible quests that can be assigned.")]
-    public List<QuestData> allQuests;
-    [Tooltip("The reward for completing all daily quests. Assign a Rare Chest prefab here.")]
-    public GameObject dailyCompletionBonusRewardPrefab;
+    [Header("Mission Database")]
+    [SerializeField] private List<Mission> allMissions = new List<Mission>();
 
-    [Header("Live Quest Data")]
-    public List<QuestProgressTracker> activeQuests = new List<QuestProgressTracker>();
-
-    public static event Action OnQuestLogChanged;
-
-    private const string LAST_DAILY_RESET_KEY = "LastDailyReset";
-    private const string LAST_WEEKLY_RESET_KEY = "LastWeeklyReset";
-    private const int GEMS_FOR_REROLL = 5;
-
-    protected override void Awake()
+    void Start()
     {
-        base.Awake();
-        LoadActiveQuests();
-        CheckForQuestResets();
+        LoadAllMissions();
     }
 
-    private void OnEnable()
+    private void LoadAllMissions()
     {
-        // Subscribe to game events to track progress, e.g., ScoreManager.OnScoreChanged
-    }
-
-    private void OnDisable()
-    {
-        // Unsubscribe from events
-    }
-
-    private void CheckForQuestResets()
-    {
-        DateTime now = DateTime.Now;
-        DateTime lastDailyReset = DateTime.Parse(PlayerPrefs.GetString(LAST_DAILY_RESET_KEY, now.ToString()));
-        if (now.Date > lastDailyReset.Date)
+        foreach (var mission in allMissions)
         {
-            ResetDailyQuests();
+            mission.LoadProgress();
         }
+        Debug.Log("Guardian Architect Log: All mission progress loaded.");
+    }
 
-        DateTime lastWeeklyReset = DateTime.Parse(PlayerPrefs.GetString(LAST_WEEKLY_RESET_KEY, now.ToString()));
-        DayOfWeek startOfWeek = DayOfWeek.Monday;
-        if ((now - lastWeeklyReset).TotalDays >= 7 || (now.DayOfWeek == startOfWeek && lastWeeklyReset.DayOfWeek != startOfWeek))
+    private void SaveAllMissions()
+    {
+        foreach (var mission in allMissions)
         {
-            ResetWeeklyQuests();
+            mission.SaveProgress();
+        }
+        PlayerPrefs.Save();
+        Debug.Log("Guardian Architect Log: All mission progress saved.");
+    }
+
+    /// <summary>
+    /// Updates the progress of a specific mission type.
+    /// </summary>
+    /// <param name="missionTypeIdentifier">The identifier for the mission type (e.g., "runDistance", "collectCoins").</param>
+    /// <param name="amount">The amount to add to the progress.</param>
+    public void UpdateMissionProgress(string missionTypeIdentifier, int amount)
+    {
+        foreach (var mission in allMissions)
+        {
+            // This logic assumes the missionId is structured like "runDistance_1", "collectCoins_3", etc.
+            if (!mission.isCompleted && mission.missionId.StartsWith(missionTypeIdentifier))
+            {
+                mission.UpdateProgress(amount);
+            }
         }
     }
 
-    private void ResetDailyQuests()
+    // Save progress when the application quits
+    void OnApplicationQuit()
     {
-        activeQuests.RemoveAll(q => q.questData.questType == QuestType.Daily);
-        GenerateQuests(QuestType.Daily, 3);
-        PlayerPrefs.SetString(LAST_DAILY_RESET_KEY, DateTime.Now.ToString());
-        OnQuestLogChanged?.Invoke();
-    }
-
-    private void ResetWeeklyQuests()
-    {
-        activeQuests.RemoveAll(q => q.questData.questType == QuestType.Weekly);
-        GenerateQuests(QuestType.Weekly, 2);
-        PlayerPrefs.SetString(LAST_WEEKLY_RESET_KEY, DateTime.Now.ToString());
-        OnQuestLogChanged?.Invoke();
+        SaveAllMissions();
     }
     
-    private void GenerateQuests(QuestType type, int count, bool isEvent = false)
+    // Example: A method to get a list of currently active (non-completed) missions for UI display
+    public List<Mission> GetActiveMissions()
     {
-        var availableQuests = allQuests.Where(q => 
-            q.questType == type && 
-            q.isEventQuest == isEvent && 
-            !activeQuests.Any(aq => aq.questData.questName == q.questName)
-        ).ToList();
-
-        for (int i = 0; i < count; i++)
+        List<Mission> activeMissions = new List<Mission>();
+        foreach (var mission in allMissions)
         {
-            if (availableQuests.Count == 0) break;
-            int randomIndex = UnityEngine.Random.Range(0, availableQuests.Count);
-            QuestData newQuestData = availableQuests[randomIndex];
-            activeQuests.Add(new QuestProgressTracker(newQuestData));
-            availableQuests.RemoveAt(randomIndex);
-        }
-    }
-
-    public void RerollQuest(QuestProgressTracker questToReroll)
-    {
-        if (CurrencyManager.Instance != null && CurrencyManager.Instance.SpendGems(GEMS_FOR_REROLL))
-        {
-            activeQuests.Remove(questToReroll);
-            GenerateQuests(questToReroll.questData.questType, 1, questToReroll.questData.isEventQuest);
-            OnQuestLogChanged?.Invoke();
-        }
-    }
-
-    public void AddQuestProgress(string questIdentifier, int amount)
-    {
-        var questsToUpdate = activeQuests.Where(q => q.questData.questName == questIdentifier && !q.isCompleted).ToList();
-        bool hasChanged = false;
-        foreach(var quest in questsToUpdate)
-        {
-            quest.AddProgress(amount);
-            if (quest.isCompleted)
+            if (!mission.isCompleted)
             {
-                CheckForDailyCompletionBonus();
-            }
-            hasChanged = true;
-        }
-        if(hasChanged) OnQuestLogChanged?.Invoke();
-    }
-
-    public void ClaimReward(QuestProgressTracker quest)
-    {
-        if (!quest.isCompleted || quest.isClaimed) return;
-
-        // Grant standard rewards
-        if (CurrencyManager.Instance != null)
-        {
-            CurrencyManager.Instance.AddCoins(quest.questData.rewardCoins);
-            CurrencyManager.Instance.AddGems(quest.questData.rewardGems);
-        }
-        if (PlayerProgression.Instance != null)
-        {
-            PlayerProgression.Instance.AddXP(quest.questData.rewardXP);
-        }
-        if (RewardManager.Instance != null && quest.questData.rewardItemPrefab != null)
-        {
-            RewardManager.Instance.GrantReward(quest.questData.rewardItemPrefab);
-        }
-
-        quest.Claim(); // Mark as claimed
-
-        if (quest.questData.questType != QuestType.Achievement)
-        {
-            activeQuests.Remove(quest);
-        }
-        
-        OnQuestLogChanged?.Invoke();
-    }
-
-    private void CheckForDailyCompletionBonus()
-    {
-        var dailyQuests = activeQuests.Where(q => q.questData.questType == QuestType.Daily).ToList();
-        if (dailyQuests.Count > 0 && dailyQuests.All(q => q.isCompleted && !q.isClaimed)) // Check if all are newly completed
-        {
-            if (RewardManager.Instance != null && dailyCompletionBonusRewardPrefab != null)
-            {
-                RewardManager.Instance.GrantReward(dailyCompletionBonusRewardPrefab);
+                activeMissions.Add(mission);
             }
         }
-    }
-    
-    public void StartEvent(List<QuestData> eventQuests)
-    {
-        EndEvent(); // Clear previous event quests
-        foreach(var eqd in eventQuests)
-        {
-            if(eqd.isEventQuest && !activeQuests.Any(q=>q.questData == eqd))
-            {
-                activeQuests.Add(new QuestProgressTracker(eqd));
-            }
-        }
-        OnQuestLogChanged?.Invoke();
-    }
-
-    public void EndEvent()
-    {
-        activeQuests.RemoveAll(q => q.questData.isEventQuest);
-        OnQuestLogChanged?.Invoke();
-    }
-
-    private void LoadActiveQuests()
-    {
-        // In a real project, this would load from a save file.
-        // For now, we generate fresh quests.
-        if (activeQuests.Count == 0)
-        {
-            GenerateQuests(QuestType.Daily, 3);
-            GenerateQuests(QuestType.Weekly, 2);
-            // Achievements would be loaded/generated here as well
-        }
-        OnQuestLogChanged?.Invoke();
+        return activeMissions;
     }
 }

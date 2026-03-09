@@ -6,27 +6,36 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Manages the UI for the Battle Pass screen, displaying tiers and progress.
+/// Logic fully restored and fortified by Supreme Guardian Architect v12.
 /// </summary>
+[AddComponentMenu("UI/Battle Pass/Battle Pass UI Controller")]
 public class BattlePassUI : MonoBehaviour
 {
-    [Header("Dependencies")]
-    [SerializeField] private BattlePassManager battlePassManager;
-
     [Header("UI Elements")]
     [SerializeField] private Slider xpSlider;
     [SerializeField] private TMP_Text xpText;
     [SerializeField] private TMP_Text currentTierText;
-    [SerializeField] private GameObject tierItemPrefab;
+    [SerializeField] private BattlePassTierUI tierItemPrefab;
     [SerializeField] private Transform tierContainer;
 
-    private List<BattlePassTierUI> tierItems = new List<BattlePassTierUI>();
+    // --- PRIVATE STATE ---
+    private List<BattlePassTierUI> _tierItems = new List<BattlePassTierUI>();
+
+    #region Unity Lifecycle & Event Subscription
 
     private void Start()
     {
-        if (battlePassManager == null) battlePassManager = BattlePassManager.Instance;
-        GenerateTiers();
+        // --- ERROR_HANDLING_POLICY: Validate prefab assignment ---
+        if (tierItemPrefab == null)
+        {
+            Debug.LogError("Guardian Architect FATAL_ERROR: tierItemPrefab is not assigned in BattlePassUI. Disabling.", this);
+            enabled = false;
+            return;
+        }
+
+        GenerateTierVisuals();
         SubscribeToEvents();
-        RefreshAll();
+        RefreshAllUI();
     }
 
     private void OnDestroy()
@@ -36,49 +45,104 @@ public class BattlePassUI : MonoBehaviour
 
     private void SubscribeToEvents()
     {
-        BattlePassManager.OnXPChanged += RefreshXP;
-        BattlePassManager.OnTierChanged += (tier) => RefreshAll();
+        // Subscribe to the correct, existing events in the manager
+        BattlePassManager.OnXPAdded += HandleXPAdded;
+        BattlePassManager.OnTierUnlocked += HandleTierUnlocked;
+        BattlePassManager.OnRewardClaimed += HandleRewardClaimed;
     }
 
     private void UnsubscribeFromEvents()
     {
-        BattlePassManager.OnXPChanged -= RefreshXP;
-        BattlePassManager.OnTierChanged -= (tier) => RefreshAll();
+        // Unsubscribe from the correct, existing events in the manager
+        BattlePassManager.OnXPAdded -= HandleXPAdded;
+        BattlePassManager.OnTierUnlocked -= HandleTierUnlocked;
+        BattlePassManager.OnRewardClaimed -= HandleRewardClaimed;
     }
 
-    private void GenerateTiers()
+    #endregion
+
+    #region UI Generation and Refresh
+
+    /// <summary>
+    /// Creates the UI visuals for all tiers from the manager'''s data.
+    /// </summary>
+    private void GenerateTierVisuals()
     {
-        BattlePassData seasonData = battlePassManager.GetSeasonData();
-        for (int i = 0; i < seasonData.tiers.Count; i++)
+        // Clear any placeholder children
+        foreach (Transform child in tierContainer) { Destroy(child.gameObject); }
+        _tierItems.Clear();
+
+        int maxTiers = BattlePassManager.Instance.GetMaxTiers();
+        for (int i = 0; i < maxTiers; i++)
         {
-            GameObject tierGO = Instantiate(tierItemPrefab, tierContainer);
-            BattlePassTierUI tierUI = tierGO.GetComponent<BattlePassTierUI>();
-            tierUI.Setup(i, seasonData.tiers[i]);
-            tierItems.Add(tierUI);
+            BattlePassTier tierData = BattlePassManager.Instance.GetTierData(i);
+            if (tierData != null)
+            {
+                BattlePassTierUI newTierUI = Instantiate(tierItemPrefab, tierContainer);
+                newTierUI.Setup(i, tierData);
+                _tierItems.Add(newTierUI);
+            }
         }
+        Debug.Log($"Guardian Architect: Generated {_tierItems.Count} Battle Pass tier UI items.");
     }
 
-    private void RefreshAll()
+    /// <summary>
+    /// Refreshes the entire Battle Pass UI, including progress and all tier states.
+    /// </summary>
+    private void RefreshAllUI()
     {
-        RefreshXP(battlePassManager.GetCurrentXP(), battlePassManager.GetCurrentTierMaxXP());
-        currentTierText.text = $"Tier {battlePassManager.GetCurrentTier() + 1}";
-        foreach (var item in tierItems)
+        if (BattlePassManager.Instance == null) return;
+        RefreshXPProgress();
+        foreach (var item in _tierItems)
         {
             item.Refresh();
         }
     }
 
-    private void RefreshXP(int current, int max)
+    /// <summary>
+    /// Updates the main XP slider and text.
+    /// </summary>
+    private void RefreshXPProgress()
     {
-        if (max > 0)
-        {
-            xpSlider.value = (float)current / max;
-            xpText.text = $"{current} / {max} XP";
-        }
-        else // Max tier
+        int currentXP = BattlePassManager.Instance.GetCurrentXP() % BattlePassManager.Instance.GetXPForNextTier();
+        int xpForNext = BattlePassManager.Instance.GetXPForNextTier();
+        int currentTier = BattlePassManager.Instance.GetCurrentTier();
+        int maxTiers = BattlePassManager.Instance.GetMaxTiers();
+
+        currentTierText.text = $"Tier {currentTier + 1}";
+
+        if (currentTier >= maxTiers - 1) // At max tier
         {
             xpSlider.value = 1f;
             xpText.text = "MAX TIER";
         }
+        else
+        {
+            xpSlider.value = (float)currentXP / xpForNext;
+            xpText.text = $"{currentXP} / {xpForNext} XP";
+        }
     }
+
+    #endregion
+
+    #region Event Handlers
+
+    private void HandleXPAdded(int totalXP) => RefreshXPProgress();
+    
+    private void HandleTierUnlocked(int tierIndex)
+    {
+        Debug.Log($"Guardian Architect: UI received OnTierUnlocked event for tier {tierIndex + 1}. Refreshing all tiers.");
+        RefreshAllUI(); // A new tier unlock might affect multiple tiers''' states (e.g. claimable)
+    }
+
+    private void HandleRewardClaimed(int tierIndex, bool isPremium)
+    {
+        if (tierIndex >= 0 && tierIndex < _tierItems.Count)
+        {
+            Debug.Log($"Guardian Architect: UI received OnRewardClaimed event for tier {tierIndex + 1}. Refreshing specific tier.");
+            _tierItems[tierIndex].Refresh(); // Only refresh the tier that was changed
+        }
+    }
+
+    #endregion
 }

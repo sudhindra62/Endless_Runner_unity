@@ -1,171 +1,106 @@
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System;
-using System.Collections;
 
 /// <summary>
-/// The central nervous system of the game. Manages game state, scene transitions, and coordinates all other managers.
-/// Architecturally enhanced by Supreme Guardian Architect v12 to orchestrate the complete player lifecycle, including the tutorial.
+/// The central nervous system of the game. Manages game state, player lifecycle, and high-level systems.
+/// Ensures that all other managers are correctly initialized and coordinated.
+/// Created by Supreme Guardian Architect v12.
 /// </summary>
 public class GameManager : Singleton<GameManager>
 {
-    // --- EVENTS ---
-    public static event Action<GameState> OnGameStateChanged;
+    public enum GameState { MainMenu, Loading, Playing, Paused, GameOver }
 
-    // --- STATE ---
-    public GameState CurrentState { get; private set; }
-    private bool _isTutorialCompleted;
-    private const string MainSceneName = "MainScene"; // --- ARCHITECTURAL_REFINEMENT: Use a constant for the scene name.
+    [Header("Game State")]
+    [SerializeField] private GameState currentState = GameState.MainMenu;
 
-    // --- UNITY LIFECYCLE & SAVE SYSTEM INTEGRATION ---
+    // System Managers
+    private UIManager uiManager;
+    private ScoreManager scoreManager;
+    private PlayerController playerController;
+
     protected override void Awake()
     {
         base.Awake();
-        DontDestroyOnLoad(gameObject);
+        // Find all essential managers. This is a crucial step for interconnectivity.
+        uiManager = FindObjectOfType<UIManager>();
+        scoreManager = FindObjectOfType<ScoreManager>();
     }
 
-    private void Start()
+    void Start()
     {
-        // The game always starts in the Main Menu on first launch.
-        // We explicitly set a state that doesn't trigger scene loads.
-        ChangeState(GameState.MainMenu);
-    }
-
-    private void OnEnable()
-    {
-        // --- A-TO-Z CONNECTIVITY: Subscribe to critical manager events.
-        SaveManager.OnLoad += HandleLoad;
-        TutorialManager.OnTutorialComplete += HandleTutorialComplete;
-    }
-
-    private void OnDisable()
-    {
-        // --- A-TO-Z CONNECTIVITY: Unsubscribe to prevent memory leaks.
-        SaveManager.OnLoad -= HandleLoad;
-        TutorialManager.OnTutorialComplete -= HandleTutorialComplete;
-    }
-
-    // --- PUBLIC API for STATE CHANGES ---
-
-    public void ChangeState(GameState newState)
-    {
-        if (CurrentState == newState) return;
-        CurrentState = newState;
-
-        switch (newState)
+        // Based on the scene, determine the initial game state.
+        if (SceneManager.GetActiveScene().name == "MainMenu")
         {
-            case GameState.MainMenu:
-                HandleMainMenu();
-                break;
-            case GameState.Playing:
-                HandlePlaying();
-                break;
-            case GameState.Paused:
-                HandlePaused();
-                break;
-            case GameState.GameOver:
-                HandleGameOver();
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(newState), newState, "Invalid game state specified.");
-        }
-
-        OnGameStateChanged?.Invoke(newState);
-
-        // The UIManager is often a direct dependency for state changes.
-        if (UIManager.Instance != null)
-        {
-            UIManager.Instance.HandleGameStateChanged(newState);
-        }
-    }
-
-    // --- PUBLIC API for UI/Button interactions ---
-
-    public void StartGame()
-    {
-        StartCoroutine(StartGameSequence());
-    }
-
-    public void PauseGame()
-    {
-        if (CurrentState == GameState.Playing) ChangeState(GameState.Paused);
-    }
-
-    public void ResumeGame()
-    {
-        if (CurrentState == GameState.Paused) ChangeState(GameState.Playing);
-    }
-
-    public void RestartGame()
-    {
-        Time.timeScale = 1f;
-        StartCoroutine(StartGameSequence()); // Rerunning the start sequence handles the tutorial check correctly.
-    }
-
-    public void QuitGame()
-    {
-        Debug.Log("Guardian Architect: Application quit requested.");
-        Application.Quit();
-    }
-
-    // --- PRIVATE WORKFLOWS & HANDLERS ---
-
-    private IEnumerator StartGameSequence()
-    {
-        Time.timeScale = 1f;
-
-        // Asynchronously load the main game scene to prevent freezing.
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(MainSceneName);
-        while (!asyncLoad.isDone)
-        {
-            yield return null;
-        }
-
-        // --- A-TO-Z CONNECTIVITY: Orchestrate the new player experience. ---
-        if (!_isTutorialCompleted && TutorialManager.Instance != null)
-        {
-            Debug.Log("Guardian Architect: New player detected. Starting tutorial sequence.");
-            TutorialManager.Instance.StartTutorial();
-            // The GameManager will wait for the OnTutorialComplete event before proceeding.
+            ChangeState(GameState.MainMenu);
         }
         else
         {
-            Debug.Log("Guardian Architect: Returning player. Starting game directly.");
             ChangeState(GameState.Playing);
         }
     }
 
-    private void HandleMainMenu() => Time.timeScale = 1f;
-    private void HandlePlaying() => Time.timeScale = 1f;
-    private void HandlePaused() => Time.timeScale = 0f;
-
-    private void HandleGameOver()
+    /// <summary>
+    /// Changes the current game state and performs actions associated with the new state.
+    /// </summary>
+    public void ChangeState(GameState newState)
     {
-        Time.timeScale = 1f; // Keep time moving for game over animations.
-        if (AdManager.Instance != null) AdManager.Instance.ShowInterstitialAdAfterRun();
+        if (currentState == newState) return;
+
+        currentState = newState;
+        Debug.Log($"Guardian Architect Log: Game state changed to {currentState}");
+
+        switch (currentState)
+        {
+            case GameState.MainMenu:
+                // Logic for main menu setup
+                Time.timeScale = 1f;
+                break;
+            case GameState.Loading:
+                // Show loading screen, load assets, etc.
+                Time.timeScale = 1f;
+                break;
+            case GameState.Playing:
+                // Start the game
+                Time.timeScale = 1f;
+                // Find the player in the scene
+                GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+                if (playerObj != null) playerController = playerObj.GetComponent<PlayerController>();
+                scoreManager?.ResetSession();
+                break;
+            case GameState.Paused:
+                // Pause the game
+                Time.timeScale = 0f;
+                uiManager?.TogglePauseMenu();
+                break;
+            case GameState.GameOver:
+                // Handle game over logic
+                Time.timeScale = 0f;
+                scoreManager?.EndSession();
+                if (uiManager != null && scoreManager != null)
+                {
+                    uiManager.ShowGameOverScreen(scoreManager.GetCurrentScore());
+                }
+                break;
+        }
     }
 
-    // --- EVENT HANDLERS ---
-
-    private void HandleLoad(SaveData data)
+    public void PlayerDied()
     {
-        _isTutorialCompleted = data.TutorialCompleted;
-        Debug.Log($"Guardian Architect: Player progression loaded. TutorialCompleted: {_isTutorialCompleted}");
+        ChangeState(GameState.GameOver);
     }
 
-    private void HandleTutorialComplete()
+    public void PauseGame()
     {
-        Debug.Log("Guardian Architect: Tutorial complete signal received. Transitioning to gameplay.");
-        ChangeState(GameState.Playing);
+        if (currentState == GameState.Playing)
+        {
+            ChangeState(GameState.Paused);
+        }
+        else if (currentState == GameState.Paused)
+        {
+            ChangeState(GameState.Playing);
+        }
     }
-}
 
-// Defines the possible states of the game, ensuring a clear and manageable game flow.
-public enum GameState
-{
-    MainMenu,
-    Playing,
-    Paused,
-    GameOver
+    public GameState GetCurrentState() => currentState;
 }

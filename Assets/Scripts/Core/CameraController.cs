@@ -1,10 +1,10 @@
 using UnityEngine;
-using System.Collections;
+using EndlessRunner.Managers; // Ensure the namespace is included
 
 /// <summary>
-/// Manages the main game camera to smoothly follow the player and provides dynamic shake effects.
-/// Logic expanded and fortified by Supreme Guardian Architect v12.
-/// This system ensures a stable, responsive, and professional-grade camera experience with added tactile feedback.
+/// Manages the main game camera to smoothly follow the player.
+/// Integrates with CameraShakeController to apply shake effects.
+/// Logic refactored by Supreme Guardian Architect v13 for full integration with dedicated managers.
 /// </summary>
 public class CameraController : Singleton<CameraController>
 {
@@ -19,14 +19,9 @@ public class CameraController : Singleton<CameraController>
     [Tooltip("How quickly the camera catches up to the target's position. Smaller values are faster.")]
     [SerializeField] private float smoothTime = 0.25f;
 
-    // --- PRIVATE FOLLOW STATE ---
+    // --- PRIVATE STATE ---
     private Vector3 _velocity = Vector3.zero;
-
-    // --- PRIVATE SHAKE STATE ---
-    private float _shakeTimer = 0f;
-    private float _shakeMagnitude = 0f;
-    private float _initialShakeMagnitude = 0f;
-    private float _initialShakeDuration = 1f; // Default to 1 to avoid division by zero
+    private CameraShakeController _shakeController; // Dependency on the new manager
 
     protected override void Awake()
     {
@@ -49,7 +44,16 @@ public class CameraController : Singleton<CameraController>
             {
                 Debug.LogError("Guardian Architect Error: CameraController could not find a target with the 'Player' tag. Please assign the target manually in the Inspector.", this);
                 enabled = false; // Disable script to prevent runtime errors.
+                return;
             }
+        }
+
+        // --- DEPENDENCY RESOLUTION: Find the dedicated shake manager ---
+        // This follows the TOTAL_STABILITY_PROTOCOL by ensuring a clean, non-breaking integration.
+        _shakeController = CameraShakeController.Instance;
+        if (_shakeController == null)
+        {
+            Debug.LogWarning("Guardian Architect Warning: CameraController could not find an instance of CameraShakeController. Shake effects will be disabled. Please ensure a CameraShakeController exists in the scene on the 'Managers' GameObject.", this);
         }
     }
 
@@ -61,37 +65,34 @@ public class CameraController : Singleton<CameraController>
             return; // Exit if there is no target to follow.
         }
 
-        // --- A-to-Z CONNECTIVITY: Smoothly interpolate the camera's current position toward the target position. ---
+        // --- CORE FUNCTION: Smoothly interpolate the camera's current position toward the target position. ---
         Vector3 targetPosition = target.position + offset;
         transform.position = Vector3.SmoothDamp(transform.position, targetPosition, ref _velocity, smoothTime);
 
-        // --- ADDITIVE FEATURE: Apply camera shake if active ---
-        if (_shakeTimer > 0)
+        // --- INTEGRATED FEATURE: Apply camera shake offset from the dedicated manager ---
+        // This reads the value calculated by the CameraShakeController and applies it additively.
+        if (_shakeController != null)
         {
-            // Linearly dampen the shake magnitude over its duration for a smooth falloff.
-            _shakeMagnitude = Mathf.Lerp(_initialShakeMagnitude, 0f, 1f - (_shakeTimer / _initialShakeDuration));
-
-            // Generate a random offset within a sphere and apply it to the camera's position.
-            transform.position += Random.insideUnitSphere * _shakeMagnitude;
-
-            // Decrement the shake timer.
-            _shakeTimer -= Time.deltaTime;
+            transform.position += _shakeController.ShakeOffset;
         }
     }
 
     /// <summary>
-    /// Public API to trigger a camera shake from any other script (e.g., PlayerController on impact).
+    /// Public API to trigger a camera shake. This method now delegates the call to the
+    /// centralized CameraShakeController, preserving the public interface of this script.
+    /// This adheres to the MODIFICATION & GRANULARITY DEFENSE protocol.
     /// </summary>
     /// <param name="duration">The total duration of the shake in seconds.</param>
     /// <param name="magnitude">The maximum intensity/distance of the shake.</param>
     public void TriggerShake(float duration, float magnitude)
     {
-        // Set the timer and magnitude for the shake effect.
-        _shakeTimer = duration;
-        _shakeMagnitude = magnitude;
-
-        // Store the initial values to allow for smooth damping over time.
-        _initialShakeDuration = duration;
-        _initialShakeMagnitude = magnitude;
+        if (_shakeController != null)
+        {
+            _shakeController.TriggerShake(duration, magnitude);
+        }
+        else
+        {
+            Debug.LogWarning("Attempted to trigger shake, but CameraShakeController instance is not available.", this);
+        }
     }
 }

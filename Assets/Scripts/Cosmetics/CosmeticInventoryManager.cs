@@ -1,64 +1,65 @@
 
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
+/// <summary>
+/// Manages the player's inventory of unlocked cosmetic effects.
+/// Created by Supreme Guardian Architect v12 to fulfill the A-to-Z Connectivity mandate for CosmeticEffectManager.
+/// </summary>
 public class CosmeticInventoryManager : Singleton<CosmeticInventoryManager>
 {
-    private List<string> unlockedCosmetics = new List<string>();
-    private Dictionary<CosmeticEffectType, string> equippedCosmetics = new Dictionary<CosmeticEffectType, string>();
+    // Using a HashSet for fast lookups
+    private HashSet<string> _unlockedEffectIDs = new HashSet<string>();
+
+    private const string UNLOCKED_EFFECTS_SAVE_KEY = "UnlockedCosmeticEffects";
 
     protected override void Awake()
     {
         base.Awake();
-        LoadInventory();
+        LoadUnlockedEffects();
     }
 
-    public void UnlockCosmetic(string effectID)
+    /// <summary>
+    /// Checks if a cosmetic effect is unlocked.
+    /// </summary>
+    public bool IsEffectUnlocked(string effectID)
     {
-        if (!unlockedCosmetics.Contains(effectID))
+        return _unlockedEffectIDs.Contains(effectID);
+    }
+
+    /// <summary>
+    /// Unlocks a cosmetic effect for the player.
+    /// </summary>
+    public void UnlockEffect(string effectID)
+    {
+        if (_unlockedEffectIDs.Add(effectID))
         {
-            unlockedCosmetics.Add(effectID);
-            Debug.Log($"Unlocked cosmetic: {effectID}");
-            SaveInventory();
+            SaveUnlockedEffects();
+            Debug.Log($"<color=green>Guardian Architect: Cosmetic Effect '{effectID}' unlocked.</color>");
         }
     }
 
-    public bool IsCosmeticUnlocked(string effectID)
+    /// <summary>
+    /// Gets a list of all unlocked effect IDs.
+    /// </summary>
+    public List<string> GetUnlockedEffectIDs()
     {
-        return unlockedCosmetics.Contains(effectID);
+        return new List<string>(_unlockedEffectIDs);
     }
 
-    public void EquipCosmetic(string effectID, CosmeticEffectType effectType)
+    private void SaveUnlockedEffects()
     {
-        if (IsCosmeticUnlocked(effectID))
-        {
-            equippedCosmetics[effectType] = effectID;
-            Debug.Log($"Equipped {effectID} for {effectType}");
-            SaveInventory();
+        string data = string.Join(",", _unlockedEffectIDs);
+        PlayerPrefs.SetString(UNLOCKED_EFFECTS_SAVE_KEY, data);
+        PlayerPrefs.Save();
+    }
 
-            // Notify the CosmeticEffectManager to update the visual effect
-            CosmeticEffectManager.Instance.OnCosmeticEquipped(effectID, effectType);
+    private void LoadUnlockedEffects()
+    {
+        string data = PlayerPrefs.GetString(UNLOCKED_EFFECTS_SAVE_KEY, string.Empty);
+        if (!string.IsNullOrEmpty(data))
+        {
+            _unlockedEffectIDs = new HashSet<string>(data.Split(','));
         }
     }
-
-    public string GetEquippedCosmetic(CosmeticEffectType effectType)
-    {
-        if (equippedCosmetics.TryGetValue(effectType, out string effectID))
-        {
-            return effectID;
-        }
-        return null;
-    }
-
-    private void SaveInventory()
-    {
-        // In a real game, this would save to PlayerPrefs or a backend service
-    }
-
-    private void LoadInventory()
-    {
-        // In a real game, this would load from PlayerPrefs or a backend service
-    }
-
-    public List<string> GetUnlockedCosmetics() => unlockedCosmetics;
 }

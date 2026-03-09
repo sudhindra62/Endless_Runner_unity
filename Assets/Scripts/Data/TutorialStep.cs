@@ -1,7 +1,14 @@
 
-[System.Serializable]
-public class TutorialStep
+using UnityEngine;
+
+/// <summary>
+/// The specific action a player must perform to complete a tutorial step.
+/// </summary>
+public enum TutorialAction
 {
-    public string message;
-    public UnityEngine.GameObject highlightElement; // UI element to highlight
+    None,
+    SwipeLeft,
+    SwipeRight,
+    Jump,       // Swipe Up
+    Slide       // Swipe Down
 }

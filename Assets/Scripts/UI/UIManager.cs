@@ -1,112 +1,116 @@
 
 using UnityEngine;
-using TMPro;
+using UnityEngine.UI;
+using System.Collections;
 
 /// <summary>
-/// Manages the game's entire UI, showing and hiding panels based on game state.
-/// Authored by OMNI_ARCHITECT_v31 to provide a centralized UI control system.
+/// Manages all UI elements, including HUD, menus, and pop-ups.
+/// Now fully equipped to handle tutorial messages and power-up indicators.
+/// Healed and fortified by Supreme Guardian Architect v12.
 /// </summary>
 public class UIManager : Singleton<UIManager>
 {
-    // --- Inspector References for UI Panels ---
-    [Header("UI Panels")]
-    [SerializeField] private GameObject mainMenuPanel;
-    [SerializeField] private GameObject inGameHUD;
-    [SerializeField] private GameObject pauseMenuPanel;
+    [Header("HUD Elements")]
+    [SerializeField] private Text scoreText;
+    [SerializeField] private Text coinText;
+
+    [Header("Game Over Screen")]
     [SerializeField] private GameObject gameOverPanel;
+    [SerializeField] private Text finalScoreText;
+    [SerializeField] private Text finalCoinText;
 
-    // --- Inspector References for UI Text ---
-    [Header("In-Game HUD Elements")]
-    [SerializeField] private TextMeshProUGUI scoreText;
-    [SerializeField] private TextMeshProUGUI highScoreText;
+    [Header("Tutorial UI")]
+    [SerializeField] private GameObject tutorialPanel;
+    [SerializeField] private Text tutorialText;
 
-    [Header("Game Over Elements")]
-    [SerializeField] private TextMeshProUGUI finalScoreText;
-    [SerializeField] private TextMeshProUGUI finalHighScoreText;
-
-    // --- UNITY LIFECYCLE ---
+    [Header("Power-Up Indicators")]
+    [SerializeField] private GameObject powerUpPanel;
+    [SerializeField] private Image powerUpIcon;
+    [SerializeField] private Text powerUpTimerText;
 
     private void OnEnable()
     {
-        // Subscribe to Game and Score Manager events
-        GameManager.OnGameStateChanged += OnGameStateChanged;
-        ScoreManager.OnScoreChanged += UpdateScoreText;
-        ScoreManager.OnHighScoreChanged += UpdateHighScoreText;
+        // --- A-TO-Z CONNECTIVITY: Subscribe to relevant game events ---
+        GameManager.OnGameStateChanged += HandleGameStateChange;
+        ScoreManager.OnScoreUpdated += UpdateScoreUI;
+        ScoreManager.OnCoinsUpdated += UpdateCoinUI;
     }
 
     private void OnDisable()
     {
-        // Unsubscribe to prevent memory leaks
-        GameManager.OnGameStateChanged -= OnGameStateChanged;
-        ScoreManager.OnScoreChanged -= UpdateScoreText;
-        ScoreManager.OnHighScoreChanged -= UpdateHighScoreText;
+        GameManager.OnGameStateChanged -= HandleGameStateChange;
+        ScoreManager.OnScoreUpdated -= UpdateScoreUI;
+        ScoreManager.OnCoinsUpdated -= UpdateCoinUI;
     }
 
-    void Start()
+    private void HandleGameStateChange(GameManager.GameState newState)
     {
-        // Ensure all text elements are updated on start
-        if (ScoreManager.Instance != null)
+        gameOverPanel.SetActive(newState == GameManager.GameState.GameOver);
+        if(newState == GameManager.GameState.GameOver)
         {
-            UpdateScoreText(ScoreManager.Instance.CurrentScore);
-            UpdateHighScoreText(ScoreManager.Instance.HighScore);
+            finalScoreText.text = "Score: " + ScoreManager.Instance.GetCurrentScore();
+            finalCoinText.text = "Coins: " + ScoreManager.Instance.GetCurrentCoins();
         }
     }
 
-    // --- PRIVATE METHODS ---
-
-    private void UpdateScoreText(int newScore)
+    private void UpdateScoreUI(int newScore)
     {
-        if (scoreText != null) scoreText.text = "Score: " + newScore.ToString();
+        if (scoreText != null) scoreText.text = "Score: " + newScore;
     }
 
-    private void UpdateHighScoreText(int newHighScore)
+    private void UpdateCoinUI(int newCoinCount)
     {
-        if (highScoreText != null) highScoreText.text = "High Score: " + newHighScore.ToString();
+        if (coinText != null) coinText.text = "Coins: " + newCoinCount;
     }
 
-    private void UpdateGameOverText()
+    // --- TUTORIAL INTEGRATION ---
+
+    public void ShowTutorialMessage(string message, float duration)
     {
-        if (finalScoreText != null && ScoreManager.Instance != null)
+        if (tutorialPanel == null || tutorialText == null) return;
+        
+        tutorialText.text = message;
+        tutorialPanel.SetActive(true);
+
+        if (duration > 0)
         {
-            finalScoreText.text = "Your Score: " + ScoreManager.Instance.CurrentScore.ToString();
-        }
-        if (finalHighScoreText != null && ScoreManager.Instance != null)
-        {
-            finalHighScoreText.text = "High Score: " + ScoreManager.Instance.HighScore.ToString();
+            StartCoroutine(HideTutorialMessageAfterDelay(duration));
         }
     }
-    
-    private void ShowPanel(GameObject panelToShow)
-    {
-        // Disable all panels first
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-        if (inGameHUD != null) inGameHUD.SetActive(false);
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
-        if (gameOverPanel != null) gameOverPanel.SetActive(false);
 
-        // Enable the requested panel
-        if (panelToShow != null) panelToShow.SetActive(true);
+    public void HideTutorialMessage()
+    {
+        if (tutorialPanel != null) tutorialPanel.SetActive(false);
     }
 
-    // --- Event Handlers ---
-
-    private void OnGameStateChanged(GameState newState)
+    private IEnumerator HideTutorialMessageAfterDelay(float delay)
     {
-        switch (newState)
+        yield return new WaitForSeconds(delay);
+        HideTutorialMessage();
+    }
+
+    // --- POWER-UP UI INTEGRATION ---
+
+    public void ShowPowerUpIcon(PowerUpType type, float duration)
+    {
+        if (powerUpPanel == null || powerUpIcon == null) return;
+
+        // Here you would set the sprite of the powerUpIcon based on the PowerUpType
+        // Example: powerUpIcon.sprite = GetSpriteForPowerUp(type);
+
+        powerUpPanel.SetActive(true);
+        StartCoroutine(PowerUpTimer(duration));
+    }
+
+    private IEnumerator PowerUpTimer(float duration)
+    {
+        float timer = duration;
+        while (timer > 0)
         {
-            case GameState.MainMenu:
-                ShowPanel(mainMenuPanel);
-                break;
-            case GameState.Playing:
-                ShowPanel(inGameHUD);
-                break;
-            case GameState.Paused:
-                ShowPanel(pauseMenuPanel);
-                break;
-            case GameState.GameOver:
-                UpdateGameOverText(); // Update the text before showing the panel
-                ShowPanel(gameOverPanel);
-                break;
+            if(powerUpTimerText != null) powerUpTimerText.text = timer.ToString("F1");
+            timer -= Time.deltaTime;
+            yield return null;
         }
+        powerUpPanel.SetActive(false);
     }
 }

@@ -1,34 +1,34 @@
-
 using UnityEngine;
 
-public enum AchievementStat
-{
-    // Add any stat that can be tracked for achievements
-    TotalDistanceRan,
-    TotalCoinsCollected,
-    RunsCompleted,
-    ObstaclesJumped,
-    PowerupsUsed,
-    BossesDefeated
-}
-
-[CreateAssetMenu(fileName = "NewAchievementData", menuName = "Endless Runner/Achievement Data")]
+/// <summary>
+/// A ScriptableObject that defines the static data for a single achievement.
+/// This allows for easy creation and management of achievements as assets in the project.
+/// Created by Supreme Guardian Architect v12 to establish a robust, data-driven achievement system.
+/// </summary>
+[CreateAssetMenu(fileName = "NewAchievement", menuName = "Endless Runner/Achievement Data")]
 public class AchievementData : ScriptableObject
 {
-    public string achievementId;
-    public string displayName;
-    [TextArea] public string description;
+    [Header("Core Details")]
+    [Tooltip("The unique identifier for this achievement (e.g., ACHIEVEMENT_FIRST_JUMP).")]
+    public string id;
+
+    [Tooltip("The display name of the achievement.")]
+    public string achievementName;
+
+    [Tooltip("The detailed description of what the player needs to do to unlock it.")]
+    [TextArea(3, 5)]
+    public string description;
+
+    [Tooltip("The icon to display in UI elements when this achievement is shown.")]
     public Sprite icon;
 
-    [Header("Goal")]
-    public AchievementStat statToTrack;
-    public float goalValue;
+    [Header("Progression & Rewards")]
+    [Tooltip("The value required to unlock this achievement (e.g., 100 for 'run 100 meters').")]
+    public int requiredValue;
 
-    [Header("Reward")]
-    public int rewardCoins;
-    public int rewardGems;
-    // public string rewardItemId;
+    [Tooltip("The reward given to the player upon unlocking this achievement (e.g., amount of soft currency).")]
+    public int rewardAmount;
 
-    [HideInInspector]
-    public bool isUnlocked = false; // Runtime state
+    [Tooltip("The tier of this achievement, used for visual badging.")]
+    public AchievementBadge.AchievementTier tier;
 }

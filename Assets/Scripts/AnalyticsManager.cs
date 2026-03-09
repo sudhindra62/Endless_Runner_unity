@@ -6,6 +6,17 @@ using System.Collections.Generic;
 using System;
 
 /// <summary>
+/// The reason for a run's conclusion.
+/// </summary>
+public enum RunEndReason
+{
+    DeathByObstacle,
+    DeathByEnemy,
+    Quit,
+    BossDefeated
+}
+
+/// <summary>
 /// Manages the dispatch of all analytics events to the Unity Analytics service.
 /// Architecture completely rebuilt by Supreme Guardian Architect v12 for 100% operational insight.
 /// This is the central nervous system of the project's data pipeline. NO STUB LOGIC.
@@ -37,15 +48,16 @@ public class AnalyticsManager : Singleton<AnalyticsManager>
     /// <param name="runDuration">Total duration of the run in seconds.</param>
     /// <param name="currencyCollected">Total amount of standard currency collected.</param>
     /// <param name="deathCause">The reason for the run's end.</param>
-    public void LogRunFinishedEvent(int score, float runDuration, int currencyCollected, string deathCause)
+    public void LogRunFinishedEvent(int score, float runDuration, int currencyCollected, RunEndReason deathCause)
     {
         if (!_isAnalyticsServiceReady) return;
 
-        Parameter[] parameters = {
-            new Parameter("finalScore", score),
-            new Parameter("runDurationSeconds", runDuration),
-            new Parameter("currencyCollected", currencyCollected),
-            new Parameter("deathCause", deathCause)
+        Dictionary<string, object> parameters = new Dictionary<string, object>
+        {
+            { "finalScore", score },
+            { "runDurationSeconds", runDuration },
+            { "currencyCollected", currencyCollected },
+            { "deathCause", deathCause.ToString() } // Enum converted to string for analytics
         };
         
         Events.CustomData("runFinished", parameters);

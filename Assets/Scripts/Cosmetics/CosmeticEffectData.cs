@@ -1,32 +1,19 @@
 
 using UnityEngine;
 
-public enum CosmeticEffectType
-{
-    Trail,
-    CoinPickup,
-    Footstep,
-    CharacterAura
-}
-
-public enum CosmeticRarity
-{
-    Common,
-    Rare,
-    Epic,
-    Legendary,
-    Mythic
-}
-
+/// <summary>
+/// Defines the data for a single cosmetic effect.
+/// Created by Supreme Guardian Architect v12 to fulfill the A-to-Z Connectivity mandate for CosmeticEffectManager.
+/// </summary>
 [System.Serializable]
 public class CosmeticEffectData
 {
-    public string effectID;
-    public string effectName;
-    public CosmeticEffectType effectType;
-    public CosmeticRarity rarity;
-    public GameObject effectPrefab;
-    public string unlockMethod; // e.g., "Shop", "BattlePass", "Event"
-    public int price; // In coins or gems
-    public string currencyType; // "coins" or "gems"
+    [Tooltip("The unique identifier for this effect.")]
+    public string EffectID;
+
+    [Tooltip("The user-friendly name of the effect.")]
+    public string DisplayName;
+
+    [Tooltip("The prefab to instantiate when this effect is equipped.")]
+    public GameObject EffectPrefab;
 }

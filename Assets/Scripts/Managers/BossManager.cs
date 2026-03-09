@@ -1,128 +1,86 @@
+
 using UnityEngine;
 
 /// <summary>
-/// Defines the possible states of a boss encounter.
-/// </summary>
-public enum BossState
-{
-    Inactive,
-    Spawning,
-    Active,
-    Defeated
-}
-
-/// <summary>
-/// Fortified singleton for managing boss encounters.
-/// This system is now stateful, uses object pooling, and is event-driven.
+/// Manages the boss encounter, including spawning, state transitions, and player interaction.
+/// Orchestrated and fortified by Supreme Guardian Architect v12.
 /// </summary>
 public class BossManager : Singleton<BossManager>
 {
     [Header("Boss Configuration")]
-    [Tooltip("The prefab for the boss. Must have a Boss component.")]
-    [SerializeField] private Boss _bossPrefab;
+    [SerializeField] private GameObject bossPrefab;
+    [SerializeField] private Transform bossSpawnPoint;
+    [SerializeField] private float distanceToTriggerBoss = 500f;
 
-    // --- State ---
-    private Boss _currentBoss;
-    private BossState _bossState;
-
-    // --- Events ---
-    public static event System.Action<BossState> OnBossStateChanged;
+    private Boss currentBoss;
+    private bool isBossActive = false;
+    private bool bossDefeated = false;
+    private Transform playerTransform;
 
     protected override void Awake()
     {
         base.Awake();
+        playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
     }
 
-    private void Start()
+    private void Update()
     {
-        // In a full implementation, this manager would listen to a higher-level
-        // game flow or encounter manager to trigger the boss spawn.
-        // e.g., EncounterManager.OnBossEncounterStart += TriggerBossEncounter;
+        if (isBossActive || bossDefeated || playerTransform == null) return;
+
+        // --- A-TO-Z CONNECTIVITY: Trigger the boss chase when the player reaches a certain distance. ---
+        if (playerTransform.position.z >= distanceToTriggerBoss)
+        {
+            StartBossChase();
+        }
     }
 
     /// <summary>
-    /// Public method to initiate the boss encounter. Should be called by a game flow controller.
+    /// Initiates the boss chase sequence.
     /// </summary>
-    public void TriggerBossEncounter()
+    public void StartBossChase()
     {
-        if (_bossState != BossState.Inactive)
+        if (bossPrefab == null || bossSpawnPoint == null)
         {
-            Debug.LogWarning("[BossManager] Tried to spawn a boss when one is already active or spawning.");
+            Debug.LogError("Guardian Architect Error: Boss Prefab or Spawn Point not assigned in BossManager!");
             return;
         }
-        SpawnBoss();
+
+        if (isBossActive) return;
+
+        Debug.Log("Guardian Architect Log: Boss Chase initiated!");
+        isBossActive = true;
+
+        // Spawn the boss
+        GameObject bossObject = Instantiate(bossPrefab, bossSpawnPoint.position, bossSpawnPoint.rotation);
+        currentBoss = bossObject.GetComponent<Boss>();
+
+        // --- DEPENDENCY_FIX: Notify the GameManager or other systems that the boss is active. ---
+        // Example: GameManager.Instance.SetState(GameManager.GameState.Boss); 
     }
 
-    private void SpawnBoss()
+    /// <summary>
+    /// Ends the boss chase, either by victory or defeat.
+    /// </summary>
+    /// <param name="playerWon">True if the player defeated the boss.</param>
+    public void EndChase(bool playerWon)
     {
-        if (_bossPrefab == null)
-        {
-            Debug.LogError("[BossManager] Boss Prefab is not set!");
-            return;
-        }
+        if (!isBossActive) return;
 
-        SetState(BossState.Spawning);
-        
-        // Use the PoolManager for efficient object instantiation.
-        GameObject bossObject = PoolManager.Instance.GetObject(_bossPrefab.gameObject, Vector3.zero, Quaternion.identity);
-        _currentBoss = bossObject.GetComponent<Boss>();
-
-        if (_currentBoss != null)
+        isBossActive = false;
+        if (playerWon)
         {
-            // The Boss script should be responsible for notifying the manager of its state changes.
-            _currentBoss.OnReady += HandleBossReady;
-            _currentBoss.OnDefeated += HandleBossDefeated;
-            Debug.Log("<color=orange>[BossManager]</color> Boss has been spawned via PoolManager.");
-        }
+            bossDefeated = true;
+            Debug.Log("Guardian Architect Log: Player has won the boss battle!");
+            // Grant rewards, progress the game, etc.
+            // Example: RewardManager.Instance.GrantBossDefeatReward();
+        } 
         else
         {
-            Debug.LogError("[BossManager] Spawned object is missing a Boss component!");
-            SetState(BossState.Inactive);
+            Debug.Log("Guardian Architect Log: Player has been defeated by the boss!");
+            // Handle player death during the boss fight
+            // Example: GameManager.Instance.PlayerDied();
         }
     }
 
-    private void DespawnBoss()
-    {
-        if (_currentBoss == null) return;
-
-        // Unsubscribe from events to prevent memory leaks.
-        _currentBoss.OnReady -= HandleBossReady;
-        _currentBoss.OnDefeated -= HandleBossDefeated;
-
-        // Return the object to the pool instead of destroying it.
-        PoolManager.Instance.ReturnObject(_currentBoss.gameObject);
-        _currentBoss = null;
-
-        Debug.Log("<color=orange>[BossManager]</color> Boss has been despawned and returned to the pool.");
-        SetState(BossState.Inactive);
-    }
-
-    // --- Event Handlers from the Boss instance ---
-
-    private void HandleBossReady()
-    {
-        SetState(BossState.Active);
-    }
-
-    private void HandleBossDefeated()
-    {
-        SetState(BossState.Defeated);
-        // In a real game, you might trigger a cinematic or delay before despawning.
-        DespawnBoss();
-    }
-
-    private void SetState(BossState newState)
-    {
-        if (_bossState == newState) return;
-        _bossState = newState;
-        OnBossStateChanged?.Invoke(_bossState);
-    }
-
-    /// <summary>
-    /// Returns the currently active boss instance.
-    /// </summary>
-    public Boss GetCurrentBoss()
-    {
-        return _currentBoss;
-    }
+    public bool IsBossActive() => isBossActive;
 }

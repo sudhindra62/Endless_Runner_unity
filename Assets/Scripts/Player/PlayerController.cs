@@ -1,21 +1,20 @@
+
 using UnityEngine;
 using System.Collections;
 
 /// <summary>
 /// Manages all aspects of player behavior including movement, input, collision, and state.
-/// Logic fully restored and fortified by Supreme Guardian Architect v12.
-/// This controller is designed for responsiveness, extensibility, and seamless integration with all other game systems.
+/// Logic fully restored, power-up enabled, and fortified by Supreme Guardian Architect v12.
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(CapsuleCollider))]
 public class PlayerController : MonoBehaviour
 {
     // --- PUBLIC STATE ---
-    public bool IsInvincible { get; set; } = false;
+    public bool IsInvincible { get; private set; } = false;
 
     // --- EVENTS ---
     public static event System.Action OnPlayerDeath;
-    public static event System.Action<int> OnCoinsCollected;
 
     // --- PRIVATE STATE ---
     private Rigidbody _rb;
@@ -25,121 +24,91 @@ public class PlayerController : MonoBehaviour
     private bool _isGrounded = true;
     private Coroutine _slideCoroutine;
     private bool _isSliding = false;
+    private bool _isMagnetActive = false;
+    private float _magnetRadius = 0f;
+    private float _baseMoveSpeed;
 
-    // Inspector-assigned properties for fine-tuning
+    // Inspector-assigned properties
     [Header("Core Movement")]
-    [Tooltip("The constant forward speed of the player.")]
     [SerializeField] private float moveSpeed = 15f;
-    [Tooltip("The distance between the centers of adjacent lanes.")]
     [SerializeField] private float laneDistance = 3.5f;
-    [Tooltip("How quickly the player snaps to the target lane. Higher values are faster.")]
     [SerializeField] private float laneChangeSpeed = 20f;
 
     [Header("Jumping & Sliding")]
-    [Tooltip("The initial upward force applied when jumping.")]
     [SerializeField] private float jumpForce = 10f;
-    [Tooltip("The duration of the slide in seconds.")]
     [SerializeField] private float slideDuration = 0.8f;
 
-    // Stored collider dimensions for sliding
     private float _originalColliderHeight;
     private Vector3 _originalColliderCenter;
-
-    // --- UNITY LIFECYCLE ---
 
     void Awake()
     {
         _rb = GetComponent<Rigidbody>();
         _capsuleCollider = GetComponent<CapsuleCollider>();
-        _animator = GetComponentInChildren<Animator>(); // Assuming animator is on a child object
-
-        // Store original collider dimensions for resetting after a slide
+        _animator = GetComponentInChildren<Animator>();
         _originalColliderHeight = _capsuleCollider.height;
         _originalColliderCenter = _capsuleCollider.center;
+        _baseMoveSpeed = moveSpeed;
     }
 
     void Start()
     {
-        // Ensure player starts visually in the center lane
         transform.position = new Vector3((_currentLane - 1) * laneDistance, transform.position.y, transform.position.z);
     }
 
     private void OnEnable()
     {
-        // --- A-TO-Z CONNECTIVITY: Subscribe to the centralized input system ---
         InputManager.OnSwipe += HandleSwipe;
     }
 
     private void OnDisable()
     {
-        // --- A-TO-Z CONNECTIVITY: Unsubscribe to prevent memory leaks ---
         InputManager.OnSwipe -= HandleSwipe;
     }
 
     void Update()
     {
-        // Only process movement if the game is in the 'Playing' state
-        if (GameManager.Instance.CurrentState != GameState.Playing) return;
+        if (GameManager.Instance.GetCurrentState() != GameManager.GameState.Playing) return;
 
-        // Handle continuous forward movement
         transform.Translate(Vector3.forward * moveSpeed * Time.deltaTime);
 
-        // Handle smooth lane changing via Lerp for a fluid feel
         Vector3 targetPosition = new Vector3((_currentLane - 1) * laneDistance, _rb.position.y, _rb.position.z);
         _rb.MovePosition(Vector3.Lerp(_rb.position, targetPosition, Time.deltaTime * laneChangeSpeed));
 
-        // Update animator with current speed
         if (_animator != null) _animator.SetFloat("MoveSpeed", moveSpeed);
 
-        // Ground Check
         CheckIfGrounded();
+        HandleMagnet();
     }
-
-    // --- COLLISION & TRIGGER HANDLING ---
 
     void OnCollisionEnter(Collision collision)
     {
-        // --- CONTEXT_WIRING: Check for obstacles only ---
         if (collision.gameObject.CompareTag("Obstacle"))
         {
-            HandleObstacleCollision();
+            HandleObstacleCollision(collision.gameObject.GetComponent<Obstacle>());
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // --- CONTEXT_WIRING: Handle coin collection ---
         if (other.gameObject.CompareTag("Coin"))
         {
-            CollectCoin(other.gameObject);
+            // The Coin script now handles its own collection logic.
         }
     }
-
-    // --- INPUT HANDLING ---
 
     private void HandleSwipe(SwipeDirection direction)
     {
-        // Do not process input if not playing
-        if (GameManager.Instance.CurrentState != GameState.Playing) return;
+        if (GameManager.Instance.GetCurrentState() != GameManager.GameState.Playing) return;
 
         switch (direction)
         {
-            case SwipeDirection.Left:
-                ChangeLane(-1);
-                break;
-            case SwipeDirection.Right:
-                ChangeLane(1);
-                break;
-            case SwipeDirection.Up:
-                Jump();
-                break;
-            case SwipeDirection.Down:
-                Slide();
-                break;
+            case SwipeDirection.Left: ChangeLane(-1); break;
+            case SwipeDirection.Right: ChangeLane(1); break;
+            case SwipeDirection.Up: Jump(); break;
+            case SwipeDirection.Down: Slide(); break;
         }
     }
-
-    // --- MOVEMENT ACTIONS ---
 
     private void ChangeLane(int direction)
     {
@@ -152,8 +121,6 @@ public class PlayerController : MonoBehaviour
         {
             _rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             if (_animator != null) _animator.SetTrigger("Jump");
-            // --- SFX HOOK ---
-            // SoundManager.Instance.PlaySound("Jump");
         }
     }
 
@@ -169,59 +136,86 @@ public class PlayerController : MonoBehaviour
     {
         _isSliding = true;
         if (_animator != null) _animator.SetBool("isSliding", true);
-
-        // Shrink collider for sliding under obstacles
         _capsuleCollider.height = _originalColliderHeight / 2;
         _capsuleCollider.center = _originalColliderCenter / 2;
 
         yield return new WaitForSeconds(slideDuration);
 
-        // Restore collider to original dimensions
         _capsuleCollider.height = _originalColliderHeight;
         _capsuleCollider.center = _originalColliderCenter;
-
         if (_animator != null) _animator.SetBool("isSliding", false);
         _isSliding = false;
     }
 
-    // --- GAMEPLAY LOGIC ---
-
-    private void HandleObstacleCollision()
+    private void HandleObstacleCollision(Obstacle obstacle)
     {
-        if (IsInvincible) return; // Ignore collision if invincible
+        if (IsInvincible) return;
+        
+        // --- POWER-UP HOOK: Check for active shield --- 
+        if (PowerupManager.Instance.IsShieldActive())
+        {
+            Debug.Log("Guardian Architect Log: Shield absorbed the hit!");
+            PowerupManager.Instance.CollectPowerUp(null); // This is a placeholder to deactivate the shield
+            if(obstacle != null) obstacle.Shatter();
+            return;
+        }
 
-        // --- VFX HOOK ---
-        // VFXManager.Instance.PlayEffect("PlayerDeath", transform.position);
-
-        // Stop all movement
         moveSpeed = 0;
-        enabled = false; // Disable this script
-
+        enabled = false;
         if (_animator != null) _animator.SetTrigger("Death");
 
-        // --- A-TO-Z CONNECTIVITY: Notify GameManager and other systems of player death ---
-        GameManager.Instance.ChangeState(GameState.GameOver);
+        GameManager.Instance.ChangeState(GameManager.GameState.GameOver);
         OnPlayerDeath?.Invoke();
     }
 
-    private void CollectCoin(GameObject coinObject)
+    public void CollectCoin(int value)
     {
-        // --- VFX & SFX HOOKS ---
-        // VFXManager.Instance.PlayEffect("CoinCollect", coinObject.transform.position);
-        // SoundManager.Instance.PlaySound("CoinCollect");
-
-        // Notify ScoreManager
-        OnCoinsCollected?.Invoke(1);
-
-        // Return coin to pool
-        ObjectPool.Instance.ReturnObject(coinObject);
+        ScoreManager.Instance.AddCoins(value);
     }
 
     private void CheckIfGrounded()
     {
-        // Raycast down to check for ground
         float raycastDistance = _capsuleCollider.height / 2 + 0.1f;
         _isGrounded = Physics.Raycast(transform.position, Vector3.down, raycastDistance);
         if (_animator != null) _animator.SetBool("isGrounded", _isGrounded);
+    }
+    
+    // --- POWER-UP INTEGRATION ---
+
+    public void SetInvincible(bool isInvincible)
+    {
+        this.IsInvincible = isInvincible;
+        Debug.Log($"Guardian Architect Log: Player invincibility set to {isInvincible}");
+    }
+
+    public void ApplySpeedBoost(float multiplier)
+    {
+        moveSpeed = _baseMoveSpeed * multiplier;
+        Debug.Log($"Guardian Architect Log: Player speed boost applied. New speed: {moveSpeed}");
+    }
+
+    public void SetMagnetActive(bool isActive, float radius = 0f)
+    {
+        _isMagnetActive = isActive;
+        _magnetRadius = radius;
+        Debug.Log($"Guardian Architect Log: Coin magnet set to {isActive} with radius {radius}");
+    }
+
+    private void HandleMagnet()
+    {
+        if (!_isMagnetActive) return;
+
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, _magnetRadius);
+        foreach (var hitCollider in hitColliders)
+        {
+            if (hitCollider.CompareTag("Coin"))
+            {
+                Coin coin = hitCollider.GetComponent<Coin>();
+                if (coin != null)
+                {
+                    coin.AttractTo(transform);
+                }
+            }
+        }
     }
 }

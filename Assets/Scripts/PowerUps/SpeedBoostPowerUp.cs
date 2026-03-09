@@ -1,31 +1,36 @@
+
 using UnityEngine;
 
 /// <summary>
-/// This power-up increases the player's forward speed for a short duration.
-/// It interacts with the GameDifficultyManager to apply a speed boost.
+/// Concrete implementation for the Speed Boost power-up.
+/// Increases the player's forward movement speed for a set duration.
+/// Engineered by the Supreme Guardian Architect v12.
 /// </summary>
-[CreateAssetMenu(menuName = "PowerUps/SpeedBoost")]
+[RequireComponent(typeof(BoxCollider))] // For trigger detection
 public class SpeedBoostPowerUp : PowerUp
 {
-    public float speedMultiplier = 1.5f;
+    [Header("Speed Boost Specifics")]
+    [SerializeField] private float speedMultiplier = 1.5f;
     
-    public override void Activate(GameObject player)
+    public SpeedBoostPowerUp()
     {
-        GameDifficultyManager difficultyManager = ServiceLocator.Get<GameDifficultyManager>();
-        if (difficultyManager != null)
+        powerUpType = PowerUpType.SpeedBoost;
+        duration = 7f;
+    }
+
+    protected override void Activate(PlayerController player)
+    {
+        if (player != null)
         {
-            difficultyManager.SetSpeedBoostMultiplier(speedMultiplier);
-            Debug.Log($"Speed Boost Activated! Multiplier: {speedMultiplier}");
+            player.ApplySpeedBoost(speedMultiplier);
         }
     }
 
-    public override void Deactivate(GameObject player)
+    protected override void Deactivate(PlayerController player)
     {
-        GameDifficultyManager difficultyManager = ServiceLocator.Get<GameDifficultyManager>();
-        if (difficultyManager != null)
+        if (player != null)
         {
-            difficultyManager.SetSpeedBoostMultiplier(1.0f); // Reset to default
-            Debug.Log("Speed Boost Deactivated!");
+            player.ApplySpeedBoost(1f); // Reset to default speed
         }
     }
 }

@@ -4,6 +4,7 @@ using UnityEngine;
 /// A generic, thread-safe singleton pattern implementation for MonoBehaviour components.
 /// Ensures that only one instance of a singleton exists in the scene.
 /// Logic consolidated and fortified by Supreme Guardian Architect v12.
+/// API updated to Unity 6 standards by OMNI_GUARDIAN_ARCHITECT_v12_SUPREME.
 /// </summary>
 /// <typeparam name="T">The type of the singleton component.</typeparam>
 public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
@@ -26,9 +27,11 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
             {
                 if (_instance == null)
                 {
-                    _instance = (T)FindObjectOfType(typeof(T));
+                    // --- API HEALING: Updated to modern, non-deprecated Unity 6 API ---
+                    _instance = Object.FindFirstObjectByType<T>();
 
-                    if (FindObjectsOfType(typeof(T)).Length > 1)
+                    // --- API HEALING: Updated to modern, non-deprecated Unity 6 API ---
+                    if (Object.FindObjectsByType<T>(FindObjectsSortMode.None).Length > 1)
                     {
                         Debug.LogError("[Singleton] Something went really wrong - there's more than one singleton! Reopening the scene might fix it.");
                         return _instance;
