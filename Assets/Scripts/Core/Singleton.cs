@@ -1,35 +1,27 @@
-
 using UnityEngine;
 
 namespace Core
 {
     /// <summary>
-    /// A generic base class for creating singletons from MonoBehaviours.
-    /// This ensures that only one instance of the class exists, providing a global access point.
-    /// It handles persistence across scene loads and prevents the creation of "ghost" objects in the editor.
+    /// A generic, thread-safe singleton pattern implementation for MonoBehaviour components.
+    /// Ensures that only one instance of a singleton exists in the scene.
+    /// Logic consolidated and fortified by Supreme Guardian Architect v12.
+    /// API updated to Unity 6 standards by OMNI_GUARDIAN_ARCHITECT_v12_SUPREME.
     /// </summary>
-    /// <typeparam name="T">The type of the singleton class, which must inherit from MonoBehaviour.</typeparam>
+    /// <typeparam name="T">The type of the singleton component.</typeparam>
     public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
     {
-        // The single, static instance of the singleton.
         private static T _instance;
-
-        // A lock object to ensure thread safety during instance access.
         private static readonly object _lock = new object();
+        private static bool _applicationIsQuitting = false;
 
-        // Flag to prevent re-creation of the instance during application shutdown.
-        private static bool _isApplicationQuitting = false;
-
-        /// <summary>
-        /// Gets the singleton instance. If it doesn't exist, it will be found or created.
-        /// </summary>
         public static T Instance
         {
             get
             {
-                if (_isApplicationQuitting)
+                if (_applicationIsQuitting)
                 {
-                    Debug.LogWarning($"[Singleton] Instance of '{typeof(T)}' will not be created because the application is quitting.");
+                    Debug.LogWarning($"[Singleton] Instance '{typeof(T)}' already destroyed on application quit. Won't create again - returning null.");
                     return null;
                 }
 
@@ -37,54 +29,52 @@ namespace Core
                 {
                     if (_instance == null)
                     {
-                        // Try to find an existing instance in the scene.
-                        _instance = FindObjectOfType<T>();
+                        _instance = FindFirstObjectByType<T>();
 
-                        // If no instance exists, create a new one.
+                        if (FindObjectsByType<T>(FindObjectsSortMode.None).Length > 1)
+                        {
+                            Debug.LogError("[Singleton] Something went really wrong - there's more than one singleton! Reopening the scene might fix it.");
+                            return _instance;
+                        }
+
                         if (_instance == null)
                         {
-                            var singletonObject = new GameObject();
-                            _instance = singletonObject.AddComponent<T>();
-                            singletonObject.name = $"{typeof(T)} (Singleton)";
+                            GameObject singleton = new GameObject();
+                            _instance = singleton.AddComponent<T>();
+                            singleton.name = "(singleton) " + typeof(T).ToString();
+
+                            DontDestroyOnLoad(singleton);
+
+                            Debug.Log($"[Singleton] An instance of {typeof(T)} is needed in the scene, so '{singleton}' was created with DontDestroyOnLoad.");
+                        }
+                        else
+                        {
+                            Debug.Log($"[Singleton] Using instance already created: {_instance.gameObject.name}");
                         }
                     }
+
                     return _instance;
                 }
             }
         }
 
-        /// <summary>
-        /// This is the primary mechanism for enforcing the singleton pattern.
-        /// It's a virtual method to allow derived classes to extend its behavior.
-        /// </summary>
         protected virtual void Awake()
         {
             if (_instance == null)
             {
-                // If this is the first instance, make it the singleton.
                 _instance = this as T;
-                
-                // Mark this object to not be destroyed when loading new scenes.
                 DontDestroyOnLoad(gameObject);
             }
             else if (_instance != this)
             {
-                // If another instance already exists, destroy this one.
-                Debug.LogWarning($"[Singleton] Duplicate instance of '{typeof(T)}' found. Destroying the duplicate.");
+                Debug.Log($"[Singleton] An instance of {typeof(T)} already exists. Destroying this duplicate.");
                 Destroy(gameObject);
             }
         }
 
-        /// <summary>
-        /// OnDestroy is called when the MonoBehaviour will be destroyed.
-        /// We set a flag here to prevent any further access to the singleton instance.
-        /// </summary>
-        protected virtual void OnDestroy()
+        public void OnDestroy()
         {
-            if (_instance == this)
-            {
-                _isApplicationQuitting = true;
-            }
+            _applicationIsQuitting = true;
         }
     }
 }

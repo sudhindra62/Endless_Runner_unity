@@ -2,67 +2,91 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class LevelGenerator : MonoBehaviour
+namespace Core
 {
-    [Header("Level Geometry")]
-    [SerializeField] private GameObject levelChunkPrefab;
-    [SerializeField] private int chunkLength = 20;
-    [SerializeField] private int initialChunks = 5;
-    [SerializeField] private int chunksToMaintain = 3;
-
-    [Header("Generation Parameters")]
-    [SerializeField] private ProceduralPatternGenerator patternGenerator;
-    [SerializeField] private float generationInterval = 5.0f; 
-
-    private Queue<GameObject> _activeChunks = new Queue<GameObject>();
-    private Vector3 _nextChunkPosition;
-    private float _timeSinceLastGeneration = 0f;
-
-    private void Start()
+    public class LevelGenerator : Singleton<LevelGenerator>
     {
-        InitializeLevel();
-        // Additional setup if required
-    }
+        [Header("Level Geometry")]
+        [SerializeField] private GameObject levelChunkPrefab;
+        [SerializeField] private int chunkLength = 30;
+        [SerializeField] private int initialChunks = 5;
+        [SerializeField] private int chunksToMaintain = 5;
 
-    private void Update()
-    {
-        _timeSinceLastGeneration += Time.deltaTime;
-        if (_timeSinceLastGeneration >= generationInterval)
-        { 
-            GenerateAndPlaceChunk();
-            _timeSinceLastGeneration = 0f;
-        }
+        [Header("Generation Control")]
+        [SerializeField] private Transform playerTransform;
+        [SerializeField] private float generationTriggerDistance = 15f;
 
-        // Optional: Implement a trigger-based generation system instead of time-based.
-    }
+        [Header("Pattern Generation")]
+        [SerializeField] private ProceduralPatternGenerator patternGenerator;
 
-    private void InitializeLevel()
-    {
-        _nextChunkPosition = transform.position;
-        for (int i = 0; i < initialChunks; i++)
+        private Queue<GameObject> _activeChunks = new Queue<GameObject>();
+        private Vector3 _nextChunkPosition;
+        private Vector3 _initialPosition;
+
+        protected override void Awake()
         {
-            GenerateAndPlaceChunk();
-        }
-    }
-
-    private void GenerateAndPlaceChunk()
-    {
-        int[] pattern = patternGenerator.GeneratePattern(chunkLength);
-        GameObject newChunk = Instantiate(levelChunkPrefab, _nextChunkPosition, Quaternion.identity, transform);
-        _nextChunkPosition.z += chunkLength;
-
-        // The LevelChunk component will now be responsible for populating itself.
-        LevelChunk chunkComponent = newChunk.GetComponent<LevelChunk>();
-        if (chunkComponent != null)
-        { 
-            chunkComponent.Initialize(pattern);
+            base.Awake();
+            if (playerTransform == null)
+            {
+                playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
+            }
+            _initialPosition = transform.position;
         }
 
-        _activeChunks.Enqueue(newChunk);
-
-        if (_activeChunks.Count > chunksToMaintain)
+        private void Start()
         {
-            Destroy(_activeChunks.Dequeue());
+            InitializeLevel();
+        }
+
+        private void Update()
+        {
+            if (GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
+
+            if (playerTransform.position.z + generationTriggerDistance > _nextChunkPosition.z)
+            {
+                GenerateAndPlaceChunk();
+            }
+
+            if (_activeChunks.Count > chunksToMaintain)
+            {
+                GameObject chunkToDeactivate = _activeChunks.Dequeue();
+                chunkToDeactivate.SetActive(false);
+            }
+        }
+
+        private void InitializeLevel()
+        {
+            _nextChunkPosition = _initialPosition;
+            for (int i = 0; i < initialChunks; i++)
+            {
+                GenerateAndPlaceChunk();
+            }
+        }
+
+        private void GenerateAndPlaceChunk()
+        {
+            int[] pattern = patternGenerator.GeneratePattern(chunkLength);
+            GameObject newChunk = ObjectPooler.Instance.SpawnFromPool("LevelChunk", _nextChunkPosition, Quaternion.identity);
+            _nextChunkPosition.z += chunkLength;
+
+            LevelChunk chunkComponent = newChunk.GetComponent<LevelChunk>();
+            if (chunkComponent != null)
+            {
+                chunkComponent.Initialize(pattern);
+            }
+
+            _activeChunks.Enqueue(newChunk);
+        }
+
+        public void Reset()
+        {
+            foreach (var chunk in _activeChunks)
+            {
+                chunk.SetActive(false);
+            }
+            _activeChunks.Clear();
+            transform.position = _initialPosition;
+            InitializeLevel();
         }
     }
 }

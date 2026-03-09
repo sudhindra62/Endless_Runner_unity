@@ -4,44 +4,30 @@ using System;
 namespace Core
 {
     /// <summary>
-    /// Defines global game events using a static class for easy access.
-    /// This allows for a decoupled communication system between different game components.
+    /// A static class to hold all game-wide events.
     /// </summary>
     public static class GameEvents
     {
-        // Called when a new level chunk is generated and ready for population.
-        public static Action<LevelChunk> OnLevelChunkGenerated;
+        /// <summary>
+        /// Event fired when the player collides with an obstacle.
+        /// </summary>
+        public static event Action OnPlayerDied;
 
-        // Called when the player successfully navigates a hazard.
-        public static Action OnPlayerSurvivedHazard;
+        /// <summary>
+        /// Event fired when a coin is collected. The integer value represents the coin's worth.
+        /// </summary>
+        public static event Action<int> OnCoinCollected;
 
-        // Called when the game state changes (e.g., from Menu to Playing).
-        public static Action<GameState> OnGameStateChanged;
+        // --- Helper methods to invoke events safely ---
 
-        // Called when the score is updated.
-        public static Action<int> OnScoreUpdated;
+        public static void TriggerPlayerDied()
+        {
+            OnPlayerDied?.Invoke();
+        }
 
-        // Called when the player collects a coin.
-        public static Action<int> OnCoinCollected;
-    }
-
-    /// <summary>
-    /// Represents the different states of the game.
-    /// </summary>
-    public enum GameState
-    {
-        Menu,
-        Playing,
-        Paused,
-        GameOver
-    }
-
-    /// <summary>
-    /// Represents a segment of the level, containing its layout and properties.
-    /// </summary>
-    public class LevelChunk
-    {
-        public int Length { get; set; }
-        public int[] ObstacleLayout { get; set; }
+        public static void TriggerCoinCollected(int amount)
+        {
+            OnCoinCollected?.Invoke(amount);
+        }
     }
 }

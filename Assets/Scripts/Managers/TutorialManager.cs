@@ -2,6 +2,8 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using Core;
+using Managers;
 
 /// <summary>
 /// Manages the step-by-step tutorial sequence for new players.
@@ -16,10 +18,35 @@ public class TutorialManager : Singleton<TutorialManager>
 
     private int currentStepIndex = 0;
     private bool isTutorialActive = false;
+    private bool actionWasPerformed = false;
+
+    protected override void Awake()
+    {
+        base.Awake();
+        InputManager.Instance.OnSwipe += OnSwipe;
+    }
+
+    private void OnDestroy()
+    {
+        if(InputManager.Instance != null)
+        {
+            InputManager.Instance.OnSwipe -= OnSwipe;
+        }
+    }
+
+    private void OnSwipe(SwipeDirection direction)
+    {
+        if (!isTutorialActive) return;
+
+        TutorialStep currentStep = tutorialSteps[currentStepIndex];
+        if (currentStep.requiredAction == TutorialAction.SwipeLeft && direction == SwipeDirection.Left) actionWasPerformed = true;
+        if (currentStep.requiredAction == TutorialAction.SwipeRight && direction == SwipeDirection.Right) actionWasPerformed = true;
+        if (currentStep.requiredAction == TutorialAction.SwipeUp && direction == SwipeDirection.Up) actionWasPerformed = true;
+        if (currentStep.requiredAction == TutorialAction.SwipeDown && direction == SwipeDirection.Down) actionWasPerformed = true;
+    }
 
     private void Start()
     {
-        // --- PERSISTENCE HOOK: Check if the tutorial has been completed before. ---
         if (SaveManager.Instance.GetPlayerData().tutorialCompleted)
         {
             isTutorialActive = false;
@@ -31,14 +58,10 @@ public class TutorialManager : Singleton<TutorialManager>
         }
     }
 
-    /// <summary>
-    /// Begins the tutorial sequence.
-    /// </summary>
     public void StartTutorial()
     {
         if (tutorialSteps == null || tutorialSteps.Count == 0) return;
 
-        Debug.Log("Guardian Architect Log: Tutorial starting.");
         isTutorialActive = true;
         currentStepIndex = 0;
         StartCoroutine(TutorialSequence());
@@ -46,20 +69,17 @@ public class TutorialManager : Singleton<TutorialManager>
 
     private IEnumerator TutorialSequence()
     {
-        // Wait for the game to start
         yield return new WaitUntil(() => GameManager.Instance.GetCurrentState() == GameManager.GameState.Playing);
 
         while(currentStepIndex < tutorialSteps.Count)
         {
+            actionWasPerformed = false;
             TutorialStep currentStep = tutorialSteps[currentStepIndex];
             
-            // --- A-TO-Z CONNECTIVITY: Display the tutorial message via the UIManager. ---
             UIManager.Instance.ShowTutorialMessage(currentStep.instructionText, currentStep.duration);
             
-            // Wait for the player to perform the correct action
-            yield return new WaitUntil(() => WasActionPerformed(currentStep.requiredAction));
+            yield return new WaitUntil(() => actionWasPerformed);
 
-            // Hide the message and wait before the next step
             UIManager.Instance.HideTutorialMessage();
             yield return new WaitForSeconds(timeBetweenSteps);
             
@@ -69,26 +89,14 @@ public class TutorialManager : Singleton<TutorialManager>
         EndTutorial();
     }
 
-    private bool WasActionPerformed(TutorialAction action)
-    {
-        // This is a simplified check. A real implementation would listen to events from InputManager.
-        // For now, we will assume the player performs the action within the message duration.
-        // NOTE: This will be fortified later with a proper event-based check.
-        return true; 
-    }
-
-    /// <summary>
-    /// Concludes the tutorial and saves the player's progress.
-    /// </summary>
     private void EndTutorial()
     {
-        Debug.Log("Guardian Architect Log: Tutorial complete.");
         isTutorialActive = false;
         
-        // --- PERSISTENCE HOOK: Mark tutorial as completed and save data. ---
         PlayerData data = SaveManager.Instance.GetPlayerData();
         data.tutorialCompleted = true;
         SaveManager.Instance.SavePlayerData(data);
+        gameObject.SetActive(false);
     }
 }
 

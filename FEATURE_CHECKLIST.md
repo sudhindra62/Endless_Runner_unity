@@ -31,6 +31,7 @@
 - [x] Style scoring
 
 ## Progression Systems
+- [x] **Saving/Loading:** Player data (coins, high score) persistence implemented.
 - [x] XP system
 - [x] Rank system
 - [x] Milestones
@@ -46,8 +47,8 @@
 - [x] Reward chest UI
 
 ## Economy Systems
-- [x] Currency manager
-- [x] Shop system
+- [x] **Currency Manager:** Coin and score management implemented.
+- [x] **Shop System:** Basic shop UI and purchasing logic implemented.
 - [x] Skin system
 - [x] Purchase validation
 

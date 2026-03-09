@@ -1,7 +1,6 @@
 
 using System;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Core;
 
 namespace Managers
@@ -19,20 +18,24 @@ namespace Managers
 
         public GameState CurrentState { get; private set; }
 
+        protected override void Awake()
+        {
+            base.Awake();
+            GameEvents.OnPlayerDied += GameOver;
+        }
+
         private void Start()
         {
-            UpdateGameState(GameState.Playing);
-
-            // Subscribe to the restart button event from the UIManager
             if (UIManager.Instance != null)
             {
                 UIManager.Instance.OnRestartButtonPressed += RestartGame;
             }
+            UpdateGameState(GameState.Playing);
         }
 
         private void OnDestroy()
         {
-            // Unsubscribe to prevent memory leaks
+            GameEvents.OnPlayerDied -= GameOver;
             if (UIManager.Instance != null)
             {
                 UIManager.Instance.OnRestartButtonPressed -= RestartGame;
@@ -52,10 +55,18 @@ namespace Managers
                     Time.timeScale = 1f;
                     break;
                 case GameState.Paused:
-                case GameState.GameOver:
                     Time.timeScale = 0f;
                     break;
+                case GameState.GameOver:
+                    Time.timeScale = 1f; // Keep time running for animations
+                    ScoreManager.Instance.SaveScore();
+                    break;
             }
+        }
+
+        public GameState GetCurrentState()
+        {
+            return CurrentState;
         }
 
         public void PauseGame()
@@ -74,7 +85,7 @@ namespace Managers
             }
         }
 
-        public void GameOver()
+        private void GameOver()
         {
             if (CurrentState != GameState.GameOver)
             {
@@ -84,8 +95,13 @@ namespace Managers
 
         public void RestartGame()
         {
-            // Reload the current scene to restart the game
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            // Reset all necessary systems
+            PlayerController.Instance.Reset();
+            ScoreManager.Instance.Reset();
+            LevelGenerator.Instance.Reset();
+
+            // Set the state back to playing
+            UpdateGameState(GameState.Playing);
         }
     }
 }
