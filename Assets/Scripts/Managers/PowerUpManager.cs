@@ -13,73 +13,83 @@ public enum PowerUpType
     DoubleJump
 }
 
-[Serializable]
-public class PowerUp
-{
-    public PowerUpType type;
-    public float duration;
-    public float value; // For ScoreMultiplier, this is the multiplier amount. For others, it might be unused.
-}
-
 public class PowerUpManager : Singleton<PowerUpManager>
 {
-    public event Action<PowerUp> OnPowerUpActivated;
-    public event Action<PowerUp> OnPowerUpDeactivated;
+    public event Action<PowerUpDefinition> OnPowerUpActivated;
+    public event Action<PowerUpType> OnPowerUpDeactivated;
 
     private readonly Dictionary<PowerUpType, Coroutine> _activePowerUps = new Dictionary<PowerUpType, Coroutine>();
-    private readonly Dictionary<PowerUpType, PowerUp> _powerUpData = new Dictionary<PowerUpType, PowerUp>();
+    private readonly Dictionary<PowerUpType, PowerUpDefinition> _powerUpDefinitions = new Dictionary<PowerUpType, PowerUpDefinition>();
 
-    public void ActivatePowerUp(PowerUp powerUp)
+    /// <summary>
+    /// Activates a power-up based on its definition.
+    /// </summary>
+    public void ActivatePowerUp(PowerUpDefinition powerUpDef)
     {
-        if (powerUp == null)
+        if (powerUpDef == null)
         {
-            Debug.LogWarning("Null PowerUp provided to ActivatePowerUp.");
+            Debug.LogWarning("Null PowerUpDefinition provided to ActivatePowerUp.");
             return;
         }
 
-        if (_activePowerUps.TryGetValue(powerUp.type, out Coroutine existingCoroutine))
+        if (_activePowerUps.TryGetValue(powerUpDef.type, out Coroutine existingCoroutine))
         {
             StopCoroutine(existingCoroutine);
         }
 
-        Coroutine powerUpCoroutine = StartCoroutine(PowerUpRoutine(powerUp));
-        _activePowerUps[powerUp.type] = powerUpCoroutine;
-        _powerUpData[powerUp.type] = powerUp;
+        Coroutine powerUpCoroutine = StartCoroutine(PowerUpRoutine(powerUpDef));
+        _activePowerUps[powerUpDef.type] = powerUpCoroutine;
+        _powerUpDefinitions[powerUpDef.type] = powerUpDef;
 
-        OnPowerUpActivated?.Invoke(powerUp);
-        Debug.Log($"{powerUp.type} activated for {powerUp.duration} seconds.");
+        OnPowerUpActivated?.Invoke(powerUpDef);
+        Debug.Log($"{powerUpDef.type} activated for {powerUpDef.duration} seconds.");
+
+        if (powerUpDef.activationEffect != null)
+        {
+            // Example of spawning a visual effect - you might need a more sophisticated system for this
+            Instantiate(powerUpDef.activationEffect, transform.position, Quaternion.identity);
+        }
     }
 
-    private IEnumerator PowerUpRoutine(PowerUp powerUp)
+    private IEnumerator PowerUpRoutine(PowerUpDefinition powerUpDef)
     {
-        yield return new WaitForSeconds(powerUp.duration);
-        DeactivatePowerUp(powerUp.type);
+        yield return new WaitForSeconds(powerUpDef.duration);
+        DeactivatePowerUp(powerUpDef.type);
     }
 
+    /// <summary>
+    /// Deactivates a power-up of a specific type.
+    /// </summary>
     public void DeactivatePowerUp(PowerUpType powerUpType)
     {
         if (_activePowerUps.ContainsKey(powerUpType))
         {
             StopCoroutine(_activePowerUps[powerUpType]);
             _activePowerUps.Remove(powerUpType);
-            
-            if (_powerUpData.TryGetValue(powerUpType, out PowerUp powerUp))
+
+            if (_powerUpDefinitions.ContainsKey(powerUpType))
             {
-                OnPowerUpDeactivated?.Invoke(powerUp);
-                _powerUpData.Remove(powerUpType);
+                _powerUpDefinitions.Remove(powerUpType);
+                OnPowerUpDeactivated?.Invoke(powerUpType);
                 Debug.Log($"{powerUpType} deactivated.");
             }
         }
     }
 
+    /// <summary>
+    /// Checks if a power-up of a specific type is currently active.
+    /// </summary>
     public bool IsPowerUpActive(PowerUpType powerUpType)
     {
         return _activePowerUps.ContainsKey(powerUpType);
     }
 
-    public PowerUp GetPowerUpData(PowerUpType powerUpType)
+    /// <summary>
+    /// Gets the definition of an active power-up.
+    /// </summary>
+    public PowerUpDefinition GetActivePowerUp(PowerUpType powerUpType)
     {
-        _powerUpData.TryGetValue(powerUpType, out PowerUp powerUp);
-        return powerUp;
+        _powerUpDefinitions.TryGetValue(powerUpType, out PowerUpDefinition powerUpDef);
+        return powerUpDef;
     }
 }

@@ -1,10 +1,13 @@
 
-/// <summary>
-/// The type of obstacle.
-/// </summary>
-public enum ObstacleType
+namespace Data
 {
-    Static,
-    Moving,
-    Laser
+    /// <summary>
+    /// The type of obstacle.
+    /// </summary>
+    public enum ObstacleType
+    {
+        Static,
+        Moving,
+        Laser
+    }
 }

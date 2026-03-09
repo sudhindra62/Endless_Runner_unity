@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class RareDropManager : Singleton<RareDropManager>
 {
+    public static event System.Action<RareDropData> OnRareDropAwarded;
+
     // ... (existing code) ...
 
     public void EvaluateRareDrop(RunSessionData runData, bool bossDefeated)
@@ -32,6 +34,14 @@ public class RareDropManager : Singleton<RareDropManager>
             if(PityCounterManager.Instance != null) PityCounterManager.Instance.IncrementPityCounters();
             Debug.Log("No rare drop awarded this run.");
         }
+    }
+
+    public void AwardRandomDrop()
+    {
+        // In a real implementation, you would have a loot table to pull from.
+        // For now, we will just award a generic legendary shard.
+        RareDropData drop = new RareDropData { itemID = "LEGENDARY_SHARD_01", rarity = "Legendary", baseChance = 0.01f, pityIncrease = 0.01f };
+        OnRareDropAwarded?.Invoke(drop);
     }
 
     // ... (rest of the existing code) ...

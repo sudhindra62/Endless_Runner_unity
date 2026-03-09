@@ -5,7 +5,7 @@ using System.Collections.Generic;
 public class SaveData
 {
     public int HighScore;
-    public int TotalCurrency;
+    public int PrimaryCurrency;
     public int PremiumCurrency; // Added by Supreme Guardian Architect v12 to fix CurrencyManager integration
     public bool TutorialCompleted;
 
@@ -15,7 +15,7 @@ public class SaveData
     public SaveData()
     {
         HighScore = 0;
-        TotalCurrency = 0;
+        PrimaryCurrency = 0;
         PremiumCurrency = 0;
         TutorialCompleted = false;
         UnlockedCharacterIDs = new List<string>();

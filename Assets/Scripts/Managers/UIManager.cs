@@ -1,52 +1,64 @@
 
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Manages the game's user interface, including the HUD and various menus.
-/// Fully implemented by Supreme Guardian Architect v12.
-/// </summary>
 public class UIManager : Singleton<UIManager>
 {
-    [Header("HUD Elements")]
+    [Header("In-Game HUD")]
     [SerializeField] private TextMeshProUGUI scoreText;
-    [SerializeField] private TextMeshProUGUI coinText;
-
-    [Header("Menu Panels")]
-    [SerializeField] private GameObject pauseMenu;
-    [SerializeField] private GameObject gameOverScreen;
+    [SerializeField] private TextMeshProUGUI coinsText;
 
     [Header("Game Over Screen")]
+    [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private TextMeshProUGUI finalScoreText;
+    [SerializeField] private Button restartButton;
 
-    private ScoreManager scoreManager;
-
-    private void Start()
+    protected override void Awake()
     {
-        scoreManager = ScoreManager.Instance;
-        // Ensure menus are hidden at the start of the game
-        pauseMenu.SetActive(false);
-        gameOverScreen.SetActive(false);
-    }
-
-    private void Update()
-    {
-        if (GameManager.Instance.GetCurrentState() == GameManager.GameState.Playing)
+        base.Awake();
+        if (restartButton != null)
         {
-            // Update HUD
-            scoreText.text = "Score: " + scoreManager.GetCurrentScore().ToString();
-            coinText.text = "Coins: " + scoreManager.GetCurrentCoins().ToString();
+            restartButton.onClick.AddListener(GameManager.Instance.RestartGame);
         }
     }
 
-    public void TogglePauseMenu()
+    private void Start()
     {
-        pauseMenu.SetActive(!pauseMenu.activeSelf);
+        if (ScoreManager.Instance != null)
+        {
+            ScoreManager.Instance.OnScoreChanged += UpdateScore;
+            ScoreManager.Instance.OnCoinsChanged += UpdateCoins;
+        }
+
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
     }
 
-    public void ShowGameOverScreen(int finalScore)
+    private void OnDestroy()
     {
-        finalScoreText.text = "Final Score: " + finalScore.ToString();
-        gameOverScreen.SetActive(true);
+        if (ScoreManager.Instance != null)
+        {
+            ScoreManager.Instance.OnScoreChanged -= UpdateScore;
+            ScoreManager.Instance.OnCoinsChanged -= UpdateCoins;
+        }
+    }
+
+    private void UpdateScore(int newScore)
+    {
+        if (scoreText != null) scoreText.text = "Score: " + newScore;
+    }
+
+    private void UpdateCoins(int newCoins)
+    {
+        if (coinsText != null) coinsText.text = "Coins: " + newCoins;
+    }
+
+    public void ShowGameOverScreen()
+    {
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+        if (finalScoreText != null && ScoreManager.Instance != null)
+        {
+            finalScoreText.text = "Final Score: " + ScoreManager.Instance.GetScore();
+        }
     }
 }

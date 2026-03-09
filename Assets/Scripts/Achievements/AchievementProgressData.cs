@@ -36,8 +36,7 @@ namespace Achievements
 
         public int GetTargetProgress()
         {
-            // This is a placeholder. In a real implementation, the target progress would be stored in the Achievement data.
-            return 1; 
+            return Achievement.TargetProgress;
         }
     }
 }

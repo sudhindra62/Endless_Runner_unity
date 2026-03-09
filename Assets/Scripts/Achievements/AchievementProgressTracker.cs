@@ -1,74 +1,56 @@
 
-using System;
+using UnityEngine;
 
-public static class AchievementProgressTracker
+public class AchievementProgressTracker : MonoBehaviour
 {
-    public static void Initialize()
+    private void OnEnable()
     {
-        // Subscribe to all relevant game events here
-        RunSessionManager.OnRunEnded += OnRunEnded;
-        FlowComboManager.OnComboChanged += OnComboChanged;
-        BossManager.OnBossDefeated += OnBossDefeated;
-        RareDropManager.OnRareDropAwarded += OnRareDropAwarded;
-        LeagueManager.OnPlayerLeagueChanged += OnPlayerLeagueChanged;
-        DailyLoginManager.OnLoginStreakChanged += OnLoginStreakChanged;
-        PlayerCoinManager.OnCoinsChanged += OnCoinsChanged;
+        SubscribeToEvents();
     }
 
-    public static void Uninitialize()
+    private void OnDisable()
     {
-        // Unsubscribe from all relevant game events here
-        RunSessionManager.OnRunEnded -= OnRunEnded;
-        FlowComboManager.OnComboChanged -= OnComboChanged;
-        BossManager.OnBossDefeated -= OnBossDefeated;
-        RareDropManager.OnRareDropAwarded -= OnRareDropAwarded;
-        LeagueManager.OnPlayerLeagueChanged -= OnPlayerLeagueChanged;
-        DailyLoginManager.OnLoginStreakChanged -= OnLoginStreakChanged;
-        PlayerCoinManager.OnCoinsChanged -= OnCoinsChanged;
+        UnsubscribeFromEvents();
     }
 
-    private static void OnRunEnded(RunSessionData data)
+    private void SubscribeToEvents()
     {
-        AchievementManager.Instance.UpdateAchievement(AchievementID.TotalDistance, (int)data.distance);
-        if (data.reviveCount == 0)
+        GameManager.OnGameOver += UpdateRunAchievements;
+        CurrencyManager.OnPrimaryCurrencyChanged += UpdateCoinAchievements;
+        DailyLoginManager.OnLoginStreakChanged += UpdateStreakAchievements;
+        RareDropManager.OnRareDropAwarded += UpdateRareDropAchievements;
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        GameManager.OnGameOver -= UpdateRunAchievements;
+        CurrencyManager.OnPrimaryCurrencyChanged -= UpdateCoinAchievements;
+        DailyLoginManager.OnLoginStreakChanged -= UpdateStreakAchievements;
+        RareDropManager.OnRareDropAwarded -= UpdateRareDropAchievements;
+    }
+
+    private void UpdateRunAchievements(RunSessionData runData)
+    {
+        AchievementManager.Instance.UpdateProgress(AchievementID.HighScorer, runData.Score);
+        AchievementManager.Instance.UpdateProgress(AchievementID.CoinCollector, runData.Coins);
+        AchievementManager.Instance.UpdateProgress(AchievementID.DistanceRunner, (int)runData.Distance);
+    }
+
+    private void UpdateCoinAchievements(int totalCoins)
+    {
+        AchievementManager.Instance.UpdateProgress(AchievementID.CoinHoarder, totalCoins);
+    }
+
+    private void UpdateStreakAchievements(int streak)
+    {
+        AchievementManager.Instance.UpdateProgress(AchievementID.StreakEnthusiast, streak);
+    }
+
+    private void UpdateRareDropAchievements(RareDropData drop)
+    {
+        if (drop.rarity == "Legendary")
         {
-            AchievementManager.Instance.UpdateAchievement(AchievementID.NoReviveRun, 1);
+            AchievementManager.Instance.UpdateProgress(AchievementID.LegendaryHunter, 1);
         }
-    }
-
-    private static void OnComboChanged(int combo)
-    {
-        AchievementManager.Instance.UpdateAchievement(AchievementID.ComboPeak, combo);
-    }
-
-    private static void OnBossDefeated()
-    {
-        AchievementManager.Instance.UpdateAchievement(AchievementID.BossesDefeated, 1);
-    }
-
-    private static void OnRareDropAwarded(string itemID, string rarity)
-    {
-        if (rarity == "Legendary" && itemID.Contains("Shard"))
-        {
-            AchievementManager.Instance.UpdateAchievement(AchievementID.LegendaryShards, 1);
-        }
-    }
-
-    private static void OnPlayerLeagueChanged(LeagueTier tier)
-    {
-        if (tier.LeagueName == "Diamond")
-        {
-            AchievementManager.Instance.UpdateAchievement(AchievementID.DiamondLeague, 1);
-        }
-    }
-
-    private static void OnLoginStreakChanged(int streak)
-    {
-        AchievementManager.Instance.UpdateAchievement(AchievementID.LoginStreak, streak);
-    }
-
-    private static void OnCoinsChanged(int coins)
-    {
-        AchievementManager.Instance.UpdateAchievement(AchievementID.TotalCoins, coins);
     }
 }

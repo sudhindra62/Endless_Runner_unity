@@ -1,113 +1,132 @@
 
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
+using Core;
 
-public class BossController : MonoBehaviour
+namespace Gameplay
 {
-    [Header("Movement")]
-    [SerializeField] private float chaseSpeed = 15f;
-    [SerializeField] private float followDistance = 15f;
-
-    [Header("Attack")]
-    [SerializeField] private float attackCooldown = 5f;
-    [SerializeField] private Transform attackSpawnPoint;
-
-    private Transform playerTransform;
-    private Coroutine attackCoroutine;
-    private ObjectPooler objectPooler;
-
-    private void Awake()
+    /// <summary>
+    /// Manages the behavior of a boss character, including chasing the player and performing attacks.
+    /// </summary>
+    public class BossController : MonoBehaviour
     {
-        playerTransform = FindObjectOfType<PlayerMovement>()?.transform;
-        objectPooler = ObjectPooler.Instance;
-    }
+        [Header("Movement Parameters")]
+        [SerializeField] private float chaseSpeed = 15f;
+        [SerializeField] private float followDistance = 15f;
+        [SerializeField] private float laneWidth = 3f;
 
-    private void OnEnable()
-    {
-        if (playerTransform != null)
+        [Header("Attack Parameters")]
+        [SerializeField] private float attackCooldown = 5f;
+        [SerializeField] private Transform attackSpawnPoint;
+        [SerializeField] private string projectileTag = "BossProjectile";
+        [SerializeField] private string barrierTag = "Barrier";
+
+        private Transform _playerTransform;
+        private Coroutine _chaseCoroutine;
+        private Coroutine _attackCoroutine;
+
+        private void OnEnable()
         {
-            StartCoroutine(ChasePlayer());
-            attackCoroutine = StartCoroutine(PerformAttacks());
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (attackCoroutine != null)
-        {
-            StopCoroutine(attackCoroutine);
-        }
-    }
-
-    private IEnumerator ChasePlayer()
-    {
-        while (true)
-        {
-            if (playerTransform != null)
+            // Attempt to find the player in the scene.
+            // A more robust solution would be to use a service locator or manager to get the player reference.
+            var player = FindObjectOfType<PlayerController>();
+            if (player != null)
             {
-                Vector3 targetPosition = playerTransform.position - playerTransform.forward * followDistance;
-                transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * chaseSpeed);
-                transform.rotation = Quaternion.LookRotation(playerTransform.forward);
-            }
-            yield return null;
-        }
-    }
-
-    private IEnumerator PerformAttacks()
-    {
-        yield return new WaitForSeconds(attackCooldown / 2); // Initial delay
-
-        while (true)
-        {
-            if(Random.value > 0.5f)
-            {
-                PerformProjectileAttack();
+                _playerTransform = player.transform;
+                StartCoroutines();
             }
             else
             {
-                PerformLaneBlockAttack();
+                Debug.LogWarning("BossController could not find a PlayerController in the scene.");
             }
-
-            yield return new WaitForSeconds(attackCooldown);
         }
-    }
 
-    private void PerformProjectileAttack()
-    {
-        if (playerTransform != null)
+        private void OnDisable()
         {
+            StopCoroutines();
+        }
+
+        private void StartCoroutines()
+        {
+            _chaseCoroutine = StartCoroutine(ChasePlayer());
+            _attackCoroutine = StartCoroutine(PerformAttacks());
+        }
+
+        private void StopCoroutines()
+        {
+            if (_chaseCoroutine != null)
+            {
+                StopCoroutine(_chaseCoroutine);
+                _chaseCoroutine = null;
+            }
+            if (_attackCoroutine != null)
+            {
+                StopCoroutine(_attackCoroutine);
+                _attackCoroutine = null;
+            }
+        }
+
+        private IEnumerator ChasePlayer()
+        {
+            while (true)
+            {
+                if (_playerTransform != null)
+                {
+                    Vector3 targetPosition = _playerTransform.position - _playerTransform.forward * followDistance;
+                    transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * chaseSpeed);
+                    transform.LookAt(_playerTransform);
+                }
+                yield return null;
+            }
+        }
+
+        private IEnumerator PerformAttacks()
+        {
+            yield return new WaitForSeconds(attackCooldown * 0.5f); // Initial delay
+
+            while (true)
+            {
+                if (Random.value > 0.5f)
+                {
+                    PerformProjectileAttack();
+                }
+                else
+                {
+                    PerformLaneBlockAttack();
+                }
+
+                yield return new WaitForSeconds(attackCooldown);
+            }
+        }
+
+        private void PerformProjectileAttack()
+        {
+            if (_playerTransform == null || ObjectPool.Instance == null) return;
+
             Debug.Log("Boss is performing a projectile attack!");
-            Vector3 attackPosition = attackSpawnPoint.position;
-            Quaternion attackRotation = Quaternion.LookRotation(playerTransform.position - attackSpawnPoint.position);
-            objectPooler.SpawnFromPool("BossProjectile", attackPosition, attackRotation);
+            Quaternion attackRotation = Quaternion.LookRotation(_playerTransform.position - attackSpawnPoint.position);
+            ObjectPool.Instance.SpawnFromPool(projectileTag, attackSpawnPoint.position, attackRotation);
         }
-    }
 
-    private void PerformLaneBlockAttack()
-    {
-        if (playerTransform == null) return;
-
-        Debug.Log("Boss is performing a lane block attack!");
-
-        int randomLane = Random.Range(-1, 2); // -1 for left, 0 for middle, 1 for right
-        float laneOffset = randomLane * 3f; // Example lane offset, adjust as needed
-
-        Vector3 barrierPosition = playerTransform.position + playerTransform.forward * 20f + new Vector3(laneOffset, 0.5f, 0);
-        GameObject barrier = objectPooler.GetPooledObject("Barrier");
-        
-        if (barrier != null)
+        private void PerformLaneBlockAttack()
         {
-            barrier.transform.position = barrierPosition;
-            barrier.transform.rotation = playerTransform.rotation;
-        }
-    }
+            if (_playerTransform == null || ObjectPool.Instance == null) return;
 
-    public float GetDistanceFromPlayer()
-    {
-        if (playerTransform == null)
-        {
-            return float.MaxValue;
+            Debug.Log("Boss is performing a lane block attack!");
+            int randomLane = Random.Range(-1, 2); // -1 for left, 0 for middle, 1 for right
+            float laneOffset = randomLane * laneWidth;
+
+            Vector3 barrierPosition = _playerTransform.position + _playerTransform.forward * 20f + new Vector3(laneOffset, 0.5f, 0);
+            ObjectPool.Instance.SpawnFromPool(barrierTag, barrierPosition, _playerTransform.rotation);
         }
-        return Vector3.Distance(transform.position, playerTransform.position);
+
+        /// <summary>
+        /// Calculates the distance from the boss to the player.
+        /// </summary>
+        public float GetDistanceFromPlayer()
+        {
+            if (_playerTransform == null) return float.MaxValue;
+            return Vector3.Distance(transform.position, _playerTransform.position);
+        }
     }
 }

@@ -1,106 +1,88 @@
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System;
 
-/// <summary>
-/// The central nervous system of the game. Manages game state, player lifecycle, and high-level systems.
-/// Ensures that all other managers are correctly initialized and coordinated.
-/// Created by Supreme Guardian Architect v12.
-/// </summary>
 public class GameManager : Singleton<GameManager>
 {
-    public enum GameState { MainMenu, Loading, Playing, Paused, GameOver }
+    public enum GameState
+    {
+        MainMenu,
+        Playing,
+        Paused,
+        GameOver
+    }
 
-    [Header("Game State")]
-    [SerializeField] private GameState currentState = GameState.MainMenu;
+    public static event Action<GameState> OnGameStateChanged;
 
-    // System Managers
-    private UIManager uiManager;
-    private ScoreManager scoreManager;
-    private PlayerController playerController;
+    public GameState CurrentState { get; private set; }
+
+    // Service Locator pattern for managers
+    public static UIManager UIManager { get; private set; }
+    public static ScoreManager ScoreManager { get; private set; }
 
     protected override void Awake()
     {
         base.Awake();
-        // Find all essential managers. This is a crucial step for interconnectivity.
-        uiManager = FindObjectOfType<UIManager>();
-        scoreManager = FindObjectOfType<ScoreManager>();
+        // The singleton pattern will ensure this instance is unique.
     }
 
-    void Start()
+    private void Start()
     {
-        // Based on the scene, determine the initial game state.
-        if (SceneManager.GetActiveScene().name == "MainMenu")
-        {
-            ChangeState(GameState.MainMenu);
-        }
-        else
-        {
-            ChangeState(GameState.Playing);
-        }
+        ChangeState(GameState.MainMenu);
     }
 
-    /// <summary>
-    /// Changes the current game state and performs actions associated with the new state.
-    /// </summary>
+    #region Manager Registration
+    public static void RegisterUIManager(UIManager manager) => UIManager = manager;
+    public static void RegisterScoreManager(ScoreManager manager) => ScoreManager = manager;
+    #endregion
+
     public void ChangeState(GameState newState)
     {
-        if (currentState == newState) return;
+        if (CurrentState == newState) return;
 
-        currentState = newState;
-        Debug.Log($"Guardian Architect Log: Game state changed to {currentState}");
-
-        switch (currentState)
+        CurrentState = newState;
+        switch (CurrentState)
         {
             case GameState.MainMenu:
-                // Logic for main menu setup
                 Time.timeScale = 1f;
-                break;
-            case GameState.Loading:
-                // Show loading screen, load assets, etc.
-                Time.timeScale = 1f;
+                if (UIManager != null) UIManager.ShowMainMenu();
                 break;
             case GameState.Playing:
-                // Start the game
                 Time.timeScale = 1f;
-                // Find the player in the scene
-                GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-                if (playerObj != null) playerController = playerObj.GetComponent<PlayerController>();
-                scoreManager?.ResetSession();
+                if (ScoreManager != null) ScoreManager.ResetScore();
+                if (UIManager != null) UIManager.ShowGameUI();
                 break;
             case GameState.Paused:
-                // Pause the game
                 Time.timeScale = 0f;
-                uiManager?.TogglePauseMenu();
+                if (UIManager != null) UIManager.ShowPauseMenu();
                 break;
             case GameState.GameOver:
-                // Handle game over logic
                 Time.timeScale = 0f;
-                scoreManager?.EndSession();
-                if (uiManager != null && scoreManager != null)
-                {
-                    uiManager.ShowGameOverScreen(scoreManager.GetCurrentScore());
-                }
+                if (ScoreManager != null) ScoreManager.SetHighScore();
+                if (UIManager != null) UIManager.ShowGameOverScreen();
                 break;
         }
+        
+        // Invoke the event to notify other parts of the game
+        OnGameStateChanged?.Invoke(newState);
     }
 
     public void PlayerDied()
     {
         ChangeState(GameState.GameOver);
+        Debug.Log("Game Over!");
     }
 
-    public void PauseGame()
+    public void RestartGame()
     {
-        if (currentState == GameState.Playing)
-        {
-            ChangeState(GameState.Paused);
-        }
-        else if (currentState == GameState.Paused)
-        {
-            ChangeState(GameState.Playing);
-        }
+        // Reset time scale before reloading the scene
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    public GameState GetCurrentState() => currentState;
+    public void StartGame()
+    {
+        ChangeState(GameState.Playing);
+    }
 }

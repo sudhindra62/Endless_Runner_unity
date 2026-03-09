@@ -1,88 +1,55 @@
 
-using UnityEngine;
 using System;
+using UnityEngine;
+using Core;
 
-public class ScoreManager : Singleton<ScoreManager>
+namespace Managers
 {
-    public static event Action<int> OnScoreUpdated;
-    public static event Action<int> OnCoinsUpdated;
-
-    private int _currentScore;
-    private int _currentCoins;
-    private float _distance;
-    private float _scoreMultiplier = 1f;
-
-    [Header("Scoring Parameters")]
-    [SerializeField] private float scorePerMeter = 1f;
-    private Transform _playerTransform;
-
-    protected override void Awake()
+    /// <summary>
+    /// Manages the player's score, high score, and coins.
+    /// </summary>
+    public class ScoreManager : Singleton<ScoreManager>
     {
-        base.Awake();
-        _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
-    }
+        public event Action<int> OnScoreChanged;
+        public event Action<int> OnHighScoreChanged;
+        public event Action<int> OnCoinsChanged;
 
-    private void OnEnable()
-    {
-        PowerUpManager.Instance.OnPowerUpActivated += HandlePowerUpActivated;
-        PowerUpManager.Instance.OnPowerUpDeactivated += HandlePowerUpDeactivated;
-    }
+        public int Score { get; private set; }
+        public int HighScore { get; private set; }
+        public int Coins { get; private set; }
 
-    private void OnDisable()
-    {
-        if (PowerUpManager.Instance != null)
+        private void Start()
         {
-            PowerUpManager.Instance.OnPowerUpActivated -= HandlePowerUpActivated;
-            PowerUpManager.Instance.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
+            // In a real game, you would load the high score from a save file.
+            HighScore = PlayerPrefs.GetInt("HighScore", 0);
+            OnHighScoreChanged?.Invoke(HighScore);
         }
-    }
 
-    private void Update()
-    {
-        if (GameManager.Instance.GetCurrentState() == GameManager.GameState.Playing && _playerTransform != null)
+        public void AddScore(int amount)
         {
-            _distance = _playerTransform.position.z;
-            int newScore = Mathf.FloorToInt(_distance * scorePerMeter * _scoreMultiplier);
-            if (newScore != _currentScore)
+            Score += amount;
+            OnScoreChanged?.Invoke(Score);
+
+            if (Score > HighScore)
             {
-                _currentScore = newScore;
-                OnScoreUpdated?.Invoke(_currentScore);
+                HighScore = Score;
+                PlayerPrefs.SetInt("HighScore", HighScore);
+                OnHighScoreChanged?.Invoke(HighScore);
             }
         }
-    }
 
-    public void AddCoins(int amount)
-    {
-        _currentCoins += amount;
-        OnCoinsUpdated?.Invoke(_currentCoins);
-    }
-
-    public void ResetSession()
-    {
-        _currentScore = 0;
-        _currentCoins = 0;
-        _distance = 0f;
-        _scoreMultiplier = 1f;
-        OnScoreUpdated?.Invoke(_currentScore);
-        OnCoinsUpdated?.Invoke(_currentCoins);
-    }
-
-    public int GetCurrentScore() => _currentScore;
-    public int GetCurrentCoins() => _currentCoins;
-
-    private void HandlePowerUpActivated(PowerUp powerUp)
-    {
-        if (powerUp.type == PowerUpType.ScoreMultiplier)
+        public void AddCoins(int amount)
         {
-            _scoreMultiplier = powerUp.value;
+            Coins += amount;
+            OnCoinsChanged?.Invoke(Coins);
         }
-    }
 
-    private void HandlePowerUpDeactivated(PowerUp powerUp)
-    {
-        if (powerUp.type == PowerUpType.ScoreMultiplier)
+        public void ResetScore()
         {
-            _scoreMultiplier = 1f;
+            Score = 0;
+            Coins = 0;
+            OnScoreChanged?.Invoke(Score);
+            OnCoinsChanged?.Invoke(Coins);
         }
     }
 }

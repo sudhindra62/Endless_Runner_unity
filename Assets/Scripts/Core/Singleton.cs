@@ -1,87 +1,90 @@
+
 using UnityEngine;
 
-/// <summary>
-/// A generic, thread-safe singleton base class for MonoBehaviour.
-/// This ensures that only one instance of a manager or system exists, providing a global access point.
-/// Logic and structure validated and deployed by Supreme Guardian Architect v12.
-/// </summary>
-/// <typeparam name="T">The type of the singleton class.</typeparam>
-public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
+namespace Core
 {
-    private static T _instance;
-    private static readonly object _lock = new object();
-    private static bool _applicationIsQuitting = false;
-
     /// <summary>
-    /// The static instance of the singleton.
+    /// A generic base class for creating singletons from MonoBehaviours.
+    /// This ensures that only one instance of the class exists, providing a global access point.
+    /// It handles persistence across scene loads and prevents the creation of "ghost" objects in the editor.
     /// </summary>
-    public static T Instance
+    /// <typeparam name="T">The type of the singleton class, which must inherit from MonoBehaviour.</typeparam>
+    public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
     {
-        get
+        // The single, static instance of the singleton.
+        private static T _instance;
+
+        // A lock object to ensure thread safety during instance access.
+        private static readonly object _lock = new object();
+
+        // Flag to prevent re-creation of the instance during application shutdown.
+        private static bool _isApplicationQuitting = false;
+
+        /// <summary>
+        /// Gets the singleton instance. If it doesn't exist, it will be found or created.
+        /// </summary>
+        public static T Instance
         {
-            if (_applicationIsQuitting)
+            get
             {
-                Debug.LogWarning($"[Singleton] Instance '{typeof(T)}' already destroyed on application quit. Won't create again - returning null.");
-                return null;
-            }
-
-            lock (_lock)
-            {
-                if (_instance == null)
+                if (_isApplicationQuitting)
                 {
-                    // Search for an existing instance in the scene
-                    _instance = (T)FindObjectOfType(typeof(T));
-
-                    // If more than one instance is found, something is wrong.
-                    if (FindObjectsOfType(typeof(T)).Length > 1)
-                    {
-                        Debug.LogError("[Singleton] Something went really wrong - there's more than 1 instance of a singleton. Reopening the scene might fix it.");
-                        return _instance;
-                    }
-
-                    // If no instance is found, create a new GameObject and add the component.
-                    if (_instance == null)
-                    {
-                        GameObject singleton = new GameObject();
-                        _instance = singleton.AddComponent<T>();
-                        singleton.name = $"(singleton) {typeof(T)}";
-
-                        // Mark the singleton to not be destroyed when loading new scenes.
-                        DontDestroyOnLoad(singleton);
-                        
-                        Debug.Log($"[Singleton] An instance of {typeof(T)} is needed in the scene, so '{singleton}' was created with DontDestroyOnLoad.");
-                    }
+                    Debug.LogWarning($"[Singleton] Instance of '{typeof(T)}' will not be created because the application is quitting.");
+                    return null;
                 }
 
-                return _instance;
+                lock (_lock)
+                {
+                    if (_instance == null)
+                    {
+                        // Try to find an existing instance in the scene.
+                        _instance = FindObjectOfType<T>();
+
+                        // If no instance exists, create a new one.
+                        if (_instance == null)
+                        {
+                            var singletonObject = new GameObject();
+                            _instance = singletonObject.AddComponent<T>();
+                            singletonObject.name = $"{typeof(T)} (Singleton)";
+                        }
+                    }
+                    return _instance;
+                }
             }
         }
-    }
 
-    /// <summary>
-    /// When Unity quits, it destroys objects in a random order.
-    /// In principle, a Singleton is only destroyed when the application quits.
-    /// If any script calls Instance after it have been destroyed, 
-    ///   it will create a buggy ghost object that will stay on the Editor scene
-    ///   even after stopping playing the Application. Really bad!
-    /// So, this was made to be sure we're not creating that buggy ghost object.
-    /// </summary>
-    public void OnDestroy()
-    {
-        _applicationIsQuitting = true;
-    }
-
-    protected virtual void Awake()
-    {
-        if (_instance == null)
+        /// <summary>
+        /// This is the primary mechanism for enforcing the singleton pattern.
+        /// It's a virtual method to allow derived classes to extend its behavior.
+        /// </summary>
+        protected virtual void Awake()
         {
-            _instance = this as T;
-            DontDestroyOnLoad(gameObject);
+            if (_instance == null)
+            {
+                // If this is the first instance, make it the singleton.
+                _instance = this as T;
+                
+                // Mark this object to not be destroyed when loading new scenes.
+                DontDestroyOnLoad(gameObject);
+            }
+            else if (_instance != this)
+            {
+                // If another instance already exists, destroy this one.
+                Debug.LogWarning($"[Singleton] Duplicate instance of '{typeof(T)}' found. Destroying the duplicate.");
+                Destroy(gameObject);
+            }
         }
-        else if (_instance != this)
+
+        /// <summary>
+        /// OnDestroy is called when the MonoBehaviour will be destroyed.
+        /// We set a flag here to prevent any further access to the singleton instance.
+        /// </summary>
+        protected virtual void OnDestroy()
         {
-            Debug.LogWarning($"[Singleton] Instance of '{typeof(T)}' already exists. Destroying this duplicate.");
-            Destroy(gameObject);
+            if (_instance == this)
+            {
+                _isApplicationQuitting = true;
+            }
         }
     }
 }

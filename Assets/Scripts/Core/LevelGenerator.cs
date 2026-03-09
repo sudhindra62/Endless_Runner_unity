@@ -1,58 +1,68 @@
 
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
-/// <summary>
-/// Procedurally generates the level by spawning and managing track tiles.
-/// Ensures an endless and varied path for the player.
-/// Created by Supreme Guardian Architect v12.
-/// </summary>
 public class LevelGenerator : MonoBehaviour
 {
-    [Header("Track Generation")]
-    [SerializeField] private GameObject[] trackTiles;
-    [SerializeField] private float tileLength = 50f; // Length of a single track tile prefab
-    [SerializeField] private int initialTiles = 5;
-    [SerializeField] private Transform playerTransform;
+    [Header("Level Geometry")]
+    [SerializeField] private GameObject levelChunkPrefab;
+    [SerializeField] private int chunkLength = 20;
+    [SerializeField] private int initialChunks = 5;
+    [SerializeField] private int chunksToMaintain = 3;
 
-    private List<GameObject> activeTiles = new List<GameObject>();
-    private float spawnPositionZ = 0;
+    [Header("Generation Parameters")]
+    [SerializeField] private ProceduralPatternGenerator patternGenerator;
+    [SerializeField] private float generationInterval = 5.0f; 
 
-    void Start()
+    private Queue<GameObject> _activeChunks = new Queue<GameObject>();
+    private Vector3 _nextChunkPosition;
+    private float _timeSinceLastGeneration = 0f;
+
+    private void Start()
     {
-        if (playerTransform == null)
-        {
-            playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
+        InitializeLevel();
+        // Additional setup if required
+    }
+
+    private void Update()
+    {
+        _timeSinceLastGeneration += Time.deltaTime;
+        if (_timeSinceLastGeneration >= generationInterval)
+        { 
+            GenerateAndPlaceChunk();
+            _timeSinceLastGeneration = 0f;
         }
 
-        // Spawn initial set of tiles
-        for (int i = 0; i < initialTiles; i++)
+        // Optional: Implement a trigger-based generation system instead of time-based.
+    }
+
+    private void InitializeLevel()
+    {
+        _nextChunkPosition = transform.position;
+        for (int i = 0; i < initialChunks; i++)
         {
-            SpawnTile();
+            GenerateAndPlaceChunk();
         }
     }
 
-    void Update()
+    private void GenerateAndPlaceChunk()
     {
-        // If the player has moved far enough, spawn a new tile and remove the oldest one
-        if (playerTransform.position.z - (tileLength) > spawnPositionZ - (initialTiles * tileLength))
-        {
-            SpawnTile();
-            DeleteOldestTile();
+        int[] pattern = patternGenerator.GeneratePattern(chunkLength);
+        GameObject newChunk = Instantiate(levelChunkPrefab, _nextChunkPosition, Quaternion.identity, transform);
+        _nextChunkPosition.z += chunkLength;
+
+        // The LevelChunk component will now be responsible for populating itself.
+        LevelChunk chunkComponent = newChunk.GetComponent<LevelChunk>();
+        if (chunkComponent != null)
+        { 
+            chunkComponent.Initialize(pattern);
         }
-    }
 
-    private void SpawnTile()
-    {
-        GameObject tileToSpawn = trackTiles[Random.Range(0, trackTiles.Length)];
-        GameObject spawnedTile = Instantiate(tileToSpawn, Vector3.forward * spawnPositionZ, Quaternion.identity, this.transform);
-        activeTiles.Add(spawnedTile);
-        spawnPositionZ += tileLength;
-    }
+        _activeChunks.Enqueue(newChunk);
 
-    private void DeleteOldestTile()
-    {
-        Destroy(activeTiles[0]);
-        activeTiles.RemoveAt(0);
+        if (_activeChunks.Count > chunksToMaintain)
+        {
+            Destroy(_activeChunks.Dequeue());
+        }
     }
 }

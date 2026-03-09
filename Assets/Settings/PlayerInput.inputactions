@@ -1,0 +1,30 @@
+
+{
+    "name": "PlayerInput",
+    "maps": [
+        {
+            "name": "Touch",
+            "id": "d7b2a2f7-331c-4f16-9d7a-3f3be3e9e5a6",
+            "actions": [
+                {
+                    "name": "PrimaryContact",
+                    "type": "PassThrough",
+                    "id": "0b8e9b4c-4a3e-461d-9c3a-3a1b3b5b6e1a",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "Press"
+                },
+                {
+                    "name": "PrimaryPosition",
+                    "type": "Value",
+                    "id": "d7d3d0f7-4c01-4b6a-9b4d-7a4b8d7c1e5a",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": ""
+                }
+            ],
+            "bindings": []
+        }
+    ],
+    "controlSchemes": []
+}

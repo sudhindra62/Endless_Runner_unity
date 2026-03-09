@@ -1,16 +1,13 @@
 
 using UnityEngine;
-using System.Collections.Generic;
 
-/// <summary>
-/// Manages the spawning of coins on track tiles, often in patterns.
-/// This script is designed to be placed on track tile prefabs.
-/// Created by Supreme Guardian Architect v12.
-/// </summary>
 public class CoinSpawner : MonoBehaviour
 {
+    public enum CoinPattern { Line, Curve, Wave }
+
     [Header("Coin Configuration")]
     [SerializeField] private GameObject coinPrefab;
+    [SerializeField] private CoinPattern pattern = CoinPattern.Line;
     [Tooltip("The number of coins to spawn in a single pattern.")]
     [SerializeField] private int coinsInPattern = 5;
     [Tooltip("The spacing between coins in a pattern.")]
@@ -27,15 +24,52 @@ public class CoinSpawner : MonoBehaviour
     {
         if (coinPrefab == null) return;
 
-        // Choose a random lane for the coin pattern
         float spawnX = laneXPositions[Random.Range(0, laneXPositions.Length)];
-        // Choose a random starting Z position for the pattern
         float startZ = transform.position.z + Random.Range(10f, 30f);
 
+        switch (pattern)
+        {
+            case CoinPattern.Line:
+                SpawnLinePattern(spawnX, startZ);
+                break;
+            case CoinPattern.Curve:
+                SpawnCurvePattern(spawnX, startZ);
+                break;
+            case CoinPattern.Wave:
+                SpawnWavePattern(spawnX, startZ);
+                break;
+        }
+    }
+
+    private void SpawnLinePattern(float spawnX, float startZ)
+    {
         for (int i = 0; i < coinsInPattern; i++)
         {
             Vector3 spawnPosition = new Vector3(spawnX, 1f, startZ + (i * coinSpacing));
-            Instantiate(coinPrefab, spawnPosition, Quaternion.identity, this.transform);
+            GameObject coin = ObjectPool.Instance.GetObject(coinPrefab, spawnPosition, Quaternion.identity);
+            coin.transform.SetParent(transform);
+        }
+    }
+
+    private void SpawnCurvePattern(float spawnX, float startZ)
+    {
+        for (int i = 0; i < coinsInPattern; i++)
+        {
+            float xOffset = Mathf.Sin(i * 0.5f) * 2f;
+            Vector3 spawnPosition = new Vector3(spawnX + xOffset, 1f, startZ + (i * coinSpacing));
+            GameObject coin = ObjectPool.Instance.GetObject(coinPrefab, spawnPosition, Quaternion.identity);
+            coin.transform.SetParent(transform);
+        }
+    }
+
+    private void SpawnWavePattern(float spawnX, float startZ)
+    {
+        for (int i = 0; i < coinsInPattern; i++)
+        {
+            float xOffset = Mathf.Sin(i * coinSpacing) * 2f;
+            Vector3 spawnPosition = new Vector3(spawnX + xOffset, 1f, startZ + (i * coinSpacing));
+            GameObject coin = ObjectPool.Instance.GetObject(coinPrefab, spawnPosition, Quaternion.identity);
+            coin.transform.SetParent(transform);
         }
     }
 }

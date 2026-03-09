@@ -1,16 +1,16 @@
 
 using UnityEngine;
+using System;
 
 /// <summary>
 /// Handles all character movement, including running, jumping, sliding, and lane switching.
-/// This is a core component of the player character.
-/// Created by Supreme Guardian Architect v12.
+/// This is a core component of the player character, controlled by the Player script.
 /// </summary>
-[RequireComponent(typeof(CharacterController), typeof(CharacterAnimator))]
+[RequireComponent(typeof(CharacterController))]
 public class CharacterMotor : MonoBehaviour
 {
     [Header("Movement Settings")]
-    [SerializeField] private float forwardSpeed = 10f;
+    [SerializeField] private float baseForwardSpeed = 10f;
     [SerializeField] private float laneChangeSpeed = 15f;
     [SerializeField] private float jumpHeight = 2f;
     [SerializeField] private float gravity = -20f;
@@ -21,27 +21,32 @@ public class CharacterMotor : MonoBehaviour
     private int currentLane = 0; // -1 for left, 0 for center, 1 for right
 
     private CharacterController controller;
-    private CharacterAnimator characterAnimator;
 
     private Vector3 verticalVelocity;
     private bool isSliding = false;
     private float slideTimer;
+    private float currentForwardSpeed;
+
+    // Power-up states
+    private bool doubleJumpEnabled = false;
+    private bool canDoubleJump = false;
+
+    // Events
+    public event Action OnJump;
+    public event Action OnSlideStart;
+    public event Action OnSlideEnd;
+    public event Action<int> OnLaneChange;
 
     void Awake()
     {
         controller = GetComponent<CharacterController>();
-        characterAnimator = GetComponent<CharacterAnimator>();
-    }
-
-    void Start()
-    {
-        characterAnimator.SetRunning(true);
+        currentForwardSpeed = baseForwardSpeed;
     }
 
     void Update()
     {
         // --- FORWARD MOVEMENT ---
-        Vector3 forwardMove = transform.forward * forwardSpeed * Time.deltaTime;
+        Vector3 forwardMove = transform.forward * currentForwardSpeed * Time.deltaTime;
 
         // --- LANE CHANGING ---
         Vector3 targetPosition = new Vector3(currentLane * laneWidth, transform.position.y, transform.position.z);
@@ -52,7 +57,7 @@ public class CharacterMotor : MonoBehaviour
         if (controller.isGrounded && verticalVelocity.y < 0)
         {
             verticalVelocity.y = -2f; // A small downward force to keep the character grounded
-            characterAnimator.SetJumping(false);
+            canDoubleJump = false; // Reset double jump when grounded
         }
         verticalVelocity.y += gravity * Time.deltaTime;
 
@@ -76,7 +81,17 @@ public class CharacterMotor : MonoBehaviour
         if (controller.isGrounded)
         {
             verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            characterAnimator.SetJumping(true);
+            OnJump?.Invoke();
+            if (doubleJumpEnabled)
+            {
+                canDoubleJump = true; // Allow a double jump after the initial jump
+            }
+        }
+        else if (doubleJumpEnabled && canDoubleJump)
+        {
+            verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            OnJump?.Invoke();
+            canDoubleJump = false; // Only one double jump allowed
         }
     }
 
@@ -86,7 +101,7 @@ public class CharacterMotor : MonoBehaviour
         {
             isSliding = true;
             slideTimer = slideDuration;
-            characterAnimator.SetSliding(true);
+            OnSlideStart?.Invoke();
             // Temporarily scale the character controller's height
             controller.height /= 2;
             controller.center = new Vector3(controller.center.x, controller.center.y / 2, controller.center.z);
@@ -96,7 +111,7 @@ public class CharacterMotor : MonoBehaviour
     private void StopSlide()
     {
         isSliding = false;
-        characterAnimator.SetSliding(false);
+        OnSlideEnd?.Invoke();
         // Restore the character controller's original height
         controller.height *= 2;
         controller.center = new Vector3(controller.center.x, controller.center.y * 2, controller.center.z);
@@ -108,8 +123,19 @@ public class CharacterMotor : MonoBehaviour
         if (targetLane >= -1 && targetLane <= 1)
         {
             currentLane = targetLane;
-            if (direction > 0) characterAnimator.SetTurningRight(true); // Fire-and-forget trigger
-            else characterAnimator.SetTurningLeft(true);
+            OnLaneChange?.Invoke(direction);
         }
+    }
+
+    // --- Power-up Control Methods ---
+    public void SetDoubleJump(bool enabled)
+    {
+        doubleJumpEnabled = enabled;
+        if (!enabled) canDoubleJump = false;
+    }
+
+    public void SetSpeedBoost(float multiplier, bool enabled)
+    {
+        currentForwardSpeed = enabled ? baseForwardSpeed * multiplier : baseForwardSpeed;
     }
 }

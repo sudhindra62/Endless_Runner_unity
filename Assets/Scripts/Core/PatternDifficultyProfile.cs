@@ -1,19 +1,11 @@
+
 using UnityEngine;
 
 namespace Core
 {
-    /// <summary>
-    /// Defines the dynamic difficulty parameters for pattern generation.
-    /// This ScriptableObject is the authoritative source for all difficulty calculations, 
-    /// providing context-aware values for different gameplay scenarios.
-    /// Fortified by Supreme Guardian Architect v12 to ensure logical encapsulation.
-    /// </summary>
     [CreateAssetMenu(fileName = "PatternDifficultyProfile", menuName = "EndlessRunner/Pattern Difficulty Profile", order = 1)]
     public class PatternDifficultyProfile : ScriptableObject
     {
-        /// <summary>
-        /// Describes the gameplay context to correctly apply difficulty modifiers.
-        /// </summary>
         public enum PatternContext
         {
             Normal,
@@ -21,55 +13,44 @@ namespace Core
             RiskLane
         }
 
-        [Header("Base Progression Curve")]
-        [Tooltip("Base density of obstacles. Higher means more obstacles per tile.")]
-        [SerializeField] private float _baseDensity = 0.5f;
-        [Tooltip("How much density increases per minute of gameplay.")]
-        [SerializeField] private float _densityGrowthRate = 0.05f;
-        [Tooltip("The maximum base density value.")]
-        [SerializeField] private float _maxDensity = 1.5f;
+        [Header("Progression Curves")]
+        [Tooltip("The time in seconds over which the difficulty curves are evaluated. After this time, difficulty remains at its maximum.")]
+        [SerializeField] private float maxProgressionTime = 300f; // 5 minutes to reach max difficulty
 
-        [Space(10)]
-        [Tooltip("The initial minimum reaction window the player is given (in seconds).")]
-        [SerializeField] private float _initialReactionWindow = 0.75f;
-        [Tooltip("How much the reaction window shrinks per minute.")]
-        [SerializeField] private float _reactionWindowShrinkRate = 0.02f;
-        [Tooltip("The absolute minimum reaction time allowed. Prevents impossible patterns.")]
-        [SerializeField] private float _minReactionWindow = 0.25f;
+        [Tooltip("Determines obstacle density over time. Time (X-axis) is normalized from 0 to 1, corresponding to 0 to maxProgressionTime. Value (Y-axis) is the density.")]
+        [SerializeField] private AnimationCurve densityCurve = AnimationCurve.Linear(0, 0.5f, 1, 1.5f);
 
-        [Header("Complexity Progression")]
-        [Tooltip("The game time (in seconds) at which more complex obstacle types (e.g., moving obstacles) can appear.")]
-        [SerializeField] private float _timeToIntroduceComplexObstacles = 120f;
-        [Tooltip("The probability (0-1) of a complex obstacle appearing after the introduction time.")]
-        [SerializeField] [Range(0f, 1f)] private float _complexObstacleChance = 0.3f;
+        [Tooltip("Determines the player's reaction window over time. Time (X-axis) is normalized. Value (Y-axis) is the reaction time in seconds.")]
+        [SerializeField] private AnimationCurve reactionWindowCurve = AnimationCurve.Linear(0, 0.75f, 1, 0.25f);
+
+        [Tooltip("Chance of a complex obstacle appearing over time. Time (X-axis) is normalized. Value (Y-axis) is the probability (0-1).")]
+        [SerializeField] private AnimationCurve complexObstacleChanceCurve = AnimationCurve.Linear(0, 0, 1, 0.3f);
 
         [Header("Contextual Modifiers")]
         [Tooltip("Multiplier for obstacle density during a boss chase.")]
-        [SerializeField] private float _bossModeDensityMultiplier = 1.5f;
+        [SerializeField] private float bossModeDensityMultiplier = 1.5f;
         [Tooltip("Flat reduction in the reaction window during a boss chase.")]
-        [SerializeField] private float _bossModeReactionWindowReduction = 0.1f;
+        [SerializeField] private float bossModeReactionWindowReduction = 0.1f;
         [Tooltip("Multiplier for obstacle density in the risk lane.")]
-        [SerializeField] private float _riskLaneDensityMultiplier = 2.0f;
+        [SerializeField] private float riskLaneDensityMultiplier = 2.0f;
         [Tooltip("Chance of finding a high-value coin cluster in the risk lane.")]
-        [SerializeField] [Range(0f, 1f)] private float _riskLaneCoinChance = 0.8f;
-
+        [SerializeField] [Range(0f, 1f)] private float riskLaneCoinChance = 0.8f;
 
         /// <summary>
         /// Calculates the context-aware obstacle density based on the game duration.
         /// </summary>
         public float GetCurrentDensity(float gameTimeInSeconds, PatternContext context = PatternContext.Normal)
         {
-            float minutes = gameTimeInSeconds / 60f;
-            float density = _baseDensity + (minutes * _densityGrowthRate);
-            density = Mathf.Min(density, _maxDensity);
+            float normalizedTime = Mathf.Clamp01(gameTimeInSeconds / maxProgressionTime);
+            float density = densityCurve.Evaluate(normalizedTime);
 
             switch (context)
             {
                 case PatternContext.BossMode:
-                    density *= _bossModeDensityMultiplier;
+                    density *= bossModeDensityMultiplier;
                     break;
                 case PatternContext.RiskLane:
-                    density *= _riskLaneDensityMultiplier;
+                    density *= riskLaneDensityMultiplier;
                     break;
             }
             return density;
@@ -80,33 +61,26 @@ namespace Core
         /// </summary>
         public float GetCurrentReactionWindow(float gameTimeInSeconds, PatternContext context = PatternContext.Normal)
         {
-            float minutes = gameTimeInSeconds / 60f;
-            float window = _initialReactionWindow - (minutes * _reactionWindowShrinkRate);
-            window = Mathf.Max(window, _minReactionWindow);
+            float normalizedTime = Mathf.Clamp01(gameTimeInSeconds / maxProgressionTime);
+            float window = reactionWindowCurve.Evaluate(normalizedTime);
 
             if (context == PatternContext.BossMode)
             {
-                window -= _bossModeReactionWindowReduction;
-                // Ensure the reduction doesn't push the window below the absolute minimum.
-                window = Mathf.Max(window, _minReactionWindow);
+                window -= bossModeReactionWindowReduction;
+                // Ensure the reduction doesn't push the window below the curve's minimum value.
+                float minPossibleWindow = reactionWindowCurve.keys.Length > 0 ? reactionWindowCurve.keys[reactionWindowCurve.length - 1].value : 0.1f;
+                window = Mathf.Max(window, minPossibleWindow);
             }
             return window;
         }
 
         /// <summary>
-        /// Determines if complex obstacles should be introduced based on game time.
+        /// Gets the probability of spawning a complex obstacle based on game time.
         /// </summary>
-        public bool ShouldIntroduceComplexObstacles(float gameTimeInSeconds)
+        public float GetComplexObstacleChance(float gameTimeInSeconds)
         {
-            return gameTimeInSeconds >= _timeToIntroduceComplexObstacles;
-        }
-        
-        /// <summary>
-        /// Gets the probability of spawning a complex obstacle.
-        /// </summary>
-        public float GetComplexObstacleChance()
-        {
-            return _complexObstacleChance;
+            float normalizedTime = Mathf.Clamp01(gameTimeInSeconds / maxProgressionTime);
+            return complexObstacleChanceCurve.Evaluate(normalizedTime);
         }
 
         /// <summary>
@@ -114,7 +88,7 @@ namespace Core
         /// </summary>
         public float GetRiskLaneCoinChance()
         {
-            return _riskLaneCoinChance;
+            return riskLaneCoinChance;
         }
     }
 }

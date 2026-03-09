@@ -7,6 +7,8 @@ public class CompetitiveLeagueManager : MonoBehaviour
 {
     public static CompetitiveLeagueManager Instance { get; private set; }
 
+    public static event System.Action<LeagueTier> OnPlayerLeagueChanged;
+
     [SerializeField] private List<LeagueDivisionData> leagueStructure;
 
     // Player data would be in a separate class, this is a simplification
@@ -57,7 +59,7 @@ public class CompetitiveLeagueManager : MonoBehaviour
         // 2. Calculate promotion/demotion based on rank
         var division = leagueStructure.FirstOrDefault(d => d.TierName + d.Division == playerDivisionId);
         if (rank <= division.PromotionThreshold) 
-        {
+        { 
             PromotePlayer();
         }
         else if (rank >= division.DemotionThreshold)
@@ -80,12 +82,16 @@ public class CompetitiveLeagueManager : MonoBehaviour
     {
         // Logic to move the player to the next division/tier
         Debug.Log("Player Promoted!");
+        var division = leagueStructure.FirstOrDefault(d => d.TierName + d.Division == playerDivisionId);
+        OnPlayerLeagueChanged?.Invoke(new LeagueTier { LeagueName = division.TierName, Tier = division.Division });
     }
 
     private void DemotePlayer() 
     {
         // Logic to move the player to the previous division/tier
         Debug.Log("Player Demoted.");
+        var division = leagueStructure.FirstOrDefault(d => d.TierName + d.Division == playerDivisionId);
+        OnPlayerLeagueChanged?.Invoke(new LeagueTier { LeagueName = division.TierName, Tier = division.Division });
     }
 
     private int GetPlayerRankInGroup()

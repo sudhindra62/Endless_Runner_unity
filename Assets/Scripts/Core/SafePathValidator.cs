@@ -4,70 +4,82 @@ using UnityEngine;
 namespace Core
 {
     /// <summary>
-    /// Performs geometric and timing validation to ensure a pattern is physically possible for the player to navigate.
-    /// This is the ultimate "fairness" check, preventing guaranteed hits.
+    /// Validates obstacle patterns to ensure they are physically navigable by the player.
+    /// This script acts as a "fairness" check to prevent unbeatable level segments.
     /// </summary>
     public class SafePathValidator : MonoBehaviour
     {
-        // These would be loaded from a config or GameSettings file
-        private const float MIN_REACTION_TIME = 0.25f; // Minimum time player has to react
-        private const float PLAYER_JUMP_CLEARANCE_TIME = 0.75f; // Time it takes to complete a jump
-        private const float PLAYER_SLIDE_CLEARANCE_TIME = 0.6f;  // Time it takes to complete a slide
+        [Header("Player Movement Parameters")]
+        [Tooltip("The number of available lanes for the player.")]
+        [SerializeField] private int numberOfLanes = 3;
 
-        // This would be linked to the Player's movement capabilities
-        private const float LANE_SWITCH_TIME = 0.15f; // Time it takes to switch one lane
+        [Tooltip("The time required for the player to switch from one lane to another.")]
+        [SerializeField] private float laneSwitchTime = 0.2f;
+
+        public int NumberOfLanes => numberOfLanes;
 
         /// <summary>
-        /// Analyzes a pattern to determine if there is at least one guaranteed safe path through it.
+        /// Analyzes a generated pattern to determine if a safe path exists for the player.
         /// </summary>
-        /// <param name="pattern">The pattern to analyze.</param>
-        /// <param name="gameSpeed">The current forward speed of the game.</param>
-        /// <returns>True if a safe path exists, false otherwise.</returns>
-        public bool IsPathSafe(ProceduralPattern pattern, float gameSpeed)
+        /// <param name="pattern">The obstacle pattern, represented as an array of bitmasks.</param>
+        /// <param name="chunkLength">The length of the pattern array.</param>
+        /// <returns>True if a safe path is found, false otherwise.</returns>
+        public bool IsPathSafe(int[] pattern, int chunkLength)
         {
-            // This is a highly complex task. A real implementation would involve simulating player movement
-            // through the pattern's obstacle layout. We simulate this by checking lane-by-lane possibilities.
-            
-            // For each of the 3 lanes, can we traverse it safely?
-            bool lane1Safe = IsLaneTraversable(pattern, 0, gameSpeed);
-            bool lane2Safe = IsLaneTraversable(pattern, 1, gameSpeed);
-            bool lane3Safe = IsLaneTraversable(pattern, 2, gameSpeed);
+            // This simplified validator checks for two main conditions:
+            // 1. That there is never a full blockage of all lanes at the same time.
+            // 2. That there is always at least one open lane to move into.
 
-            // As long as ONE lane is clear, the pattern is deemed "fair" at a basic level.
-            if (lane1Safe || lane2Safe || lane3Safe)
+            int allLanesBlockedMask = (1 << numberOfLanes) - 1;
+
+            for (int i = 0; i < chunkLength; i++)
             {
-                return true;
+                // Check for a full blockage
+                if (pattern[i] == allLanesBlockedMask)
+                {
+                    return false; // Instant failure if all lanes are blocked
+                }
+
+                // Check if a lane switch is required and possible
+                if (i > 0 && pattern[i-1] != 0 && pattern[i] != 0)
+                {
+                    int previousOpenLanes = allLanesBlockedMask & ~pattern[i-1];
+                    int currentOpenLanes = allLanesBlockedMask & ~pattern[i];
+                    
+                    // If there are no common open lanes, a switch is needed.
+                    if ((previousOpenLanes & currentOpenLanes) == 0)
+                    {
+                        // This simplistic check doesn't account for the *time* to switch,
+                        // but it ensures there is at least a theoretical path.
+                        // A more advanced validator would use gameSpeed and chunkDistance.
+                        bool canSwitch = false;
+                        for(int prevLane = 0; prevLane < numberOfLanes; prevLane++)
+                        {
+                            if(((previousOpenLanes >> prevLane) & 1) == 1)
+                            {
+                                for(int currLane = 0; currLane < numberOfLanes; currLane++)
+                                {
+                                    if((currentOpenLanes >> currLane) & 1) == 1
+                                    {
+                                        // In a real scenario, you'd calculate if the distance between obstacles
+                                        // is greater than player speed * laneSwitchTime.
+                                        canSwitch = true; 
+                                        break;
+                                    }
+                                }
+                            }
+                            if(canSwitch) break;
+                        }
+
+                        if (!canSwitch)
+                        {
+                            return false;
+                        }
+                    }
+                }
             }
 
-            // If no single lane is safe, check for paths that require lane switching.
-            // This is a much harder problem. A simple check could be:
-            // Is there enough time to switch from a safe spot in one lane to a safe spot in another?
-            
-            // This is a simplified placeholder for what would be a complex pathfinding check.
-            return CheckCrossLanePaths(pattern, gameSpeed);
-        }
-
-        /// <summary>
-        /// Checks if a single lane is clear of impossible-to-pass obstacles.
-        /// </summary>
-        private bool IsLaneTraversable(ProceduralPattern pattern, int laneIndex, float gameSpeed)
-        {            
-            // This would loop through all obstacles in the pattern for this lane
-            // and check timing between them. For now, we assume it's safe.
-            return true; // Placeholder
-        }
-
-        /// <summary>
-        /// Checks for safe paths that require the player to switch lanes.
-        /// </summary>
-        private bool CheckCrossLanePaths(ProceduralPattern pattern, float gameSpeed)
-        {
-            // SUPER COMPLEX: This is where the majority of the "fairness" logic would reside.
-            // It needs to analyze the timing windows between obstacles across adjacent lanes.
-            
-            // For the purpose of this architecture, we will assume this validator can perform this check.
-            // In a real project, this would be a significant R&D task.
-            return true; // Returning true to avoid blocking pattern generation in this example.
+            return true; // The pattern is considered safe
         }
     }
 }

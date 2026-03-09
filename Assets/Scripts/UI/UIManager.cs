@@ -1,157 +1,76 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
-using System.Collections.Generic;
 
-public class UIManager : Singleton<UIManager>
+public class UIManager : MonoBehaviour
 {
-    [Header("HUD Elements")]
-    [SerializeField] private Text scoreText;
-    [SerializeField] private Text coinText;
+    public static UIManager Instance { get; private set; }
 
-    [Header("Game Over Screen")]
+    [Header("UI Panels")]
+    [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject gameUIPanel;
+    [SerializeField] private GameObject pauseMenuPanel;
     [SerializeField] private GameObject gameOverPanel;
-    [SerializeField] private Text finalScoreText;
-    [SerializeField] private Text finalCoinText;
 
-    [Header("Tutorial UI")]
-    [SerializeField] private GameObject tutorialPanel;
-    [SerializeField] private Text tutorialText;
+    [Header("UI Text")]
+    [SerializeField] private Text scoreText;
+    [SerializeField] private Text highScoreText;
 
-    [Header("Power-Up Indicators")]
-    [SerializeField] private GameObject powerUpPanel;
-    [SerializeField] private Image powerUpIcon;
-    [SerializeField] private Text powerUpTimerText;
-    
-    [Header("Power-Up Sprites")]
-    [SerializeField] private Sprite coinMagnetIcon;
-    [SerializeField] private Sprite scoreMultiplierIcon;
-    [SerializeField] private Sprite invincibilityIcon;
-    [SerializeField] private Sprite speedBoostIcon;
-    [SerializeField] private Sprite doubleJumpIcon;
-
-    private Dictionary<PowerUpType, Coroutine> _powerUpTimers = new Dictionary<PowerUpType, Coroutine>();
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            GameManager.RegisterUIManager(this);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
 
     private void OnEnable()
     {
-        GameManager.OnGameStateChanged += HandleGameStateChange;
-        ScoreManager.OnScoreUpdated += UpdateScoreUI;
-        ScoreManager.OnCoinsUpdated += UpdateCoinUI;
-        PowerUpManager.Instance.OnPowerUpActivated += HandlePowerUpActivated;
-        PowerUpManager.Instance.OnPowerUpDeactivated += HandlePowerUpDeactivated;
+        GameManager.OnGameStateChanged += HandleGameStateChanged;
     }
 
     private void OnDisable()
     {
-        GameManager.OnGameStateChanged -= HandleGameStateChange;
-        ScoreManager.OnScoreUpdated -= UpdateScoreUI;
-        ScoreManager.OnCoinsUpdated -= UpdateCoinUI;
-        if (PowerUpManager.Instance != null)
-        {
-            PowerUpManager.Instance.OnPowerUpActivated -= HandlePowerUpActivated;
-            PowerUpManager.Instance.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
-        }
+        GameManager.OnGameStateChanged -= HandleGameStateChanged;
     }
 
-    private void HandleGameStateChange(GameManager.GameState newState)
+    private void HandleGameStateChanged(GameManager.GameState newState)
     {
+        mainMenuPanel.SetActive(newState == GameManager.GameState.MainMenu);
+        gameUIPanel.SetActive(newState == GameManager.GameState.Playing);
+        pauseMenuPanel.SetActive(newState == GameManager.GameState.Paused);
         gameOverPanel.SetActive(newState == GameManager.GameState.GameOver);
+
         if (newState == GameManager.GameState.GameOver)
         {
-            UpdateGameOverUI();
+            UpdateGameOverScreen();
         }
     }
 
-    private void UpdateScoreUI(int newScore)
+    public void UpdateScore(int score)
     {
-        if (scoreText != null) scoreText.text = "Score: " + newScore;
-    }
-
-    private void UpdateCoinUI(int newCoinCount)
-    {
-        if (coinText != null) coinText.text = "Coins: " + newCoinCount;
-    }
-
-    private void UpdateGameOverUI()
-    {
-        finalScoreText.text = "Score: " + ScoreManager.Instance.GetCurrentScore();
-        finalCoinText.text = "Coins: " + ScoreManager.Instance.GetCurrentCoins();
-    }
-
-    public void ShowTutorialMessage(string message, float duration)
-    {
-        if (tutorialPanel == null || tutorialText == null) return;
-        tutorialText.text = message;
-        tutorialPanel.SetActive(true);
-        if (duration > 0) Invoke(nameof(HideTutorialMessage), duration);
-    }
-
-    public void HideTutorialMessage()
-    {
-        if (tutorialPanel != null) tutorialPanel.SetActive(false);
-    }
-
-    private void HandlePowerUpActivated(PowerUp powerUp)
-    {
-        if (_powerUpTimers.TryGetValue(powerUp.type, out Coroutine existingCoroutine))
+        if (scoreText != null)
         {
-            StopCoroutine(existingCoroutine);
+            scoreText.text = "Score: " + score;
         }
-        Coroutine timerCoroutine = StartCoroutine(PowerUpTimerRoutine(powerUp));
-        _powerUpTimers[powerUp.type] = timerCoroutine;
     }
 
-    private void HandlePowerUpDeactivated(PowerUp powerUp)
+    private void UpdateGameOverScreen()
     {
-        if (_powerUpTimers.ContainsKey(powerUp.type))
+        if (GameManager.ScoreManager != null && highScoreText != null)
         {
-            StopCoroutine(_powerUpTimers[powerUp.type]);
-            _powerUpTimers.Remove(powerUp.type);
-        }
-        HidePowerUpUI();
-    }
-
-    private IEnumerator PowerUpTimerRoutine(PowerUp powerUp)
-    {
-        ShowPowerUpIcon(powerUp.type);
-        float remainingTime = powerUp.duration;
-        while (remainingTime > 0)
-        {
-            UpdatePowerUpTimer(remainingTime);
-            yield return new WaitForSeconds(0.1f);
-            remainingTime -= 0.1f;
-        }
-        HidePowerUpUI();
-    }
-
-    private void ShowPowerUpIcon(PowerUpType type)
-    {
-        if (powerUpPanel == null || powerUpIcon == null) return;
-        powerUpIcon.sprite = GetSpriteForPowerUp(type);
-        powerUpPanel.SetActive(true);
-    }
-
-    private void UpdatePowerUpTimer(float timeRemaining)
-    {
-        if (powerUpTimerText != null) powerUpTimerText.text = timeRemaining.ToString("F1");
-    }
-
-    private void HidePowerUpUI()
-    {
-        if (powerUpPanel != null) powerUpPanel.SetActive(false);
-    }
-
-    private Sprite GetSpriteForPowerUp(PowerUpType type)
-    {
-        switch (type)
-        {
-            case PowerUpType.CoinMagnet: return coinMagnetIcon;
-            case PowerUpType.ScoreMultiplier: return scoreMultiplierIcon;
-            case PowerUpType.Invincibility: return invincibilityIcon;
-            case PowerUpType.SpeedBoost: return speedBoostIcon;
-            case PowerUpType.DoubleJump: return doubleJumpIcon;
-            default: return null;
+            highScoreText.text = "High Score: " + GameManager.ScoreManager.HighScore;
         }
     }
+    
+    // The public Show... methods are now obsolete but can be kept for legacy calls or removed.
+    public void ShowMainMenu() => HandleGameStateChanged(GameManager.GameState.MainMenu);
+    public void ShowGameUI() => HandleGameStateChanged(GameManager.GameState.Playing);
+    public void ShowPauseMenu() => HandleGameStateChanged(GameManager.GameState.Paused);
+    public void ShowGameOverScreen() => HandleGameStateChanged(GameManager.GameState.GameOver);
 }

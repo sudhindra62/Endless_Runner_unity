@@ -1,146 +1,79 @@
 
-using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using System;
+using Core;
 
-public enum SwipeDirection
+namespace Managers
 {
-    None,
-    Left,
-    Right,
-    Up,
-    Down
-}
-
-public enum TutorialAction
-{
-    None,
-    SwipeLeft,
-    SwipeRight,
-    Jump,
-    Slide
-}
-
-public class InputManager : Singleton<InputManager>
-{
-    // --- EVENTS ---
-    public static event Action<SwipeDirection> OnSwipe;
-    public static event Action OnTap;
-
-    // --- STATE ---
-    private Vector2 _startTouchPosition;
-    private bool _isInputEnabled = true;
-    private TutorialAction _allowedAction = TutorialAction.None; // For tutorial control
-
-    [Header("Input Settings")]
-    [SerializeField] private float minSwipeDistance = 50f;
-
-    // --- UNITY LIFECYCLE ---
-    private void Update()
+    public enum SwipeDirection
     {
-        if (!_isInputEnabled) return;
-
-        HandleKeyboardInput();
-        HandleTouchInput();
+        None,
+        Up,
+        Down,
+        Left,
+        Right
     }
-
-    // --- PUBLIC API ---
 
     /// <summary>
-    /// Globally enables or disables all input processing.
+    /// Manages player input using the new Input System.
     /// </summary>
-    public void SetInputEnabled(bool isEnabled, TutorialAction allowedAction = TutorialAction.None)
+    public class InputManager : Singleton<InputManager>
     {
-        _isInputEnabled = isEnabled;
-        _allowedAction = allowedAction;
-    }
+        public event Action<SwipeDirection> OnSwipe;
 
-    // --- PRIVATE METHODS ---
+        [Header("Input Configuration")]
+        [Tooltip("The minimum distance for a swipe to be registered.")]
+        [SerializeField] private float minSwipeDistance = 20f;
 
-    private void HandleKeyboardInput()
-    {
-        // Keyboard input for editor testing
-        if (IsActionAllowed(TutorialAction.SwipeLeft) && (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)))
-        {
-            OnSwipe?.Invoke(SwipeDirection.Left);
-        }
-        if (IsActionAllowed(TutorialAction.SwipeRight) && (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)))
-        {
-            OnSwipe?.Invoke(SwipeDirection.Right);
-        }
-        if (IsActionAllowed(TutorialAction.Jump) && (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)))
-        {
-            OnSwipe?.Invoke(SwipeDirection.Up);
-        }
-        if (IsActionAllowed(TutorialAction.Slide) && (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)))
-        {
-            OnSwipe?.Invoke(SwipeDirection.Down);
-        }
-    }
+        private PlayerInput _playerInput;
+        private Vector2 _startPosition;
 
-    private void HandleTouchInput()
-    {
-        if (Input.touchCount > 0)
+        protected override void Awake()
         {
-            Touch touch = Input.GetTouch(0);
+            base.Awake();
+            _playerInput = new PlayerInput();
+        }
 
-            switch (touch.phase)
+        private void OnEnable()
+        {
+            _playerInput.Enable();
+            _playerInput.Touch.PrimaryContact.started += OnTouchStart;
+            _playerInput.Touch.PrimaryContact.canceled += OnTouchEnd;
+        }
+
+        private void OnDisable()
+        {
+            _playerInput.Disable();
+            _playerInput.Touch.PrimaryContact.started -= OnTouchStart;
+            _playerInput.Touch.PrimaryContact.canceled -= OnTouchEnd;
+        }
+
+        private void OnTouchStart(InputAction.CallbackContext context)
+        {
+            _startPosition = _playerInput.Touch.PrimaryPosition.ReadValue<Vector2>();
+        }
+
+        private void OnTouchEnd(InputAction.CallbackContext context)
+        {
+            Vector2 endPosition = _playerInput.Touch.PrimaryPosition.ReadValue<Vector2>();
+            DetectSwipe(endPosition);
+        }
+
+        private void DetectSwipe(Vector2 endPosition)
+        {
+            Vector2 delta = endPosition - _startPosition;
+
+            if (delta.magnitude < minSwipeDistance) return;
+
+            if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
             {
-                case TouchPhase.Began:
-                    _startTouchPosition = touch.position;
-                    break;
-
-                case TouchPhase.Ended:
-                    Vector2 endTouchPosition = touch.position;
-                    Vector2 swipeDelta = endTouchPosition - _startTouchPosition;
-
-                    if (swipeDelta.magnitude > minSwipeDistance)
-                    {
-                        DetectSwipe(swipeDelta);
-                    }
-                    else
-                    {
-                        OnTap?.Invoke();
-                    }
-                    break;
+                OnSwipe?.Invoke(delta.x > 0 ? SwipeDirection.Right : SwipeDirection.Left);
+            }
+            else
+            {
+                OnSwipe?.Invoke(delta.y > 0 ? SwipeDirection.Up : SwipeDirection.Down);
             }
         }
-    }
-
-    private void DetectSwipe(Vector2 swipeDelta)
-    {
-        SwipeDirection direction;
-        if (Mathf.Abs(swipeDelta.x) > Mathf.Abs(swipeDelta.y))
-        {
-            direction = swipeDelta.x > 0 ? SwipeDirection.Right : SwipeDirection.Left;
-        }
-        else
-        {
-            direction = swipeDelta.y > 0 ? SwipeDirection.Up : SwipeDirection.Down;
-        }
-
-        if (IsActionAllowed(direction))
-        {
-            OnSwipe?.Invoke(direction);
-        }
-    }
-    
-    private bool IsActionAllowed(TutorialAction action)
-    {
-        if (_allowedAction == TutorialAction.None) return true;
-        return action == _allowedAction;
-    }
-
-    private bool IsActionAllowed(SwipeDirection direction)
-    {
-        if (_allowedAction == TutorialAction.None) return true;
-
-        return direction switch
-        {
-            SwipeDirection.Left => _allowedAction == TutorialAction.SwipeLeft,
-            SwipeDirection.Right => _allowedAction == TutorialAction.SwipeRight,
-            SwipeDirection.Up => _allowedAction == TutorialAction.Jump,
-            SwipeDirection.Down => _allowedAction == TutorialAction.Slide,
-            _ => false,
-        };
     }
 }

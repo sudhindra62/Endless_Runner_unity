@@ -1,39 +1,52 @@
 
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using Data;
+using Core;
 
-public class PowerUpEffectsController : MonoBehaviour
+namespace Gameplay
 {
-    public static PowerUpEffectsController Instance { get; private set; }
-
-    [SerializeField] private ParticleSystem fusionEffect;
-
-    private void Awake()
+    /// <summary>
+    /// Manages the application and removal of power-up effects on the player.
+    /// </summary>
+    public class PowerUpEffectsController : MonoBehaviour
     {
-        if (Instance == null)
-        { 
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
+        private readonly Dictionary<PowerUpType, Coroutine> _activeEffects = new Dictionary<PowerUpType, Coroutine>();
 
-    public void PlayActivationEffect(PowerUp powerUp)
-    {
-        if (powerUp.visualEffect != null)
+        /// <summary>
+        /// Applies a power-up effect for a specified duration.
+        /// </summary>
+        public void ApplyEffect(PowerUpType effectType, float duration)
         {
-            Instantiate(powerUp.visualEffect, transform.position, Quaternion.identity);
-        }
-    }
+            if (_activeEffects.ContainsKey(effectType))
+            {
+                StopCoroutine(_activeEffects[effectType]);
+            }
 
-    public void PlayFusionEffect(PowerUp powerUp)
-    {
-        if (fusionEffect != null)
+            Coroutine effectCoroutine = StartCoroutine(EffectCoroutine(effectType, duration));
+            _activeEffects[effectType] = effectCoroutine;
+        }
+
+        private IEnumerator EffectCoroutine(PowerUpType effectType, float duration)
         {
-            // The fusion effect could be customized based on the power-up
-            Instantiate(fusionEffect, transform.position, Quaternion.identity);
+            ApplyEffect(effectType);
+            yield return new WaitForSeconds(duration);
+            RemoveEffect(effectType);
+
+            _activeEffects.Remove(effectType);
+        }
+
+        private void ApplyEffect(PowerUpType effectType)
+        {
+            // Add logic to apply the effect based on the effectType.
+            Debug.Log($"Applied {effectType} effect.");
+        }
+
+        private void RemoveEffect(PowerUpType effectType)
+        {
+            // Add logic to remove the effect based on the effectType.
+            Debug.Log($"Removed {effectType} effect.");
         }
     }
 }

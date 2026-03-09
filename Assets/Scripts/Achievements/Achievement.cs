@@ -18,6 +18,9 @@ namespace Achievements
         [Tooltip("A description of what the player needs to do to unlock the achievement.")]
         [TextArea] public string Description;
 
+        [Tooltip("The value that needs to be reached to unlock this achievement.")]
+        public int TargetProgress;
+
         [Header("Rewards")]
         public int RewardCoins;
         public int RewardGems;

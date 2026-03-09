@@ -1,58 +1,71 @@
-using UnityEngine;
+
 using System;
+using UnityEngine;
 
-/// <summary>
-/// A lightweight component attached to obstacles to detect potential near-misses.
-/// It uses a trigger collider and fires an event when the player enters its zone.
-/// This is a "fire and forget" component; all complex logic is handled by the NearMissManager.
-/// </summary>
-[RequireComponent(typeof(Collider))]
-public class NearMissDetector : MonoBehaviour
+namespace Gameplay
 {
-    // --- Static Event ---
-    // Annouces that a player has entered a near-miss zone. The manager will validate it.
-    // Parameters: Obstacle Instance ID, Obstacle Position, Proximity (distance)
-    public static event Action<int, Vector3, float> OnNearMissCandidate;
-
-    [Header("Detection Setup")]
-    [Tooltip("The layer the player is on. This must be set correctly.")]
-    [SerializeField] private LayerMask playerLayer;
-
-    // --- State ---
-    private bool hasBeenTriggered = false;
-    private Collider obstacleCollider; // Reference to the main collider of this obstacle
-
-    private void Awake()
+    /// <summary>
+    /// Detects when the player is close to an obstacle and triggers a near-miss event.
+    /// This component is designed to be lightweight and work with object pooling systems.
+    /// </summary>
+    [RequireComponent(typeof(Collider))]
+    public class NearMissDetector : MonoBehaviour
     {
-        // We need the main collider to get the instance ID and position.
-        // This assumes the detector is on a child object or the same object as the main collider.
-        obstacleCollider = GetComponentInParent<Collider>();
-        if (obstacleCollider == null)
+        /// <summary>
+        /// Event fired when a potential near-miss is detected.
+        /// Parameters: Obstacle Instance ID, Obstacle Position, Proximity to player.
+        /// </summary>
+        public static event Action<int, Vector3, float> OnNearMissCandidate;
+
+        [Header("Detection Settings")]
+        [Tooltip("The layer the player character is on.")]
+        [SerializeField] private LayerMask playerLayer;
+
+        [Tooltip("If true, the trigger will be disabled after firing to prevent re-triggering.")]
+        [SerializeField] private bool disableOnTrigger = true;
+
+        private Collider _obstacleCollider;
+        private Collider _triggerCollider;
+        private bool _hasBeenTriggered;
+
+        private void Awake()
         {
-            Debug.LogError("[NearMissDetector] Could not find a parent obstacle collider!", this);
-            this.enabled = false;
+            _triggerCollider = GetComponent<Collider>();
+            _obstacleCollider = GetComponentInParent<Collider>();
+
+            if (_obstacleCollider == null)
+            {
+                Debug.LogError("NearMissDetector could not find a parent obstacle collider.", this);
+                enabled = false;
+            }
         }
-    }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        // --- SAFETY CHECKS ---
-        // 1. Avoid re-triggering for the same obstacle pass.
-        if (hasBeenTriggered) return;
+        private void OnEnable()
+        {
+            // Reset the trigger state when the object is enabled from a pool.
+            _hasBeenTriggered = false;
+            if (_triggerCollider != null)
+            {
+                _triggerCollider.enabled = true;
+            }
+        }
 
-        // 2. Layer Check: Did the correct object enter the trigger?
-        // This is a more performant check than comparing tags.
-        if (((1 << other.gameObject.layer) & playerLayer) == 0) return;
+        private void OnTriggerEnter(Collider other)
+        {
+            if (_hasBeenTriggered || ((1 << other.gameObject.layer) & playerLayer) == 0)
+            {
+                return;
+            }
 
-        // --- VALIDATION & EVENT ---
-        hasBeenTriggered = true;
+            _hasBeenTriggered = true;
 
-        float proximity = Vector3.Distance(transform.position, other.transform.position);
+            float proximity = Vector3.Distance(transform.position, other.transform.position);
+            OnNearMissCandidate?.Invoke(_obstacleCollider.GetInstanceID(), _obstacleCollider.transform.position, proximity);
 
-        // Fire the event with all necessary context for the manager to process.
-        OnNearMissCandidate?.Invoke(obstacleCollider.GetInstanceID(), obstacleCollider.transform.position, proximity);
-
-        // Optional: Disable the trigger collider after firing to save a tiny bit of performance.
-        // GetComponent<Collider>().enabled = false;
+            if (disableOnTrigger)
+            {
+                _triggerCollider.enabled = false;
+            }
+        }
     }
 }

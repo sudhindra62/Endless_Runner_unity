@@ -10,15 +10,33 @@ namespace Achievements
         FirstRunComplete,
         TenRunsComplete,
         FiftyRunsComplete,
+        TotalDistance,
+        NoReviveRun,
         
         // --- SCORE-BASED ACHIEVEMENTS ---
         Score10000Points,
         Score50000Points,
         Score250000Points,
-        
+
         // --- COIN-BASED ACHIEVEMENTS ---
         Collect100CoinsInRun,
         Collect5000CoinsTotal,
+        TotalCoins,
+
+        // --- COMBO-BASED ACHIEVEMENTS ---
+        ComboPeak,
+
+        // --- BOSS-BASED ACHIEVEMENTS ---
+        BossesDefeated,
+
+        // --- ITEM-BASED ACHIEVEMENTS ---
+        LegendaryShards,
+
+        // --- LEAGUE-BASED ACHIEVEMENTS ---
+        DiamondLeague,
+
+        // --- LOGIN-BASED ACHIEVEMENTS ---
+        LoginStreak,
         
         // --- MISC. ACHIEVEMENTS ---
         FirstPowerUpUsed,

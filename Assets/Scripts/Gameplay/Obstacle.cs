@@ -1,39 +1,41 @@
 
 using UnityEngine;
+using Core;
+using Data;
 
-/// <summary>
-/// Defines the behavior of an obstacle that the player must avoid.
-/// Now includes logic for being destroyed by a shielded player.
-/// Fortified by Supreme Guardian Architect v12.
-/// </summary>
-public class Obstacle : MonoBehaviour
+namespace Gameplay
 {
-    [Header("Obstacle Settings")]
-    [SerializeField] private bool isDestructible = true;
-    [SerializeField] private GameObject destructionEffect;
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        // The PlayerController now handles all collision logic.
-        // This script primarily serves as a tag and data container for obstacles.
-        // Additional logic, like animations or unique obstacle behaviors, would go here.
-    }
-
     /// <summary>
-    /// Called by the PlayerController when a shield is active during a collision.
+    /// Defines the behavior of an obstacle.
     /// </summary>
-    public void Shatter()
+    public class Obstacle : MonoBehaviour
     {
-        if (!isDestructible) return;
+        [Header("Obstacle Configuration")]
+        [Tooltip("The type of the obstacle.")]
+        [SerializeField] private ObstacleType obstacleType = ObstacleType.Static;
 
-        Debug.Log("Guardian Architect Log: Obstacle shattered by shield!");
+        [Tooltip("The tag used to return the obstacle to the object pool.")]
+        [SerializeField] private string poolTag = "Obstacle";
 
-        if (destructionEffect != null)
+        public ObstacleType Type => obstacleType;
+
+        private void OnCollisionEnter(Collision collision)
         {
-            Instantiate(destructionEffect, transform.position, Quaternion.identity);
+            if (collision.gameObject.CompareTag("Player"))
+            {
+                // Handle collision with the player, e.g., deal damage.
+                Debug.Log("Player collided with an obstacle!");
+
+                // Return the obstacle to the pool.
+                if (ObjectPool.Instance != null)
+                {
+                    ObjectPool.Instance.ReturnToPool(poolTag, gameObject);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
+            }
         }
-        
-        // Disable or pool the object
-        gameObject.SetActive(false);
     }
 }

@@ -1,73 +1,106 @@
+
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
-/// <summary>
-/// Generates procedural obstacle patterns based on difficulty and fairness rules.
-/// This class designs the layout of obstacles, which is then executed by the ObstacleSpawner.
-/// </summary>
+[System.Serializable]
+public struct ObstaclePlacementData
+{
+    public int laneIndex; // e.g., 0 for left, 1 for middle, 2 for right
+    public GameObject obstaclePrefab;
+
+    public ObstaclePlacementData(int lane, GameObject prefab)
+    {
+        laneIndex = lane;
+        obstaclePrefab = prefab;
+    }
+}
+
+[System.Serializable]
+public class ObstaclePattern
+{
+    public List<ObstaclePlacementData> obstacles;
+    public ObstaclePattern()
+    {
+        obstacles = new List<ObstaclePlacementData>();
+    }
+}
+
 public class ProceduralPatternGenerator : Singleton<ProceduralPatternGenerator>
 {
-    private long currentSeed;
+    [Header("Obstacle Prefabs")]
+    [SerializeField] private GameObject[] easyObstacles;
+    [SerializeField] private GameObject[] mediumObstacles;
+    [SerializeField] private GameObject[] hardObstacles;
 
-    public void GenerateAndSpawnPattern()
+    private enum PatternType { Wall, Alternating, Single }
+
+    public ObstaclePattern GeneratePattern(float difficulty)
     {
-        // SAFETY: Use a deterministic seed for replay stability
-        currentSeed = System.DateTime.Now.Ticks;
-        Random.InitState((int)currentSeed);
-
-        // 1. Get Difficulty & Player Skill
-        float difficultyWeight = GameDifficultyManager.Instance.obstacleSpawnFrequency;
-        // float playerSkill = AdaptiveDifficultyManager.Instance.GetPlayerSkill(); // Placeholder
-
-        // 2. Generate a pattern (List of obstacles and their positions)
-        var pattern = CreatePattern(difficultyWeight);
-
-        // 3. Fairness Validation
-        if (!IsPatternFair(pattern))
+        ObstaclePattern pattern = null;
+        for (int i = 0; i < 5; i++) // Try a few times to generate a fair pattern
         {
-            Debug.LogWarning("Generated pattern was unfair. Discarding and trying again.");
-            // In a real scenario, we might try generating a few times before giving up.
-            return;
+            pattern = CreatePattern(difficulty);
+            if (IsPatternFair(pattern))
+            {
+                return pattern;
+            }
         }
-
-        // 4. Execute Spawning
-        foreach (var obstacleToSpawn in pattern)
-        {
-            ObstacleSpawner.Instance.SpawnObstacle(obstacleToSpawn.prefab, obstacleToSpawn.position);
-        }
+        Debug.LogWarning("Could not generate a fair pattern. Returning last attempt.");
+        return pattern;
     }
 
-    private List<(GameObject prefab, Vector3 position)> CreatePattern(float difficulty)
+    private ObstaclePattern CreatePattern(float difficulty)
     {
-        // BEHAVIOR: This is where the core generation logic goes.
-        // For now, a simple example that creates a wall with one opening.
-        var pattern = new List<(GameObject, Vector3)>();
-        int safeLane = Random.Range(-1, 2); // -1, 0, or 1
+        var pattern = new ObstaclePattern();
+        PatternType type = (PatternType)Random.Range(0, System.Enum.GetValues(typeof(PatternType)).Length);
+        
+        GameObject[] selectedPrefabs = easyObstacles;
+        if (difficulty > 0.75f) selectedPrefabs = hardObstacles;
+        else if (difficulty > 0.4f) selectedPrefabs = mediumObstacles;
 
-        for (int i = -1; i <= 1; i++)
+        if (selectedPrefabs.Length == 0) return pattern;
+
+        switch (type)
         {
-            if (i != safeLane)
-            {
-                // This is a placeholder for getting a real obstacle prefab
-                GameObject obstaclePrefab = new GameObject("TempObstacle");
-                pattern.Add((obstaclePrefab, new Vector3(i * 2, 0.5f, 120)));
-            }
+            case PatternType.Wall:
+                int safeLane = Random.Range(0, 3); // 3 lanes
+                for (int i = 0; i < 3; i++)
+                {
+                    if (i != safeLane)
+                    {
+                        pattern.obstacles.Add(new ObstaclePlacementData(i, selectedPrefabs[Random.Range(0, selectedPrefabs.Length)]));
+                    }
+                }
+                break;
+
+            case PatternType.Alternating:
+                int startLane = Random.Range(0, 2); // 0 or 1
+                pattern.obstacles.Add(new ObstaclePlacementData(startLane, selectedPrefabs[Random.Range(0, selectedPrefabs.Length)]));
+                pattern.obstacles.Add(new ObstaclePlacementData(startLane + 1, selectedPrefabs[Random.Range(0, selectedPrefabs.Length)]));
+                break;
+                
+            case PatternType.Single:
+                pattern.obstacles.Add(new ObstaclePlacementData(Random.Range(0, 3), selectedPrefabs[Random.Range(0, selectedPrefabs.Length)]));
+                break;
         }
         return pattern;
     }
 
-    private bool IsPatternFair(List<(GameObject prefab, Vector3 position)> pattern)
+    private bool IsPatternFair(ObstaclePattern pattern)
     {
-        // FAIRNESS RULE: Implement validation logic here.
-        // - Validate at least one safe lane.
-        // - Validate reaction window.
-        // - Validate no impossible jump/slide combos.
-        bool hasSafeLane = false;
-        // This is a simplified check. A real implementation would be more robust.
-        if (pattern.Count < 3) hasSafeLane = true;
+        if (pattern == null || pattern.obstacles == null) return false;
 
-        // SAFETY: No overlapping obstacles (would be checked here)
+        var occupiedLanes = new bool[3]; // Assuming 3 lanes
+        foreach (var obstacle in pattern.obstacles)
+        {
+            if (obstacle.laneIndex >= 0 && obstacle.laneIndex < 3)
+            {
+                occupiedLanes[obstacle.laneIndex] = true;
+            }
+        }
 
-        return hasSafeLane;
+        // Return true if at least one lane is not occupied.
+        return occupiedLanes.Contains(false);
     }
 }

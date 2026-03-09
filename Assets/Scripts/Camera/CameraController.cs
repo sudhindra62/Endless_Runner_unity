@@ -1,49 +1,60 @@
 
 using UnityEngine;
+using System.Collections;
 
-public enum CameraState
-{
-    Following,
-    Cinematic,
-    Focused
-}
-
-[RequireComponent(typeof(Camera))]
-public class CameraController : MonoBehaviour
+/// <summary>
+/// Supreme, unified, state-driven controller for all camera operations.
+/// Manages following, cinematics, focus, and environmental effects like screen shake.
+/// Architected by the Supreme Guardian for maximum stability and performance.
+/// </summary>
+public class CameraController : Singleton<CameraController>
 {
     [Header("Camera Targets")]
-    [SerializeField] private Transform _playerTarget;
-    [SerializeField] private Transform _lookAtTarget;
+    [SerializeField] private Transform playerTarget;
+    [SerializeField] private Transform lookAtTarget;
 
-    [Header("Camera Settings")]
-    [SerializeField] private Vector3 _offset = new Vector3(0, 10, -10);
-    [SerializeField] private float _smoothSpeed = 0.125f;
-    [SerializeField] private float _cinematicMoveSpeed = 5f;
-    [SerializeField] private LayerMask _collisionMask;
+    [Header("Following Settings")]
+    [SerializeField] private Vector3 followOffset = new Vector3(0, 10, -10);
+    [SerializeField] private float smoothSpeed = 0.125f;
+    [SerializeField] private LayerMask collisionMask;
 
-    private CameraState _currentState = CameraState.Following;
-    private Vector3 _cinematicTargetPosition;
-    private Quaternion _cinematicTargetRotation;
-    private float _defaultFov;
-    private Camera _camera;
+    [Header("Cinematic Settings")]
+    [SerializeField] private float cinematicMoveSpeed = 5f;
 
-    private void Awake()
+    [Header("Screen Shake Settings")]
+    [SerializeField] private float shakeIntensity = 0.1f;
+    [SerializeField] private float shakeDuration = 0.2f;
+
+    private CameraState currentState = CameraState.Following;
+    private Vector3 cinematicTargetPosition;
+    private Quaternion cinematicTargetRotation;
+    private float defaultFov;
+    private Camera mainCamera;
+    private Coroutine shakeCoroutine;
+
+    protected override void Awake()
     {
-        _camera = GetComponent<Camera>();
-        _defaultFov = _camera.fieldOfView;
-        if (_playerTarget == null)
+        base.Awake();
+        mainCamera = GetComponent<Camera>();
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+        }
+        defaultFov = mainCamera.fieldOfView;
+
+        if (playerTarget == null)
         {
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
-                _playerTarget = player.transform;
+                playerTarget = player.transform;
             }
         }
     }
 
     private void LateUpdate()
     {
-        switch (_currentState)
+        switch (currentState)
         {
             case CameraState.Following:
                 HandleFollowing();
@@ -59,60 +70,88 @@ public class CameraController : MonoBehaviour
 
     private void HandleFollowing()
     {
-        if (_playerTarget == null) return;
+        if (playerTarget == null) return;
 
-        Vector3 desiredPosition = _playerTarget.position + _offset;
-        Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, _smoothSpeed);
+        Vector3 desiredPosition = playerTarget.position + followOffset;
+        Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
         transform.position = HandleCollision(smoothedPosition);
 
-        if (_lookAtTarget != null)
+        if (lookAtTarget != null)
         {
-            transform.LookAt(_lookAtTarget);
+            transform.LookAt(lookAtTarget);
         }
         else
         {
-            transform.LookAt(_playerTarget);
+            transform.LookAt(playerTarget);
         }
     }
 
     private void HandleCinematic()
     {
-        transform.position = Vector3.Lerp(transform.position, _cinematicTargetPosition, _cinematicMoveSpeed * Time.deltaTime);
-        transform.rotation = Quaternion.Slerp(transform.rotation, _cinematicTargetRotation, _cinematicMoveSpeed * Time.deltaTime);
+        transform.position = Vector3.Lerp(transform.position, cinematicTargetPosition, cinematicMoveSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Slerp(transform.rotation, cinematicTargetRotation, cinematicMoveSpeed * Time.deltaTime);
     }
 
     private void HandleFocused()
     {
-        if (_lookAtTarget != null)
+        if (lookAtTarget != null)
         {
-            transform.LookAt(_lookAtTarget);
+            transform.LookAt(lookAtTarget);
         }
     }
 
     private Vector3 HandleCollision(Vector3 desiredPosition)
     {
         RaycastHit hit;
-        if (Physics.Linecast(_playerTarget.position, desiredPosition, out hit, _collisionMask))
+        Vector3 rayOrigin = playerTarget.position;
+        // Raise the origin slightly to avoid hitting the ground immediately behind the player
+        rayOrigin.y += 1.0f;
+        if (Physics.Linecast(rayOrigin, desiredPosition, out hit, collisionMask))
         {
-            return hit.point;
+            // Position the camera at the collision point, slightly backed off
+            return hit.point + hit.normal * 0.2f;
         }
         return desiredPosition;
     }
 
     public void SetState(CameraState newState)
     {
-        _currentState = newState;
+        currentState = newState;
     }
 
     public void SetCinematicTarget(Vector3 position, Quaternion rotation)
     {
-        _cinematicTargetPosition = position;
-        _cinematicTargetRotation = rotation;
+        cinematicTargetPosition = position;
+        cinematicTargetRotation = rotation;
     }
 
     public void SetLookAtTarget(Transform newTarget)
     {
-        _lookAtTarget = newTarget;
+        lookAtTarget = newTarget;
+    }
+
+    public void TriggerScreenShake()
+    {
+        if (shakeCoroutine != null)
+        {
+            StopCoroutine(shakeCoroutine);
+        }
+        shakeCoroutine = StartCoroutine(ShakeRoutine());
+    }
+
+    private IEnumerator ShakeRoutine()
+    {
+        float timer = shakeDuration;
+        Vector3 originalPos = transform.localPosition;
+
+        while (timer > 0)
+        {
+            transform.localPosition = originalPos + Random.insideUnitSphere * shakeIntensity;
+            timer -= Time.deltaTime;
+            yield return null;
+        }
+
+        transform.localPosition = originalPos;
     }
 
     public void ChangeFov(float newFov, float duration)
@@ -120,21 +159,21 @@ public class CameraController : MonoBehaviour
         StartCoroutine(FovChangeRoutine(newFov, duration));
     }
 
-    private System.Collections.IEnumerator FovChangeRoutine(float targetFov, float duration)
+    private IEnumerator FovChangeRoutine(float targetFov, float duration)
     {
-        float startFov = _camera.fieldOfView;
+        float startFov = mainCamera.fieldOfView;
         float time = 0;
         while (time < duration)
         {
             time += Time.deltaTime;
-            _camera.fieldOfView = Mathf.Lerp(startFov, targetFov, time / duration);
+            mainCamera.fieldOfView = Mathf.Lerp(startFov, targetFov, time / duration);
             yield return null;
         }
-        _camera.fieldOfView = targetFov;
+        mainCamera.fieldOfView = targetFov;
     }
 
     public void ResetFov(float duration)
     {
-        ChangeFov(_defaultFov, duration);
+        ChangeFov(defaultFov, duration);
     }
 }
