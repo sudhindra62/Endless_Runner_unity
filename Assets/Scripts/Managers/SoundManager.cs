@@ -1,14 +1,21 @@
 using UnityEngine;
 
-public class SoundManager : MonoBehaviour
+namespace MyGame.Managers
 {
-    void Start()
+    public class SoundManager : MonoBehaviour
     {
-        
-    }
+        public AudioSource musicSource;
+        public AudioSource sfxSource;
 
-    void Update()
-    {
-        
+        public void PlayMusic(AudioClip clip)
+        {
+            musicSource.clip = clip;
+            musicSource.Play();
+        }
+
+        public void PlaySfx(AudioClip clip)
+        {
+            sfxSource.PlayOneShot(clip);
+        }
     }
 }
