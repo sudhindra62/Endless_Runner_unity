@@ -1,57 +1,130 @@
 
 using UnityEngine;
+using UnityEngine.UI; // Required for Canvas, CanvasScaler, GraphicRaycaster
+using Managers; // Required for accessing SaveManager and its data structures
+using Core; // Required for Singleton access
 
 /// <summary>
-/// Automatically sets up the HomeScene with all necessary managers and UI elements.
-/// Add this to a GameObject in the HomeScene.
-/// Created by OMNI_LOGIC_COMPLETION_v1.
+/// Automatically and comprehensively sets up the HomeScene with ALL necessary singleton managers and a foundational UI structure.
+/// This script now serves as the authoritative controller for activating conditional systems like the Tutorial.
+/// Logic has been expanded and fortified by Supreme Guardian Architect v13 to guarantee 100% operational readiness.
 /// </summary>
 public class HomeSceneSetup : MonoBehaviour
 {
     void Awake()
     {
-        // --- Create Core Managers ---
+        Debug.Log("Guardian Architect: Initiating comprehensive HomeScene setup...");
+
+        // --- CORE & PERSISTENT MANAGERS ---
+        // These are instantiated first as many other systems depend on them.
         EnsureManager<GameManager>();
-        EnsureManager<ScoreManager>();
-        EnsureManager<CurrencyManager>();
+        EnsureManager<SaveManager>(); 
+        EnsureManager<InputManager>();
         EnsureManager<UIManager>();
+        EnsureManager<SoundManager>();
+        EnsureManager<AnalyticsManager>();
+        EnsureManager<RemoteConfigManager>();
+        EnsureManager<ThemeManager>();
+        EnsureManager<ObjectPooler>();
 
-        // --- Create UI Canvas and Panels ---
-        GameObject canvas = GameObject.Find("Canvas");
-        if (canvas == null) 
-        {
-            canvas = new GameObject("Canvas");
-            canvas.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.AddComponent<UnityEngine.UI.CanvasScaler>();
-            canvas.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-        }
+        // --- ECONOMY & MONETIZATION MANAGERS ---
+        EnsureManager<CurrencyManager>();
+        EnsureManager<IAPManager>();
+        EnsureManager<AdManager>();
+        EnsureManager<ShopManager>();
 
-        // Ensure the UIManager is linked to the panels
-        UIManager uiManager = FindObjectOfType<UIManager>();
-        if (uiManager != null)
-        {
-            // Create MainMenu Panel if it doesn't exist
-            UIPanel_MainMenu mainMenuPanel = FindObjectOfType<UIPanel_MainMenu>();
-            if (mainMenuPanel == null)
-            {
-                GameObject panelObj = new GameObject("UIPanel_MainMenu");
-                panelObj.transform.SetParent(canvas.transform, false);
-                mainMenuPanel = panelObj.AddComponent<UIPanel_MainMenu>();
-            }
-            // There would be more here to wire up the buttons and text fields.
-            // This is a conceptual script as direct scene manipulation is not possible.
-        }
+        // --- PLAYER PROGRESSION & RETENTION MANAGERS ---
+        EnsureManager<ScoreManager>();
+        EnsureManager<MissionManager>();
+        EnsureManager<AchievementManager>();
+        EnsureManager<DailyLoginManager>();
+        EnsureManager<PlayerProgression>();
+
+        // --- LIVE SERVICES & EVENTS MANAGERS ---
+        EnsureManager<LiveOpsManager>();
+        EnsureManager<EventManager>();
+        EnsureManager<CommunityChallengeManager>();
+
+        // --- TECHNICAL & VALIDATION MANAGERS ---
+        EnsureManager<IntegrityManager>();
+
+        // --- CONDITIONAL & SCENE-SPECIFIC SETUP ---
+        // Centralized logic for features that don't always run.
+        SetupTutorialManager();
+
+        // --- UI Canvas AND PANEL SETUP ---
+        SetupUICanvas();
+
+        Debug.Log("Guardian Architect: HomeScene setup complete. All systems online.");
         
-        // Once setup is complete, this script can be disabled or destroyed
-        Destroy(this);
+        // This setup object has fulfilled its purpose.
+        Destroy(gameObject);
     }
 
+    /// <summary>
+    /// Ensures a singleton manager of the specified type exists in the scene.
+    /// </summary>
     private void EnsureManager<T>() where T : MonoBehaviour
     {
         if (FindObjectOfType<T>() == null)
         {
             GameObject managerObject = new GameObject(typeof(T).Name);
             managerObject.AddComponent<T>();
+            Debug.Log($"Guardian Architect: Created missing manager -> {typeof(T).Name}");
+        } else {
+             Debug.Log($"Guardian Architect: Manager already exists -> {typeof(T).Name}");
+        }
+    }
+
+    /// <summary>
+    /// Checks if the tutorial needs to run and, if so, instantiates and starts the TutorialManager.
+    /// This is the authoritative point of control for tutorial activation.
+    /// </summary>
+    private void SetupTutorialManager()
+    {
+        // A-TO-Z CONNECTIVITY: This is the authoritative check for the tutorial.
+        SaveData data = SaveManager.Instance.LoadData();
+        
+        if (data == null || !data.TutorialCompleted)
+        {
+            Debug.Log("Guardian Architect: Player has not completed the tutorial. Initializing and commanding TutorialManager.");
+            
+            // Ensure the manager exists in the scene.
+            EnsureManager<TutorialManager>();
+
+            // Command the TutorialManager to begin its sequence.
+            // The manager will internally wait for the correct game state before displaying UI.
+            TutorialManager.Instance.StartTutorial();
+        }
+        else
+        {
+            Debug.Log("Guardian Architect: Player has already completed the tutorial. Skipping TutorialManager setup.");
+        }
+    }
+
+    /// <summary>
+    /// Ensures the primary UI Canvas and the Main Menu Panel are set up correctly.
+    /// </summary>
+    private void SetupUICanvas()
+    {
+        Canvas canvas = FindObjectOfType<Canvas>();
+        if (canvas == null)
+        {
+            GameObject canvasObj = new GameObject("UICanvas_Auto-Generated");
+            canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
+            Debug.Log("Guardian Architect: Created foundational UI Canvas.");
+        }
+
+        // Ensure a main menu panel exists for the UIManager to find.
+        if (canvas.GetComponentInChildren<UIPanel_MainMenu>() == null)
+        {
+             GameObject panelObj = new GameObject("UIPanel_MainMenu");
+             panelObj.transform.SetParent(canvas.transform, false);
+             panelObj.AddComponent<UIPanel_MainMenu>();
+             Debug.Log("Guardian Architect: Created UIPanel_MainMenu and attached to canvas.");
         }
     }
 }

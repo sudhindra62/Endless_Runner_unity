@@ -1,141 +1,191 @@
 
 using UnityEngine;
-using System;
 
-/// <summary>
-/// Handles all character movement, including running, jumping, sliding, and lane switching.
-/// This is a core component of the player character, controlled by the Player script.
-/// </summary>
-[RequireComponent(typeof(CharacterController))]
-public class CharacterMotor : MonoBehaviour
+namespace Player
 {
-    [Header("Movement Settings")]
-    [SerializeField] private float baseForwardSpeed = 10f;
-    [SerializeField] private float laneChangeSpeed = 15f;
-    [SerializeField] private float jumpHeight = 2f;
-    [SerializeField] private float gravity = -20f;
-    [SerializeField] private float slideDuration = 0.75f;
-
-    [Header("Lane Configuration")]
-    [SerializeField] private float laneWidth = 3f;
-    private int currentLane = 0; // -1 for left, 0 for center, 1 for right
-
-    private CharacterController controller;
-
-    private Vector3 verticalVelocity;
-    private bool isSliding = false;
-    private float slideTimer;
-    private float currentForwardSpeed;
-
-    // Power-up states
-    private bool doubleJumpEnabled = false;
-    private bool canDoubleJump = false;
-
-    // Events
-    public event Action OnJump;
-    public event Action OnSlideStart;
-    public event Action OnSlideEnd;
-    public event Action<int> OnLaneChange;
-
-    void Awake()
+    /// <summary>
+    /// Handles all character movement physics, including running, jumping, and sliding.
+    /// It executes commands from the PlayerController and has no knowledge of game state or other managers.
+    /// This script has been architecturally rewritten by Supreme Guardian Architect v13 to be a pure, state-agnostic motor.
+    /// </summary>
+    [RequireComponent(typeof(CharacterController))]
+    public class CharacterMotor : MonoBehaviour
     {
-        controller = GetComponent<CharacterController>();
-        currentForwardSpeed = baseForwardSpeed;
-    }
+        #region Configuration
+        [Header("Movement Dynamics")]
+        [SerializeField] private float baseMoveSpeed = 15f;
+        [SerializeField] private float laneChangeSpeed = 20f;
+        [SerializeField] private float jumpForce = 8f;
+        [SerializeField] private float gravity = -25f;
+        [SerializeField] private float slideDuration = 0.75f;
 
-    void Update()
-    {
-        // --- FORWARD MOVEMENT ---
-        Vector3 forwardMove = transform.forward * currentForwardSpeed * Time.deltaTime;
+        [Header("Lane Configuration")]
+        [SerializeField] private float laneWidth = 3.0f;
+        private const int INITIAL_LANE = 0;
+        #endregion
 
-        // --- LANE CHANGING ---
-        Vector3 targetPosition = new Vector3(currentLane * laneWidth, transform.position.y, transform.position.z);
-        Vector3 laneMove = Vector3.MoveTowards(transform.position, targetPosition, laneChangeSpeed * Time.deltaTime) - transform.position;
-        laneMove.y = 0; // Only move horizontally for lane changes
+        #region State
+        private CharacterController _controller;
+        private Vector3 _initialPosition;
+        private float _initialControllerHeight;
+        private Vector3 _initialControllerCenter;
 
-        // --- VERTICAL MOVEMENT (Gravity & Jumping) ---
-        if (controller.isGrounded && verticalVelocity.y < 0)
+        private float _currentMoveSpeed;
+        private Vector3 _verticalVelocity;
+        private int _currentLane = INITIAL_LANE;
+
+        private int _maxJumps = 1;
+        private int _jumpsRemaining;
+
+        private bool _isSliding;
+        private float _slideTimer;
+        #endregion
+
+        #region Unity Lifecycle
+        void Awake()
         {
-            verticalVelocity.y = -2f; // A small downward force to keep the character grounded
-            canDoubleJump = false; // Reset double jump when grounded
+            _controller = GetComponent<CharacterController>();
+            _initialPosition = transform.position;
+            _initialControllerHeight = _controller.height;
+            _initialControllerCenter = _controller.center;
+
+            ResetState(); // Initialize the state on awake
         }
-        verticalVelocity.y += gravity * Time.deltaTime;
 
-        // --- SLIDING ---
-        if (isSliding)
+        void Update()
         {
-            slideTimer -= Time.deltaTime;
-            if (slideTimer <= 0)
+            // --- FORWARD MOVEMENT ---
+            Vector3 forwardMove = transform.forward * _currentMoveSpeed * Time.deltaTime;
+
+            // --- HORIZONTAL MOVEMENT (LANE LERP) ---
+            float targetX = _currentLane * laneWidth;
+            Vector3 horizontalMove = new Vector3(targetX - transform.position.x, 0, 0);
+            horizontalMove = Vector3.Lerp(Vector3.zero, horizontalMove, laneChangeSpeed * Time.deltaTime);
+
+            // --- VERTICAL MOVEMENT (GRAVITY) ---
+            if (_controller.isGrounded && _verticalVelocity.y < 0)
             {
-                StopSlide();
+                _verticalVelocity.y = -2f; // Keep grounded
+                _jumpsRemaining = _maxJumps; // Reset jumps upon landing
+            }
+            _verticalVelocity.y += gravity * Time.deltaTime;
+
+            // --- SLIDE LOGIC ---
+            HandleSlideTimer();
+
+            // --- FINAL MOVEMENT ---
+            _controller.Move(forwardMove + horizontalMove + (_verticalVelocity * Time.deltaTime));
+        }
+        #endregion
+
+        #region Public API (Commanded by PlayerController)
+
+        /// <summary>
+        /// Initiates a jump if jumps are available.
+        /// </summary>
+        public void Jump()
+        {
+            if (_jumpsRemaining > 0)
+            {
+                _jumpsRemaining--;
+                _verticalVelocity.y = jumpForce;
             }
         }
 
-        // --- COMBINE & APPLY MOVEMENT ---
-        Vector3 finalMove = forwardMove + laneMove + (verticalVelocity * Time.deltaTime);
-        controller.Move(finalMove);
-    }
-
-    public void Jump()
-    {
-        if (controller.isGrounded)
+        /// <summary>
+        /// Initiates a slide, adjusting the character controller's collider.
+        /// </summary>
+        public void Slide()
         {
-            verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            OnJump?.Invoke();
-            if (doubleJumpEnabled)
+            if (!_isSliding && _controller.isGrounded)
             {
-                canDoubleJump = true; // Allow a double jump after the initial jump
+                _isSliding = true;
+                _slideTimer = slideDuration;
+                _controller.height = _initialControllerHeight / 2;
+                _controller.center = _initialControllerCenter / 2;
             }
         }
-        else if (doubleJumpEnabled && canDoubleJump)
+
+        /// <summary>
+        /// Commands the motor to change to an adjacent lane.
+        /// </summary>
+        public void ChangeLane(int direction)
         {
-            verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            OnJump?.Invoke();
-            canDoubleJump = false; // Only one double jump allowed
+            _currentLane = Mathf.Clamp(_currentLane + direction, -1, 1);
         }
-    }
 
-    public void Slide()
-    {
-        if (!isSliding && controller.isGrounded)
+        /// <summary>
+        /// Applies a speed multiplier. Called when SpeedBoost is activated.
+        /// </summary>
+        public void ApplySpeedModifier(float modifier)
         {
-            isSliding = true;
-            slideTimer = slideDuration;
-            OnSlideStart?.Invoke();
-            // Temporarily scale the character controller's height
-            controller.height /= 2;
-            controller.center = new Vector3(controller.center.x, controller.center.y / 2, controller.center.z);
+            _currentMoveSpeed = baseMoveSpeed * modifier;
         }
-    }
 
-    private void StopSlide()
-    {
-        isSliding = false;
-        OnSlideEnd?.Invoke();
-        // Restore the character controller's original height
-        controller.height *= 2;
-        controller.center = new Vector3(controller.center.x, controller.center.y * 2, controller.center.z);
-    }
-
-    public void ChangeLane(int direction) // -1 for left, 1 for right
-    {
-        int targetLane = currentLane + direction;
-        if (targetLane >= -1 && targetLane <= 1)
+        /// <summary>
+        /// Resets the speed to its base value. Called when SpeedBoost deactivates.
+        /// </summary>
+        public void ResetSpeedModifier()
         {
-            currentLane = targetLane;
-            OnLaneChange?.Invoke(direction);
+            _currentMoveSpeed = baseMoveSpeed;
         }
-    }
 
-    // --- Power-up Control Methods ---
-    public void SetDoubleJump(bool enabled)
-    {
-        doubleJumpEnabled = enabled;
-        if (!enabled) canDoubleJump = false;
-    }
+        /// <summary>
+        /// Sets the maximum number of jumps allowed. Called when DoubleJump is activated.
+        /// </summary>
+        public void SetMaxJumps(int count)
+        {
+            _maxJumps = count;
+            _jumpsRemaining = count; // Immediately grant the extra jumps
+        }
 
-    public void SetSpeedBoost(float multiplier, bool enabled)
-    {
-        currentForwardSpeed = enabled ? baseForwardSpeed * multiplier : baseForwardSpeed;
+        /// <summary>
+        /// Resets the maximum number of jumps to the default (1).
+        /// </summary>
+        public void ResetMaxJumps()
+        {
+            _maxJumps = 1;
+        }
+
+        /// <summary>
+        /// Resets the entire motor to its initial state for a new run.
+        /// </summary>
+        public void ResetState()
+        {
+            transform.position = _initialPosition;
+            _currentLane = INITIAL_LANE;
+            _verticalVelocity = Vector3.zero;
+            _currentMoveSpeed = baseMoveSpeed;
+            _maxJumps = 1;
+            _jumpsRemaining = 1;
+
+            StopSlide(); // Restore collider
+            _controller.enabled = true;
+        }
+
+        #endregion
+
+        #region Private Helpers
+        private void HandleSlideTimer()
+        {
+            if (_isSliding)
+            {
+                _slideTimer -= Time.deltaTime;
+                if (_slideTimer <= 0)
+                {
+                    StopSlide();
+                }
+            }
+        }
+
+        private void StopSlide()
+        {
+            if (!_isSliding && _controller.height == _initialControllerHeight) return;
+
+            _isSliding = false;
+            _controller.height = _initialControllerHeight;
+            _controller.center = _initialControllerCenter;
+        }
+        #endregion
     }
 }

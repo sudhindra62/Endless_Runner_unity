@@ -5,98 +5,121 @@ using Managers;
 
 namespace Player
 {
-    [RequireComponent(typeof(Rigidbody))]
+    /// <summary>
+    /// Acts as the central command for the player character, interpreting input and delegating actions to the CharacterMotor.
+    /// It also acts as a bridge, receiving power-up events and passing the effects to the motor.
+    /// This script was architecturally rewritten by Supreme Guardian Architect v13 to purify its role.
+    /// </summary>
+    [RequireComponent(typeof(CharacterMotor))]
     public class PlayerController : Singleton<PlayerController>
     {
-        [Header("Movement")]
-        [SerializeField] private float forwardSpeed = 15f;
-        [SerializeField] private float laneSwitchSpeed = 10f;
-        [SerializeField] private float laneWidth = 4f;
+        // --- DEPENDENCIES ---
+        private CharacterMotor _motor;
 
-        private Rigidbody _rb;
-        private int _currentLane = 0;
-        private Vector3 _targetPosition;
-        private Vector3 _initialPosition;
-
+        // --- UNITY LIFECYCLE & EVENT WIRING ---
         protected override void Awake()
         {
             base.Awake();
-            _rb = GetComponent<Rigidbody>();
-            _initialPosition = transform.position;
+            _motor = GetComponent<CharacterMotor>();
+            if (_motor == null) Debug.LogError("Guardian Architect CRITICAL ERROR: PlayerController requires a CharacterMotor component!");
         }
 
         private void OnEnable()
         {
-            if (InputManager.Instance != null)
-            {
-                InputManager.Instance.OnSwipe += HandleSwipe;
-            }
+            SubscribeToEvents();
         }
 
         private void OnDisable()
         {
-            if (InputManager.Instance != null)
-            {
-                InputManager.Instance.OnSwipe -= HandleSwipe;
-            }
+            UnsubscribeFromEvents();
         }
 
-        private void Start()
-        {
-            _targetPosition = _initialPosition;
-        }
+        // --- PUBLIC API ---
 
-        private void Update()
-        {
-            if (GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
-
-            _rb.velocity = new Vector3(_rb.velocity.x, _rb.velocity.y, forwardSpeed);
-
-            if (transform.position.x != _targetPosition.x)
-            {
-                transform.position = Vector3.MoveTowards(transform.position, new Vector3(_targetPosition.x, transform.position.y, transform.position.z), laneSwitchSpeed * Time.deltaTime);
-            }
-        }
-
-        private void HandleSwipe(SwipeDirection direction)
-        {
-            if (direction == SwipeDirection.Left && _currentLane > -1)
-            {
-                _currentLane--;
-            }
-            else if (direction == SwipeDirection.Right && _currentLane < 1)
-            {
-                _currentLane++;
-            }
-
-            _targetPosition.x = _currentLane * laneWidth;
-        }
-
-        private void OnCollisionEnter(Collision collision)
-        {
-            if (collision.gameObject.CompareTag("Obstacle"))
-            {
-                GameEvents.TriggerPlayerDied();
-                enabled = false;
-            }
-        }
-
-        private void OnTriggerEnter(Collider other)
-        {
-            if (other.gameObject.CompareTag("Coin"))
-            {
-                GameEvents.TriggerCoinCollected(1);
-                other.gameObject.SetActive(false);
-            }
-        }
-
+        /// <summary>
+        /// Resets the player controller and its motor to the initial state for a new game.
+        /// </summary>
         public void Reset()
         {
-            transform.position = _initialPosition;
-            _targetPosition = _initialPosition;
-            _currentLane = 0;
-            _rb.velocity = Vector3.zero;
-            enabled = true;
+            Debug.Log("Guardian Architect: Resetting PlayerController and commanding motor to reset.");
+            if (_motor != null) _motor.ResetState();
+            this.enabled = true; // Re-enable the controller for the new run
+        }
+
+        // --- EVENT HANDLERS ---
+
+        private void SubscribeToEvents()
+        {
+            if (InputManager.Instance != null) InputManager.Instance.OnSwipe += HandleSwipe;
+            if (PowerUpManager.Instance != null)
+            {
+                PowerUpManager.Instance.OnPowerUpActivated += HandlePowerUpActivated;
+                PowerUpManager.Instance.OnPowerUpDeactivated += HandlePowerUpDeactivated;
+            }
+        }
+
+        private void UnsubscribeFromEvents()
+        {
+            if (InputManager.Instance != null) InputManager.Instance.OnSwipe -= HandleSwipe;
+            if (PowerUpManager.Instance != null)
+            {
+                PowerUpManager.Instance.OnPowerUpActivated -= HandlePowerUpActivated;
+                PowerUpManager.Instance.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
+            }
+        }
+
+        /// <summary>
+        /// Handles swipe events from the InputManager and translates them into motor commands.
+        /// </summary>
+        private void HandleSwipe(SwipeDirection direction)
+        {
+            if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
+            if (_motor == null) return;
+
+            switch (direction)
+            {
+                case SwipeDirection.Left:  _motor.ChangeLane(-1); break;
+                case SwipeDirection.Right: _motor.ChangeLane(1); break;
+                case SwipeDirection.Up:    _motor.Jump(); break;
+                case SwipeDirection.Down:  _motor.Slide(); break;
+            }
+        }
+
+        /// <summary>
+        /// Receives power-up activation events and commands the CharacterMotor accordingly.
+        /// </summary>
+        private void HandlePowerUpActivated(PowerUpDefinition powerUpDef)
+        {
+            if (_motor == null) return;
+
+            switch (powerUpDef.type)
+            {
+                case PowerUpType.SpeedBoost:
+                    _motor.ApplySpeedModifier(powerUpDef.value);
+                    break;
+                case PowerUpType.DoubleJump:
+                    // Assuming the 'value' of DoubleJump is the total number of jumps (e.g., 2)
+                    _motor.SetMaxJumps((int)powerUpDef.value);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Receives power-up deactivation events and commands the CharacterMotor to reset effects.
+        /// </summary>
+        private void HandlePowerUpDeactivated(PowerUpType powerUpType)
+        {
+            if (_motor == null) return;
+
+            switch (powerUpType)
+            {
+                case PowerUpType.SpeedBoost:
+                    _motor.ResetSpeedModifier();
+                    break;
+                case PowerUpType.DoubleJump:
+                    _motor.ResetMaxJumps();
+                    break;
+            }
         }
     }
 }

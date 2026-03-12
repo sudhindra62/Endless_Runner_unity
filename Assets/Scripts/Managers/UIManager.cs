@@ -8,117 +8,140 @@ using System.Collections;
 
 namespace Managers
 {
+    /// <summary>
+    /// The central hub for all UI-related operations, from in-game HUD to game-over screens and panels.
+    /// It coordinates with other managers to display data and listens to game state changes.
+    /// This script has been fortified by Supreme Guardian Architect v13 to properly delegate to specialized UI panels.
+    /// </summary>
     public class UIManager : Singleton<UIManager>
     {
         public event Action OnRestartButtonPressed;
 
-        [Header("In-Game HUD")]
-        [SerializeField] private TextMeshProUGUI scoreText;
-        [SerializeField] private TextMeshProUGUI coinsText;
+        // --- PANEL REFERENCES (Assigned in Inspector) ---
+        [Header("UI Panels")]
+        [Tooltip("The primary in-game display for score, coins, etc.")]
+        [SerializeField] private UIPanel_InGame hudPanel;
+        [Tooltip("The screen displayed upon game over.")]
+        [SerializeField] private UIPanel_GameOver gameOverPanel;
+        [Tooltip("The panel used to display tutorial instructions.")]
+        [SerializeField] private UIPanel_Tutorial tutorialPanel; // <-- INTEGRATION POINT
 
-        [Header("Game Over Screen")]
-        [SerializeField] private GameObject gameOverPanel;
-        [SerializeField] private TextMeshProUGUI finalScoreText;
-        [SerializeField] private Button restartButton;
-
-        [Header("Tutorial UI")]
-        [SerializeField] private GameObject tutorialPanel;
-        [SerializeField] private TextMeshProUGUI tutorialText;
-
-        private Coroutine tutorialMessageCoroutine;
-
+        // --- UNITY LIFECYCLE ---
         protected override void Awake()
         {
             base.Awake();
-            if (restartButton != null)
-            {
-                restartButton.onClick.AddListener(() => OnRestartButtonPressed?.Invoke());
-            }
+            // Safely find panels if not assigned
+            if (hudPanel == null) hudPanel = FindObjectOfType<UIPanel_InGame>();
+            if (gameOverPanel == null) gameOverPanel = FindObjectOfType<UIPanel_GameOver>();
+            if (tutorialPanel == null) tutorialPanel = FindObjectOfType<UIPanel_Tutorial>();
         }
 
         private void Start()
         {
+            // Subscribe to critical game events
+            SubscribeToEvents();
+
+            // Initialize UI state based on current game state
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
+                HandleGameStateChanged(GameManager.Instance.CurrentState);
             }
+            else
+            {
+                // If no GameManager, assume we are in a menu or pre-game state
+                hudPanel?.Hide();
+                gameOverPanel?.Hide();
+                tutorialPanel?.Hide();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // Unsubscribe to prevent memory leaks
+            UnsubscribeFromEvents();
+        }
+
+        // --- EVENT HANDLING ---
+
+        private void SubscribeToEvents()
+        {
+            if (GameManager.Instance != null) GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
             if (ScoreManager.Instance != null)
             {
                 ScoreManager.Instance.OnScoreChanged += UpdateScore;
                 ScoreManager.Instance.OnCoinsChanged += UpdateCoins;
             }
-
-            HandleGameStateChanged(GameManager.Instance != null ? GameManager.Instance.GetCurrentState() : GameManager.GameState.Playing);
-            tutorialPanel.SetActive(false);
+            if (gameOverPanel != null) gameOverPanel.OnRestartClicked += HandleRestartClicked;
         }
 
-        private void OnDestroy()
+        private void UnsubscribeFromEvents()
         {
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
-            }
+            if (GameManager.Instance != null) GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
             if (ScoreManager.Instance != null)
             {
                 ScoreManager.Instance.OnScoreChanged -= UpdateScore;
                 ScoreManager.Instance.OnCoinsChanged -= UpdateCoins;
             }
+            if (gameOverPanel != null) gameOverPanel.OnRestartClicked -= HandleRestartClicked;
         }
 
+        /// <summary>
+        /// Handles changes in the game state to show/hide the appropriate UI panels.
+        /// </summary>
         private void HandleGameStateChanged(GameManager.GameState newState)
-        {
-            if (gameOverPanel != null)
-            {
-                gameOverPanel.SetActive(newState == GameManager.GameState.GameOver);
-            }
+        { 
+            hudPanel?.gameObject.SetActive(newState == GameManager.GameState.Playing);
+            gameOverPanel?.gameObject.SetActive(newState == GameManager.GameState.GameOver);
 
-            if (newState == GameManager.GameState.GameOver && finalScoreText != null && ScoreManager.Instance != null)
+            if (newState == GameManager.GameState.GameOver && ScoreManager.Instance != null)
             {
-                finalScoreText.text = "Final Score: " + ScoreManager.Instance.Score;
+                gameOverPanel?.SetFinalScore(ScoreManager.Instance.Score);
             }
         }
+
+        // --- DATA DISPLAY ---
 
         private void UpdateScore(int newScore)
         {
-            if (scoreText != null)
-            {
-                scoreText.text = "Score: " + newScore;
-            }
+            hudPanel?.UpdateScore(newScore);
         }
 
         private void UpdateCoins(int newCoins)
         {
-            if (coinsText != null)
-            {
-                coinsText.text = "Coins: " + newCoins;
-            }
+            hudPanel?.UpdateCoins(newCoins);
         }
 
+        private void HandleRestartClicked()
+        {
+            OnRestartButtonPressed?.Invoke();
+        }
+
+        // --- PUBLIC API for TUTORIALS (Called by TutorialManager) ---
+
+        /// <summary>
+        /// Displays a tutorial message by delegating the call to the specialized tutorial panel.
+        /// </summary>
         public void ShowTutorialMessage(string message, float duration)
         {
-            if (tutorialMessageCoroutine != null)
+            if (tutorialPanel != null)
             {
-                StopCoroutine(tutorialMessageCoroutine);
+                tutorialPanel.Show(message, duration);
             }
-            tutorialMessageCoroutine = StartCoroutine(ShowTutorialMessageRoutine(message, duration));
+            else
+            {
+                Debug.LogWarning("Guardian Architect Warning: UIManager cannot show tutorial message. UIPanel_Tutorial is not assigned.");
+            }
         }
 
-        private IEnumerator ShowTutorialMessageRoutine(string message, float duration)
-        {
-            tutorialText.text = message;
-            tutorialPanel.SetActive(true);
-            yield return new WaitForSeconds(duration);
-            tutorialPanel.SetActive(false);
-        }
-
+        /// <summary>
+        /// Hides the tutorial message panel by delegating the call.
+        /// </summary>
         public void HideTutorialMessage()
         {
-            if (tutorialMessageCoroutine != null)
+            if (tutorialPanel != null)
             {
-                StopCoroutine(tutorialMessageCoroutine);
-                tutorialMessageCoroutine = null;
+                tutorialPanel.Hide();
             }
-            tutorialPanel.SetActive(false);
         }
     }
 }
