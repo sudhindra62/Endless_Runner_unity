@@ -2,12 +2,15 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System;
+using Achievements;
 
 public class AchievementManager : MonoBehaviour
 {
     public static AchievementManager Instance { get; private set; }
 
-    public List<Achievement> achievements = new List<Achievement>();
+    public AchievementDatabase achievementDatabase;
+    private Dictionary<AchievementID, AchievementProgressData> achievementProgress = new Dictionary<AchievementID, AchievementProgressData>();
+
     public static event Action<Achievement> OnAchievementUnlocked;
 
     private void Awake()
@@ -20,92 +23,57 @@ public class AchievementManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            LoadAchievements();
+            LoadProgress();
         }
     }
 
-    private void Start()
+    private void LoadProgress()
     {
-        // Example of subscribing to a game event
-        // Make sure ScoreManager exists and has this event
-        // ScoreManager.OnScoreChanged += CheckScoreAchievements;
-    }
-
-    public void UnlockAchievement(string achievementId)
-    {
-        Achievement achievementToUnlock = achievements.Find(a => a.id == achievementId);
-        if (achievementToUnlock != null && !achievementToUnlock.unlocked)
+        // Load progress from a save file or PlayerPrefs
+        foreach (var achievement in achievementDatabase.Achievements)
         {
-            achievementToUnlock.unlocked = true;
-            Debug.Log("Achievement Unlocked: " + achievementToUnlock.title);
-            SaveAchievement(achievementToUnlock);
-            OnAchievementUnlocked?.Invoke(achievementToUnlock);
+            if (!achievementProgress.ContainsKey(achievement.ID))
+            {
+                achievementProgress[achievement.ID] = new AchievementProgressData();
+            }
+            achievementProgress[achievement.ID].Progress = PlayerPrefs.GetInt("Achievement_" + achievement.ID, 0);
+            achievementProgress[achievement.ID].Unlocked = PlayerPrefs.GetInt("Achievement_Unlocked_" + achievement.ID, 0) == 1;
         }
     }
 
-    private void SaveAchievement(Achievement achievement)
+    private void SaveProgress(AchievementID id)
     {
-        PlayerPrefs.SetInt("Achievement_" + achievement.id, 1);
+        PlayerPrefs.SetInt("Achievement_" + id, achievementProgress[id].Progress);
+        PlayerPrefs.SetInt("Achievement_Unlocked_" + id, achievementProgress[id].Unlocked ? 1 : 0);
         PlayerPrefs.Save();
     }
 
-    private void LoadAchievements()
+    public void AddProgress(AchievementID id, int amount)
     {
-        foreach (var achievement in achievements)
+        if (!achievementDatabase.GetAchievement(id, out var achievement) || achievementProgress[id].Unlocked)
         {
-            if (PlayerPrefs.GetInt("Achievement_" + achievement.id, 0) == 1)
-            {
-                achievement.unlocked = true;
-            }
+            return;
         }
+
+        achievementProgress[id].Progress += amount;
+
+        if (achievementProgress[id].Progress >= achievement.TargetProgress)
+        {
+            UnlockAchievement(id);
+        }
+        SaveProgress(id);
     }
 
-    // Example of a method to check achievements based on score
-    public void CheckScoreAchievements(int score)
+    private void UnlockAchievement(AchievementID id)
     {
-        foreach (var achievement in achievements)
-        {
-            if (!achievement.unlocked && achievement.unlockConditionType == AchievementUnlockCondition.SCORE_REACHED)
-            {
-                if (score >= achievement.unlockConditionValue)
-                {
-                    UnlockAchievement(achievement.id);
-                }
-            }
-        }
-    }
-    
-    // Example of a method to check achievements based on distance
-    public void CheckDistanceAchievements(float distance)
-    {
-        foreach (var achievement in achievements)
-        {
-            if (!achievement.unlocked && achievement.unlockConditionType == AchievementUnlockCondition.DISTANCE_REACHED)
-            {
-                if (distance >= achievement.unlockConditionValue)
-                {
-                    UnlockAchievement(achievement.id);
-                }
-            }
-        }
-    }
-}
+        if (achievementProgress[id].Unlocked) return;
 
-[System.Serializable]
-public class Achievement
-{
-    public string id;
-    public string title;
-    public string description;
-    public Sprite icon;
-    public bool unlocked;
-    public AchievementUnlockCondition unlockConditionType;
-    public int unlockConditionValue;
-}
-
-public enum AchievementUnlockCondition
-{
-    SCORE_REACHED,
-    DISTANCE_REACHED,
-    OBSTACLES_DODGED
+        achievementProgress[id].Unlocked = true;
+        if(achievementDatabase.GetAchievement(id, out var achievement))
+        {
+            OnAchievementUnlocked?.Invoke(achievement);
+            Debug.Log("Achievement Unlocked: " + achievement.Name);
+        }
+        SaveProgress(id);
+    }
 }

@@ -1,28 +1,35 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 using Achievements;
 
-public class AchievementUI : MonoBehaviour
+namespace Achievements.UI
 {
-    public Image badgeImage;
-    public Text achievementNameText;
-    public Text descriptionText;
-    public Slider progressBar;
-
-    public void SetData(AchievementProgressData progressData)
+    /// <summary>
+    /// Represents a single UI element for an achievement in the Trophy Gallery.
+    /// </summary>
+    public class AchievementUI : MonoBehaviour
     {
-        if (progressData == null) return;
+        public Image badge;
+        public Text achievementName;
+        public Text description;
+        public Slider progressBar;
 
-        var achievement = progressData.Achievement;
-        badgeImage.sprite = achievement.Badge;
-        badgeImage.color = progressData.IsCompleted ? achievement.TierColor : Color.gray;
-        achievementNameText.text = achievement.Name;
-        descriptionText.text = achievement.Description;
-
-        if (progressBar != null)
+        public void SetAchievement(Achievement achievement, AchievementProgressData progress)
         {
-            progressBar.maxValue = progressData.GetTargetProgress();
-            progressBar.value = progressData.CurrentProgress;
+            achievementName.text = achievement.Name;
+            description.text = achievement.Description;
+            badge.sprite = achievement.Badge;
+            badge.color = achievement.TierColor;
+
+            if (progress.Unlocked)
+            {
+                progressBar.value = 1;
+            }
+            else
+            {
+                progressBar.value = (float)progress.Progress / achievement.TargetProgress;
+            }
         }
     }
 }

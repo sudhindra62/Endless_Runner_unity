@@ -1,114 +1,42 @@
 
 using UnityEngine;
-using System.Collections.Generic;
-using System.Linq;
+using Achievements;
 
-namespace Achievements
+/// <summary>
+/// Tracks various gameplay stats and reports progress to the AchievementManager.
+/// This script acts as the bridge between gameplay events and the achievement system.
+/// </summary>
+public class AchievementProgressTracker : MonoBehaviour
 {
-    public class AchievementProgressTracker : MonoBehaviour
+    private void Start()
     {
-        [SerializeField] private AchievementDatabase achievementDatabase;
-        private Dictionary<AchievementID, AchievementProgressData> achievementProgress;
-
-        private void Awake()
-        {
-            achievementProgress = new Dictionary<AchievementID, AchievementProgressData>();
-            foreach (var achievement in achievementDatabase.achievements)
-            {
-                achievementProgress[achievement.ID] = new AchievementProgressData(achievement);
-            }
-        }
-
-        private void OnEnable()
-        {
-            GameEvents.OnRunComplete += OnRunComplete;
-            GameEvents.OnScoreIncreased += OnScoreIncreased;
-            GameEvents.OnCoinCollected += OnCoinCollected;
-            GameEvents.OnBossDefeated += OnBossDefeated;
-            GameEvents.OnPowerUpUsed += OnPowerUpUsed;
-            GameEvents.OnNearMiss += OnNearMiss;
-            GameEvents.OnReviveUsed += OnReviveUsed;
-            GameEvents.OnLogin += OnLogin;
-        }
-
-        private void OnDisable()
-        {
-            GameEvents.OnRunComplete -= OnRunComplete;
-            GameEvents.OnScoreIncreased -= OnScoreIncreased;
-            GameEvents.OnCoinCollected -= OnCoinCollected;
-            GameEvents.OnBossDefeated -= OnBossDefeated;
-            GameEvents.OnPowerUpUsed -= OnPowerUpUsed;
-            GameEvents.OnNearMiss -= OnNearMiss;
-            GameEvents.OnReviveUsed -= OnReviveUsed;
-            GameEvents.OnLogin -= OnLogin;
-        }
-
-        public AchievementProgressData GetProgress(AchievementID id)
-        {
-            return achievementProgress.ContainsKey(id) ? achievementProgress[id] : null;
-        }
-
-        public List<AchievementProgressData> GetAllProgress()
-        {
-            return achievementProgress.Values.ToList();
-        }
-
-        private void OnRunComplete(bool noRevive)
-        {
-            AddProgress(AchievementID.FirstRunComplete, 1);
-            AddProgress(AchievementID.TenRunsComplete, 1);
-            AddProgress(AchievementID.FiftyRunsComplete, 1);
-            if(noRevive)
-            {
-                AddProgress(AchievementID.NoReviveRun, 1);
-            }
-        }
-        
-        private void OnScoreIncreased(int amount)
-        {
-            AddProgress(AchievementID.Score10000Points, amount);
-            AddProgress(AchievementID.Score50000Points, amount);
-            AddProgress(AchievementID.Score250000Points, amount);
-        }
-        
-        private void OnCoinCollected(int amount)
-        {
-            AddProgress(AchievementID.Collect100CoinsInRun, amount);
-            AddProgress(AchievementID.Collect5000CoinsTotal, amount);
-            AddProgress(AchievementID.TotalCoins, amount);
-        }
-
-        private void OnBossDefeated()
-        {
-            AddProgress(AchievementID.BossesDefeated, 1);
-        }
-
-        private void OnPowerUpUsed()
-        {
-            AddProgress(AchievementID.FirstPowerUpUsed, 1);
-        }
-
-        private void OnNearMiss()
-        {
-            AddProgress(AchievementID.FirstNearMiss, 1);
-        }
-
-        private void OnReviveUsed()
-        {
-            AddProgress(AchievementID.FirstReviveUsed, 1);
-        }
-
-        private void OnLogin()
-        {
-            AddProgress(AchievementID.LoginStreak, 1);
-        }
-
-        public void AddProgress(AchievementID id, int amount)
-        {
-            if (achievementProgress.TryGetValue(id, out var progress))
-            {
-                progress.AddProgress(amount);
-            }
-        }
+        // --- A-TO-Z CONNECTIVITY: Subscribe to relevant game events ---
+        // Example subscriptions:
+        // if (ScoreManager.Instance != null) ScoreManager.OnScoreChanged += HandleScoreChange;
+        // if (PlayerStats.Instance != null) PlayerStats.OnDistanceChanged += HandleDistanceChange;
     }
+
+    private void OnDestroy()
+    {
+        // --- A-TO-Z CONNECTIVITY: Unsubscribe to prevent memory leaks ---
+        // Example unsubscriptions:
+        // if (ScoreManager.Instance != null) ScoreManager.OnScoreChanged -= HandleScoreChange;
+        // if (PlayerStats.Instance != null) PlayerStats.OnDistanceChanged -= HandleDistanceChange;
+    }
+
+    // Example handler for score changes
+    private void HandleScoreChange(int newScore)
+    {
+        AchievementManager.Instance.AddProgress(AchievementID.Score10000Points, newScore);
+        AchievementManager.Instance.AddProgress(AchievementID.Score50000Points, newScore);
+        AchievementManager.Instance.AddProgress(AchievementID.Score250000Points, newScore);
+    }
+
+    // Example handler for distance changes
+    private void HandleDistanceChange(float newDistance)
+    {
+        AchievementManager.Instance.AddProgress(AchievementID.TotalDistance, (int)newDistance);
+    }
+    
+    // Add more handlers for other events like coin collection, power-up usage, etc.
 }
