@@ -1,6 +1,6 @@
-
 using UnityEngine;
 using UnityEngine.UI;
+using Achievements;
 
 public class AchievementUI : MonoBehaviour
 {
@@ -9,17 +9,20 @@ public class AchievementUI : MonoBehaviour
     public Text descriptionText;
     public Slider progressBar;
 
-    public void SetData(AchievementData achievement, bool isUnlocked)
+    public void SetData(AchievementProgressData progressData)
     {
-        badgeImage.sprite = achievement.badge;
-        badgeImage.color = isUnlocked ? achievement.tierColor : Color.gray;
-        achievementNameText.text = achievement.achievementName;
-        descriptionText.text = achievement.description;
+        if (progressData == null) return;
+
+        var achievement = progressData.Achievement;
+        badgeImage.sprite = achievement.Badge;
+        badgeImage.color = progressData.IsCompleted ? achievement.TierColor : Color.gray;
+        achievementNameText.text = achievement.Name;
+        descriptionText.text = achievement.Description;
 
         if (progressBar != null)
         {
-            // You would get the current progress from the progress tracker
-            // progressBar.value = progress / achievement.valueToReach;
+            progressBar.maxValue = progressData.GetTargetProgress();
+            progressBar.value = progressData.CurrentProgress;
         }
     }
 }

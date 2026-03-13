@@ -17,6 +17,12 @@ namespace Achievements
 
         [Tooltip("A description of what the player needs to do to unlock the achievement.")]
         [TextArea] public string Description;
+        
+        [Header("UI Display")]
+        [Tooltip("Icon for the achievement badge.")]
+        public Sprite Badge;
+        [Tooltip("Color tint for the badge based on tier.")]
+        public Color TierColor = Color.white;
 
         [Tooltip("The value that needs to be reached to unlock this achievement.")]
         public int TargetProgress;

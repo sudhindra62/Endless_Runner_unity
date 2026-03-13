@@ -1,24 +1,40 @@
-
 using UnityEngine;
 using System.Collections.Generic;
+using Achievements;
 
 public class TrophyGallery : MonoBehaviour
 {
     public GameObject trophyContainer;
-    public GameObject trophyPrefab; // A prefab for displaying a single trophy
+    public GameObject trophyPrefab;
 
-    public void Populate(List<AchievementData> allAchievements, List<string> unlockedIds)
+    public void Populate(List<AchievementProgressData> allProgress)
     {
-        foreach (var achievement in allAchievements)
+        foreach (Transform child in trophyContainer.transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        foreach (var progressData in allProgress)
         {
             GameObject trophyGO = Instantiate(trophyPrefab, trophyContainer.transform);
             AchievementUI trophyUI = trophyGO.GetComponent<AchievementUI>();
-            trophyUI.SetData(achievement, unlockedIds.Contains(achievement.achievementId));
+            if (trophyUI != null)
+            {
+                trophyUI.SetData(progressData);
+            }
         }
     }
 
-    public void UpdateTrophy(AchievementData achievement)
+    public void UpdateTrophy(AchievementProgressData progressData)
     {
-        // Find the specific trophy UI and update it
+        foreach (Transform child in trophyContainer.transform)
+        {
+            AchievementUI ui = child.GetComponent<AchievementUI>();
+            if (ui != null && ui.achievementNameText.text == progressData.Achievement.Name)
+            {
+                 ui.SetData(progressData);
+                 break;
+            }
+        }
     }
 }

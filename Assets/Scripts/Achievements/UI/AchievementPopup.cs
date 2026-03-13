@@ -1,20 +1,44 @@
-
 using UnityEngine;
-using UnityEngine.UI;
+using System.Collections;
+using Achievements;
 
 public class AchievementPopup : MonoBehaviour
 {
     public GameObject popupPanel;
-    public Image badgeImage;
-    public Text achievementNameText;
+    public UnityEngine.UI.Image badgeImage;
+    public UnityEngine.UI.Text achievementNameText;
+    public float displayDuration = 3f;
 
-    public void Show(AchievementData achievement)
+    private Coroutine hideCoroutine;
+
+    private void OnEnable()
     {
-        badgeImage.sprite = achievement.badge;
-        badgeImage.color = achievement.tierColor;
-        achievementNameText.text = achievement.achievementName;
+        AchievementProgressData.OnAchievementUnlocked += Show;
+    }
+
+    private void OnDisable()
+    {
+        AchievementProgressData.OnAchievementUnlocked -= Show;
+    }
+
+    public void Show(Achievement achievement)
+    {
+        if (hideCoroutine != null)
+        {
+            StopCoroutine(hideCoroutine);
+        }
+
+        badgeImage.sprite = achievement.Badge;
+        badgeImage.color = achievement.TierColor;
+        achievementNameText.text = achievement.Name;
         popupPanel.SetActive(true);
 
-        // You would likely have a coroutine to hide the popup after a few seconds
+        hideCoroutine = StartCoroutine(HideAfterDelay());
+    }
+
+    private IEnumerator HideAfterDelay()
+    {
+        yield return new WaitForSeconds(displayDuration);
+        popupPanel.SetActive(false);
     }
 }

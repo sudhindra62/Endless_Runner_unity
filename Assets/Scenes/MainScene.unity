@@ -1,5 +1,5 @@
 
---- !u!1 &11001
+--- !u!1 &30111
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {instanceID: 0}
@@ -7,15 +7,15 @@ GameObject:
   m_PrefabAsset: {instanceID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {instanceID: 11002}
-  - component: {instanceID: 11003}
+  - component: {instanceID: 30112}
+  - component: {instanceID: 30113}
   m_Layer: 0
-  m_Name: PowerUpFusionManager
+  m_Name: FirebaseManager
   m_TagString: Untagged
   m_IsActive: 1
   m_StaticEditorFlags: 0
   m_IsActiveCheckEnabled: 0
---- !u!4 &11002
+--- !u!4 &30112
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {instanceID: 0}
@@ -26,140 +26,16 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {instanceID: 0}
-  m_RootOrder: 45
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &11003
+  m_RootOrder: 10
+--- !u!114 &30113
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {instanceID: 0}
   m_PrefabInstance: {instanceID: 0}
   m_PrefabAsset: {instanceID: 0}
-  m_GameObject: {instanceID: 11001}
+  m_GameObject: {instanceID: 30111}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b9b8c7d6e5f4a3b2a1b0c9d8e7f6a5b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!1 &12001
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {instanceID: 12002}
-  - component: {instanceID: 12003}
-  m_Layer: 0
-  m_Name: PowerUpUpgradeManager
-  m_TagString: Untagged
-  m_IsActive: 1
-  m_StaticEditorFlags: 0
-  m_IsActiveCheckEnabled: 0
---- !u!4 &12002
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {instanceID: 0}
-  m_RootOrder: 46
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &12003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  m_GameObject: {instanceID: 12001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a8a72c4d2574828b09f3b2b51bf734f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!1 &13001
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {instanceID: 13002}
-  - component: {instanceID: 13003}
-  m_Layer: 0
-  m_Name: IAPManager
-  m_TagString: Untagged
-  m_IsActive: 1
-  m_StaticEditorFlags: 0
-  m_IsActiveCheckEnabled: 0
---- !u!4 &13002
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {instanceID: 0}
-  m_RootOrder: 47
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &13003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  m_GameObject: {instanceID: 13001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f0e9d8c7b6a5a4b3c2d1e0f9a8b7c6d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!1 &14001
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {instanceID: 14002}
-  - component: {instanceID: 14003}
-  m_Layer: 0
-  m_Name: LeaderboardManager
-  m_TagString: Untagged
-  m_IsActive: 1
-  m_StaticEditorFlags: 0
-  m_IsActiveCheckEnabled: 0
---- !u!4 &14002
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {instanceID: 0}
-  m_RootOrder: 48
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &14003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {instanceID: 0}
-  m_PrefabInstance: {instanceID: 0}
-  m_PrefabAsset: {instanceID: 0}
-  m_GameObject: {instanceID: 14001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f3a2c1d3b4a5b6c7d8e9f0a1b2c3d4e5, type: 3}
+  m_Script: {fileID: 11500000, guid: a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
