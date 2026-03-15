@@ -5,19 +5,18 @@ namespace EndlessRunner.Data
 {
     public enum TutorialTrigger
     {
-        None,
+        None, // Used for steps that only require a button press to continue
         SwipeLeft,
         SwipeRight,
-        SwipeUp,
-        ButtonPressed
+        SwipeUp
     }
 
     [System.Serializable]
     public class TutorialStep
     {
+        [TextArea(3, 10)]
         public string instructionText;
-        public Sprite instructionSprite;
         public TutorialTrigger trigger;
-        public bool waitForButtonPress => trigger == TutorialTrigger.ButtonPressed;
+        // Potentially add references to UI elements to highlight, etc.
     }
 }

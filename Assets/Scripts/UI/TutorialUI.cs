@@ -3,67 +3,44 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using EndlessRunner.Data;
+using System;
 
 namespace EndlessRunner.UI
 {
-    /// <summary>
-    /// Manages the visual presentation of the tutorial steps.
-    /// </summary>
     public class TutorialUI : MonoBehaviour
     {
         [Header("UI References")]
         [SerializeField] private GameObject tutorialPanel;
         [SerializeField] private TextMeshProUGUI instructionText;
-        [SerializeField] private Image instructionImage; // For swipe icons, etc.
         [SerializeField] private Button continueButton;
 
-        private void Start()
+        private Action onContinueCallback;
+
+        private void Awake()
         {
+            continueButton.onClick.AddListener(OnContinueClicked);
             Hide();
         }
 
-        public void ShowStep(TutorialStep step, System.Action onContinuePressed)
+        public void ShowStep(TutorialStep step, Action onContinue)
         {
-            if (tutorialPanel == null) return;
-
+            onContinueCallback = onContinue;
             instructionText.text = step.instructionText;
 
-            if (instructionImage != null)
-            {
-                if (step.instructionSprite != null)
-                {
-                    instructionImage.sprite = step.instructionSprite;
-                    instructionImage.gameObject.SetActive(true);
-                }
-                else
-                {
-                    instructionImage.gameObject.SetActive(false);
-                }
-            }
-
-            if (continueButton != null)
-            {
-                continueButton.onClick.RemoveAllListeners();
-                if (step.waitForButtonPress)
-                {
-                    continueButton.gameObject.SetActive(true);
-                    continueButton.onClick.AddListener(() => onContinuePressed?.Invoke());
-                }
-                else
-                {
-                    continueButton.gameObject.SetActive(false);
-                }
-            }
+            // Only show the continue button if the step doesn't have a specific input trigger
+            continueButton.gameObject.SetActive(step.trigger == TutorialTrigger.None);
 
             tutorialPanel.SetActive(true);
         }
 
         public void Hide()
         {
-            if (tutorialPanel != null)
-            {
-                tutorialPanel.SetActive(false);
-            }
+            tutorialPanel.SetActive(false);
+        }
+
+        private void OnContinueClicked()
+        {
+            onContinueCallback?.Invoke();
         }
     }
 }
