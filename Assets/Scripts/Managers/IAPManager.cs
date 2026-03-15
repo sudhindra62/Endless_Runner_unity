@@ -1,129 +1,70 @@
 
 using System;
 using UnityEngine;
+using EndlessRunner.Core;
 
-/// <summary>
-/// Manages all in-app purchases, fully integrated with the project's economy and persistence layers.
-/// This system is the sole authority for real-money transactions.
-/// Logic has been fully implemented by Supreme Guardian Architect v12 to ensure architectural integrity.
-/// </summary>
-public class IAPManager : Singleton<IAPManager>
+namespace EndlessRunner.Managers
 {
-    // Event to notify other systems of a successful purchase, e.g., to update UI or disable ads.
-    public static event Action<string> OnPurchaseCompleted;
-
-    // A flag to be checked by AdManager. This should be persisted by the SaveManager.
-    public bool AdsRemoved { get; private set; }
-
-    private void OnEnable()
-    {
-        SaveManager.OnLoad += HandleLoad;
-        SaveManager.OnBeforeSave += HandleBeforeSave;
-    }
-
-    private void OnDisable()
-    {
-        SaveManager.OnLoad -= HandleLoad;
-        SaveManager.OnBeforeSave -= HandleBeforeSave;
-    }
-
     /// <summary>
-    /// Loads the state of ad removal from the save file.
+    /// Manages all In-App Purchases. Provides a framework for purchasing virtual goods.
+    /// This is a placeholder for a real IAP SDK integration (e.g., Unity IAP).
     /// </summary>
-    private void HandleLoad(SaveData data)
+    public class IAPManager : Singleton<IAPManager>
     {
-        AdsRemoved = data.AdsRemoved;
-        Debug.Log($"Guardian Architect: IAP State Loaded. Ads Removed: {AdsRemoved}");
-    }
+        public event Action<string> OnPurchaseSuccess;
+        public event Action<string> OnPurchaseFailure;
 
-    /// <summary>
-    /// Saves the state of ad removal to the save file.
-    /// </summary>
-    private void HandleBeforeSave(SaveData data)
-    {
-        data.AdsRemoved = AdsRemoved;
-    }
+        // Example Product IDs
+        public const string ProductIdCoinsTier1 = "com.omni_guardian.endlessrunner.coins1";
+        public const string ProductIdCoinsTier2 = "com.omni_guardian.endlessrunner.coins2";
+        public const string ProductIdRemoveAds = "com.omni_guardian.endlessrunner.removeads";
 
-    /// <summary>
-    /// Initiates a purchase for a given product ID.
-    /// This would call the specific platform's IAP SDK.
-    /// </summary>
-    /// <param name="productId">The unique identifier for the product (e.g., com.gamestudio.gem_pack_1).</param>
-    public void PurchaseProduct(string productId)
-    {
-        if (string.IsNullOrEmpty(productId))
+        public void InitializeIAP()
         {
-            Debug.LogWarning("Guardian Architect Warning: PurchaseProduct called with a null or empty productId.");
-            return;
+            Debug.Log("IAP_MANAGER: Initializing In-App Purchase systems...");
+            // In a real implementation, you would initialize your IAP SDK here.
         }
 
-        Debug.Log($"Guardian Architect Log: Attempting to purchase product: {productId}");
-        // In a real project, this is where you would call the purchasing SDK.
-        // For example: UnityPurchasing.InitiatePurchase(productId);
-
-        // For architectural validation, we will simulate a successful purchase immediately.
-        SimulateSuccessfulPurchase(productId);
-    }
-
-    /// <summary>
-    /// Simulates a successful purchase for testing and architectural validation.
-    /// In a real implementation, this logic would be in the success callback from the IAP SDK.
-    /// </summary>
-    private void SimulateSuccessfulPurchase(string productId)
-    {
-        Debug.Log($"Guardian Architect Log: Purchase successful for product: {productId}");
-
-        // Use a switch to grant the correct item based on the product ID from GAME_DASHBOARD.md
-        switch (productId)
+        /// <summary>
+        /// Initiates a purchase for the given product ID.
+        /// </summary>
+        public void PurchaseProduct(string productId)
         {
-            // --- CURRENCY PACKS ---
-            case "com.gamestudio.gem_pack_1":
-                CurrencyManager.Instance.AddPremiumCurrency(100);
-                break;
-            case "com.gamestudio.gem_pack_2":
-                CurrencyManager.Instance.AddPremiumCurrency(550);
-                break;
-            case "com.gamestudio.gem_pack_3":
-                CurrencyManager.Instance.AddPremiumCurrency(1200);
-                break;
+            Debug.Log($"IAP_MANAGER: Attempting to purchase product: {productId}");
+            // Simulate a delay for the purchase flow
+            Invoke(nameof(SimulatePurchaseSuccess), 2.0f);
+        }
 
-            // --- BUNDLES ---
-            case "com.gamestudio.starter_bundle":
-                CurrencyManager.Instance.AddPremiumCurrency(200);
-                // Here you would also grant the other items in the bundle, e.g., using an InventoryManager.
-                Debug.Log("Guardian Architect: Starter Bundle items would be granted here.");
-                break;
+        private void SimulatePurchaseSuccess(string productId)
+        {
+            Debug.Log($"IAP_MANAGER: Purchase successful for product: {productId}");
+            OnPurchaseSuccess?.Invoke(productId);
 
-            // --- NON-CONSUMABLES ---
-            case "com.gamestudio.remove_ads":
-                if (!AdsRemoved)
+            // Example of how to handle the reward
+            if (DataManager.Instance != null)
+            {
+                int coinsToAdd = 0;
+                switch (productId)
                 {
-                    AdsRemoved = true;
-                    Debug.Log("Guardian Architect: Advertisements have been permanently removed.");
-                    // Trigger save to persist this change immediately.
-                    SaveManager.Instance.Save();
+                    case ProductIdCoinsTier1:
+                        coinsToAdd = 1000;
+                        break;
+                    case ProductIdCoinsTier2:
+                        coinsToAdd = 5000;
+                        break;
+                    case ProductIdRemoveAds:
+                        // Set a flag in GameData to disable ads
+                        Debug.Log("IAP_MANAGER: Ads have been permanently removed.");
+                        break;
                 }
-                break;
-            
-            // --- Fallback for old or incorrect IDs ---
-             case "100_coins": // Legacy or test ID from stub
-                CurrencyManager.Instance.AddPrimaryCurrency(100);
-                break;
 
-            default:
-                Debug.LogWarning($"Guardian Architect Warning: Purchase successful, but no reward logic defined for product ID: {productId}");
-                break;
+                if (coinsToAdd > 0)
+                {
+                    GameManager.Instance.AddCoins(coinsToAdd);
+                    DataManager.Instance.GameData.totalCoins = GameManager.Instance.Coins;
+                    DataManager.Instance.SaveData();
+                }
+            }
         }
-
-        // Notify any listeners that a purchase was completed.
-        OnPurchaseCompleted?.Invoke(productId);
-    }
-
-    /// <summary>
-    /// In a real implementation, this would be the failure callback from the IAP SDK.
-    /// </summary>
-    private void OnPurchaseFailed(string productId, string reason)
-    {
-        Debug.LogWarning($"Guardian Architect Warning: Purchase failed for product: {productId}. Reason: {reason}");
     }
 }

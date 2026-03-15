@@ -1,36 +1,22 @@
+
 using UnityEngine;
 
-namespace Achievements
+namespace EndlessRunner.Achievements
 {
-    /// <summary>
-    /// Represents the static data for a single achievement.
-    /// This class provides a clear and specific data structure for achievements, replacing the generic QuestData.
-    /// </summary>
-    [System.Serializable]
-    public class Achievement
+    public enum AchievementType
     {
-        [Tooltip("The unique identifier for this achievement.")]
-        public AchievementID ID;
+        Jumps,
+        Score,
+        Coins
+    }
 
-        [Tooltip("The user-facing name of the achievement.")]
-        public string Name;
-
-        [Tooltip("A description of what the player needs to do to unlock the achievement.")]
-        [TextArea] public string Description;
-        
-        [Header("UI Display")]
-        [Tooltip("Icon for the achievement badge.")]
-        public Sprite Badge;
-        [Tooltip("Color tint for the badge based on tier.")]
-        public Color TierColor = Color.white;
-
-        [Tooltip("The value that needs to be reached to unlock this achievement.")]
-        public int TargetProgress;
-
-        [Header("Rewards")]
-        public int RewardCoins;
-        public int RewardGems;
-        public int RewardXP;
-        public GameObject RewardItemPrefab; // Optional item reward
+    [CreateAssetMenu(fileName = "New Achievement", menuName = "Endless Runner/Achievement")]
+    public class Achievement : ScriptableObject
+    {
+        public string id;
+        public string title;
+        public string description;
+        public AchievementType achievementType;
+        public int unlockThreshold;
     }
 }

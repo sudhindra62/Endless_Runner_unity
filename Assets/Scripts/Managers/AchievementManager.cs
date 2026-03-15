@@ -1,79 +1,118 @@
 
-using UnityEngine;
 using System.Collections.Generic;
-using System;
-using Achievements;
+using System.Linq;
+using UnityEngine;
+using EndlessRunner.Core;
+using EndlessRunner.Data;
+using EndlessRunner.Achievements;
 
-public class AchievementManager : MonoBehaviour
+namespace EndlessRunner.Managers
 {
-    public static AchievementManager Instance { get; private set; }
-
-    public AchievementDatabase achievementDatabase;
-    private Dictionary<AchievementID, AchievementProgressData> achievementProgress = new Dictionary<AchievementID, AchievementProgressData>();
-
-    public static event Action<Achievement> OnAchievementUnlocked;
-
-    private void Awake()
+    /// <summary>
+    /// Manages player achievements by listening to game events and tracking progress.
+    /// </summary>
+    public class AchievementManager : Singleton<AchievementManager>
     {
-        if (Instance != null && Instance != this)
+        private List<Achievement> allAchievements;
+        private Dictionary<string, AchievementData> playerProgress;
+
+        protected override void Awake()
         {
-            Destroy(gameObject);
+            base.Awake();
+            LoadAchievements();
         }
-        else
+
+        private void OnEnable()
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            GameEvents.OnPlayerJump += HandlePlayerJump;
+            GameEvents.OnScoreGained += HandleScoreGained;
+            GameEvents.OnCoinsGained += HandleCoinsGained;
+        }
+
+        private void OnDisable()
+        {
+            GameEvents.OnPlayerJump -= HandlePlayerJump;
+            GameEvents.OnScoreGained -= HandleScoreGained;
+            GameEvents.OnCoinsGained -= HandleCoinsGained;
+        }
+
+        private void Start()
+        {
             LoadProgress();
         }
-    }
 
-    private void LoadProgress()
-    {
-        // Load progress from a save file or PlayerPrefs
-        foreach (var achievement in achievementDatabase.Achievements)
+        private void LoadAchievements()
         {
-            if (!achievementProgress.ContainsKey(achievement.ID))
+            allAchievements = Resources.LoadAll<Achievement>("Achievements").ToList();
+            Debug.Log($"ACHIEVEMENT_MANAGER: Loaded {allAchievements.Count} achievements from Resources.");
+        }
+
+        private void LoadProgress()
+        {
+            if (DataManager.Instance != null)
             {
-                achievementProgress[achievement.ID] = new AchievementProgressData();
+                playerProgress = DataManager.Instance.GameData.achievementData;
+                // Ensure all achievements have a corresponding progress entry
+                foreach (var achievement in allAchievements)
+                {
+                    if (!playerProgress.ContainsKey(achievement.id))
+                    {
+                        playerProgress[achievement.id] = new AchievementData(achievement.id);
+                    }
+                }
             }
-            achievementProgress[achievement.ID].Progress = PlayerPrefs.GetInt("Achievement_" + achievement.ID, 0);
-            achievementProgress[achievement.ID].Unlocked = PlayerPrefs.GetInt("Achievement_Unlocked_" + achievement.ID, 0) == 1;
+            else
+            {
+                playerProgress = new Dictionary<string, AchievementData>();
+            }
         }
-    }
 
-    private void SaveProgress(AchievementID id)
-    {
-        PlayerPrefs.SetInt("Achievement_" + id, achievementProgress[id].Progress);
-        PlayerPrefs.SetInt("Achievement_Unlocked_" + id, achievementProgress[id].Unlocked ? 1 : 0);
-        PlayerPrefs.Save();
-    }
-
-    public void AddProgress(AchievementID id, int amount)
-    {
-        if (!achievementDatabase.GetAchievement(id, out var achievement) || achievementProgress[id].Unlocked)
+        private void SaveProgress()
         {
-            return;
+            if (DataManager.Instance != null)
+            {
+                DataManager.Instance.GameData.achievementData = playerProgress;
+                DataManager.Instance.SaveData();
+            }
         }
 
-        achievementProgress[id].Progress += amount;
-
-        if (achievementProgress[id].Progress >= achievement.TargetProgress)
+        private void HandlePlayerJump()
         {
-            UnlockAchievement(id);
+            IncrementAchievementProgress(AchievementType.Jumps, 1);
         }
-        SaveProgress(id);
-    }
 
-    private void UnlockAchievement(AchievementID id)
-    {
-        if (achievementProgress[id].Unlocked) return;
-
-        achievementProgress[id].Unlocked = true;
-        if(achievementDatabase.GetAchievement(id, out var achievement))
+        private void HandleScoreGained(int score)
         {
-            OnAchievementUnlocked?.Invoke(achievement);
-            Debug.Log("Achievement Unlocked: " + achievement.Name);
+            IncrementAchievementProgress(AchievementType.Score, score);
         }
-        SaveProgress(id);
+
+        private void HandleCoinsGained(int coins)
+        {
+            IncrementAchievementProgress(AchievementType.Coins, coins);
+        }
+
+        private void IncrementAchievementProgress(AchievementType type, int amount)
+        {
+            var achievements = allAchievements.Where(a => a.achievementType == type);
+            foreach (var achievement in achievements)
+            {
+                if (playerProgress.TryGetValue(achievement.id, out AchievementData progress) && !progress.isUnlocked)
+                {
+                    progress.currentProgress += amount;
+                    CheckForUnlock(achievement, progress);
+                }
+            }
+            SaveProgress();
+        }
+
+        private void CheckForUnlock(Achievement achievement, AchievementData progress)
+        {
+            if (progress.currentProgress >= achievement.unlockThreshold)
+            {
+                progress.isUnlocked = true;
+                GameEvents.TriggerAchievementUnlocked(achievement);
+                Debug.Log($"ACHIEVEMENT_MANAGER: Unlocked '{achievement.title}'!");
+            }
+        }
     }
 }

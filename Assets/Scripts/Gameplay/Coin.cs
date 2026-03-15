@@ -1,76 +1,49 @@
 
-using System.Collections;
 using UnityEngine;
-using Core;
+using EndlessRunner.Core;
 
-namespace Gameplay
+namespace EndlessRunner.Gameplay
 {
     /// <summary>
-    /// Manages the behavior of a collectible coin, including its attraction to the player and collection.
+    /// Represents a collectible coin that triggers game events upon collection.
     /// </summary>
+    [RequireComponent(typeof(Collider))]
     public class Coin : MonoBehaviour
     {
-        [Header("Coin Parameters")]
-        [Tooltip("The tag used to identify the coin's pool in the ObjectPool.")]
-        [SerializeField] private string poolTag = "Coin";
+        [Header("Coin Settings")]
+        [SerializeField] private int scoreValue = 10;
         [SerializeField] private int coinValue = 1;
 
-        [Header("Attraction")]
-        [SerializeField] private float attractionSpeed = 15f;
-        [SerializeField] private float collectionDistance = 1f;
+        [Header("Effects")]
+        [SerializeField] private GameObject collectionEffectPrefab;
 
-        private bool _isCollected = false;
-
-        /// <summary>
-        /// Initiates the attraction of the coin towards a target transform (usually the player).
-        /// </summary>
-        public void AttractTo(Transform target)
-        {
-            if (!_isCollected)
-            {
-                StartCoroutine(AttractAndCollect(target));
-            }
-        }
+        private bool isCollected = false;
 
         private void OnTriggerEnter(Collider other)
         {
-            if (other.CompareTag("Player") && !_isCollected)
+            if (isCollected) return;
+
+            if (other.CompareTag("Player"))
             {
-                Collect();
+                isCollected = true;
+                HandleCollection();
             }
         }
 
-        private IEnumerator AttractAndCollect(Transform target)
+        private void HandleCollection()
         {
-            _isCollected = true; // Mark as collected to prevent multiple triggers
+            // 1. Trigger Game Events
+            GameEvents.TriggerScoreGained(scoreValue);
+            GameEvents.TriggerCoinsGained(coinValue);
 
-            while (target != null && Vector3.Distance(transform.position, target.position) > collectionDistance)
+            // 2. Play visual effects
+            if (collectionEffectPrefab != null)
             {
-                transform.position = Vector3.MoveTowards(transform.position, target.position, attractionSpeed * Time.deltaTime);
-                yield return null;
+                Instantiate(collectionEffectPrefab, transform.position, Quaternion.identity);
             }
-            
-            Collect();
-        }
 
-        private void Collect()
-        {
-            if (_isCollected) return; // Ensure collection logic runs only once
-            _isCollected = true;
-
-            GameEvents.OnCoinCollected?.Invoke(coinValue);
-            
-            // Reset state for when it's reused from the pool
-            _isCollected = false; 
-
-            if (ObjectPool.Instance != null)
-            {
-                ObjectPool.Instance.ReturnToPool(poolTag, gameObject);
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
+            // 3. Deactivate the coin
+            gameObject.SetActive(false);
         }
     }
 }

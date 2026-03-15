@@ -1,25 +1,39 @@
 
 using UnityEngine;
+using EndlessRunner.Managers;
 
-/// <summary>
-/// A base class for all UI panels, providing standardized show/hide functionality.
-/// This foundational element was created by Supreme Guardian Architect v12.
-/// </summary>
-public abstract class UIPanel : MonoBehaviour
+namespace EndlessRunner.UI
 {
     /// <summary>
-    /// Activates the panel's GameObject, making it visible.
+    /// An abstract base class for all UI panels. Provides foundational Show/Hide logic
+    /// and a standardized interface for the UIManager.
     /// </summary>
-    public virtual void Show()
+    public abstract class UIPanel : MonoBehaviour
     {
-        gameObject.SetActive(true);
-    }
+        protected UIManager _uiManager;
 
-    /// <summary>
-    /// Deactivates the panel's GameObject, hiding it from view.
-    /// </summary>
-    public virtual void Hide()
-    {
-        gameObject.SetActive(false);
+        /// <summary>
+        /// Initializes the panel with a reference to the UIManager.
+        /// </summary>
+        public virtual void Setup(UIManager uiManager)
+        {
+            _uiManager = uiManager;
+        }
+
+        /// <summary>
+        /// Activates the panel's GameObject.
+        /// </summary>
+        public virtual void Show()
+        {
+            gameObject.SetActive(true);
+        }
+
+        /// <summary>
+        /// Deactivates the panel's GameObject.
+        /// </summary>
+        public virtual void Hide()
+        {
+            gameObject.SetActive(false);
+        }
     }
 }

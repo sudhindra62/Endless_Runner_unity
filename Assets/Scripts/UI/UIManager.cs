@@ -1,76 +1,112 @@
 
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
+using EndlessRunner.Core;
+using EndlessRunner.Managers;
 
-public class UIManager : MonoBehaviour
+namespace EndlessRunner.UI
 {
-    public static UIManager Instance { get; private set; }
-
-    [Header("UI Panels")]
-    [SerializeField] private GameObject mainMenuPanel;
-    [SerializeField] private GameObject gameUIPanel;
-    [SerializeField] private GameObject pauseMenuPanel;
-    [SerializeField] private GameObject gameOverPanel;
-
-    [Header("UI Text")]
-    [SerializeField] private Text scoreText;
-    [SerializeField] private Text highScoreText;
-
-    private void Awake()
+    /// <summary>
+    /// Manages all UI elements in the game, responding to game events.
+    /// </summary>
+    public class UIManager : Singleton<UIManager>
     {
-        if (Instance == null)
+        [Header("HUD Elements")]
+        [SerializeField] private TextMeshProUGUI scoreText;
+        [SerializeField] private CurrencyUI currencyUI;
+        [SerializeField] private PowerUpHUDController powerUpHUDController;
+
+        [Header("UI Panels")]
+        [SerializeField] private GameObject gameOverPanel;
+        [SerializeField] private RevivePopupUI revivePopup;
+        
+        private void OnEnable()
         {
-            Instance = this;
-            GameManager.RegisterUIManager(this);
+            GameEvents.OnScoreGained += UpdateScoreUI;
+            GameEvents.OnShowGameOverPanel += ShowGameOverPanel;
+            GameEvents.OnGameStart += OnGameStart;
+            ReviveManager.OnRevivePrompt += ShowRevivePopup;
+            ReviveManager.OnReviveSuccess += HideRevivePopup;
+            ReviveManager.OnReviveDecline += HideRevivePopup;
         }
-        else
+
+        private void OnDisable()
         {
-            Destroy(gameObject);
+            GameEvents.OnScoreGained -= UpdateScoreUI;
+            GameEvents.OnShowGameOverPanel -= ShowGameOverPanel;
+            GameEvents.OnGameStart -= OnGameStart;
+            ReviveManager.OnRevivePrompt -= ShowRevivePopup;
+            ReviveManager.OnReviveSuccess -= HideRevivePopup;
+            ReviveManager.OnReviveDecline -= HideRevivePopup;
         }
-    }
 
-    private void OnEnable()
-    {
-        GameManager.OnGameStateChanged += HandleGameStateChanged;
-    }
-
-    private void OnDisable()
-    {
-        GameManager.OnGameStateChanged -= HandleGameStateChanged;
-    }
-
-    private void HandleGameStateChanged(GameManager.GameState newState)
-    {
-        mainMenuPanel.SetActive(newState == GameManager.GameState.MainMenu);
-        gameUIPanel.SetActive(newState == GameManager.GameState.Playing);
-        pauseMenuPanel.SetActive(newState == GameManager.GameState.Paused);
-        gameOverPanel.SetActive(newState == GameManager.GameState.GameOver);
-
-        if (newState == GameManager.GameState.GameOver)
+        private void Start()
         {
-            UpdateGameOverScreen();
+            // Initialize UI state
+            gameOverPanel.SetActive(false);
+            revivePopup.gameObject.SetActive(false);
+            if (powerUpHUDController != null)
+            {
+                powerUpHUDController.gameObject.SetActive(true);
+            }
+            if (currencyUI != null)
+            {
+                currencyUI.gameObject.SetActive(true);
+            }
+            UpdateScoreUI(0);
         }
-    }
 
-    public void UpdateScore(int score)
-    {
-        if (scoreText != null)
+        private void OnGameStart()
         {
-            scoreText.text = "Score: " + score;
+            gameOverPanel.SetActive(false);
+            if (powerUpHUDController != null)
+            {
+                powerUpHUDController.gameObject.SetActive(true);
+            }
+            if (currencyUI != null)
+            {
+                currencyUI.gameObject.SetActive(true);
+            }
         }
-    }
 
-    private void UpdateGameOverScreen()
-    {
-        if (GameManager.ScoreManager != null && highScoreText != null)
+        public void UpdateScoreUI(int score)
         {
-            highScoreText.text = "High Score: " + GameManager.ScoreManager.HighScore;
+            if (scoreText != null)
+            {
+                scoreText.text = $"Score: {score}";
+            }
+        }
+
+        private void ShowGameOverPanel()
+        {
+            if (gameOverPanel != null)
+            {
+                gameOverPanel.SetActive(true);
+            }
+            if (powerUpHUDController != null)
+            {
+                powerUpHUDController.gameObject.SetActive(false);
+            }
+            if (currencyUI != null)
+            {
+                currencyUI.gameObject.SetActive(false);
+            }
+        }
+
+        private void ShowRevivePopup()
+        {
+            revivePopup.Show();
+        }
+
+        private void HideRevivePopup()
+        {
+            revivePopup.Hide();
+        }
+
+        // Called from a UI button OnClick event
+        public void OnRestartButtonPressed()
+        {
+            GameManager.Instance.StartGame();
         }
     }
-    
-    // The public Show... methods are now obsolete but can be kept for legacy calls or removed.
-    public void ShowMainMenu() => HandleGameStateChanged(GameManager.GameState.MainMenu);
-    public void ShowGameUI() => HandleGameStateChanged(GameManager.GameState.Playing);
-    public void ShowPauseMenu() => HandleGameStateChanged(GameManager.GameState.Paused);
-    public void ShowGameOverScreen() => HandleGameStateChanged(GameManager.GameState.GameOver);
 }

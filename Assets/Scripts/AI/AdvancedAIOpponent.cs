@@ -1,148 +1,60 @@
 
 using UnityEngine;
+using EndlessRunner.Economy;
 
-[RequireComponent(typeof(WaypointPatrol))]
-[RequireComponent(typeof(Health))]
-public class AdvancedAIOpponent : MonoBehaviour
+namespace EndlessRunner.AI
 {
-    public enum AIState { Patrol, Chase, Attack }
+    public enum EnemyAIType { Basic, Advanced } // Defines the type for loot tables
 
-    public float speed = 5.0f;
-    public float obstacleAvoidanceDistance = 2.0f;
-    public LayerMask obstacleLayer;
-
-    public float playerDetectionRadius = 10f;
-    public float attackRange = 2f;
-    public LayerMask playerLayer;
-
-    public float waypointArrivalDistance = 0.5f;
-
-    public GameObject projectilePrefab;
-    public Transform firePoint;
-    public float fireRate = 1f;
-    private float nextFireTime = 0f;
-
-    public int pointsOnDeath = 100;
-
-    private AIState currentState;
-    private Transform detectedPlayer;
-    private WaypointPatrol waypointPatrol;
-
-    void Start()
+    /// <summary>
+    /// Represents a more advanced AI opponent that can be defeated.
+    /// Upon defeat, it has a chance to drop a legendary shard.
+    /// </summary>
+    public class AdvancedAIOpponent : MonoBehaviour
     {
-        gameObject.tag = "Enemy";
-        currentState = AIState.Patrol;
-        waypointPatrol = GetComponent<WaypointPatrol>();
-    }
+        [Header("AI Configuration")]
+        [SerializeField] private EnemyAIType enemyType = EnemyAIType.Advanced;
+        [SerializeField] private float health = 100f;
+        [SerializeField] private int scoreValue = 100; // Score awarded on defeat
 
-    void Update()
-    {
-        switch (currentState)
+        // This would be called by the player's attack script
+        public void TakeDamage(float amount)
         {
-            case AIState.Patrol:
-                Patrol();
-                break;
-            case AIState.Chase:
-                Chase();
-                break;
-            case AIState.Attack:
-                Attack();
-                break;
-        }
-    }
-
-    void Patrol()
-    {
-        DetectPlayer();
-        if (detectedPlayer != null)
-        {
-            currentState = AIState.Chase;
-            return;
-        }
-
-        Transform currentWaypoint = waypointPatrol.GetCurrentWaypoint();
-        if (currentWaypoint != null)
-        {
-            if (Vector3.Distance(transform.position, currentWaypoint.position) < waypointArrivalDistance)
+            health -= amount;
+            if (health <= 0)
             {
-                waypointPatrol.GoToNextWaypoint();
+                OnDeath();
             }
-            MoveTowardsTarget(currentWaypoint);
-        }
-    }
-
-    void Chase()
-    {
-        if (detectedPlayer == null)
-        {
-            currentState = AIState.Patrol;
-            return;
         }
 
-        if (Vector3.Distance(transform.position, detectedPlayer.position) <= attackRange)
+        private void OnDeath()
         {
-            currentState = AIState.Attack;
-            return;
+            Debug.Log($"AI_OPPONENT: {enemyType} opponent defeated.");
+
+            // 1. Award score to the player
+            // In a real game, this should go through an event to the GameManager
+            // GameManager.Instance.AddScore(scoreValue);
+
+            // 2. Trigger the shard drop calculation
+            ShardDropEngine.CalculateAndAwardShard(enemyType);
+
+            // 3. Play death effects (particles, sound, etc.)
+            // ... (particle system instantiation) ...
+
+            // 4. Destroy the game object
+            Destroy(gameObject);
         }
 
-        MoveTowardsTarget(detectedPlayer);
-    }
-
-    void Attack()
-    {
-        if (detectedPlayer == null || Vector3.Distance(transform.position, detectedPlayer.position) > attackRange)
+        // Example of how the player might interact with this opponent
+        private void OnCollisionEnter(Collision collision)
         {
-            currentState = AIState.Chase;
-            return;
-        }
-
-        transform.LookAt(detectedPlayer);
-
-        if (Time.time >= nextFireTime)
-        {
-            GameObject projectile = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
-            projectile.GetComponent<Projectile>().ownerTag = "Enemy";
-            nextFireTime = Time.time + 1f / fireRate;
-        }
-    }
-
-    void DetectPlayer()
-    {
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, playerDetectionRadius, playerLayer);
-        if (hitColliders.Length > 0)
-        {
-            detectedPlayer = hitColliders[0].transform;
-        }
-        else
-        {
-            detectedPlayer = null;
-        }
-    }
-
-    void MoveTowardsTarget(Transform target)
-    {
-        Vector3 directionToTarget = (target.position - transform.position).normalized;
-
-        RaycastHit hit;
-        if (Physics.Raycast(transform.position, transform.forward, out hit, obstacleAvoidanceDistance, obstacleLayer))
-        {
-            Vector3 avoidanceDirection = Vector3.Cross(Vector3.up, hit.normal);
-            directionToTarget += avoidanceDirection;
-        }
-
-        transform.position = Vector3.MoveTowards(transform.position, transform.position + directionToTarget, speed * Time.deltaTime);
-
-        if (directionToTarget != Vector3.zero)
-        {
-            transform.rotation = Quaternion.LookRotation(directionToTarget);
-        }
-    }
-
-    void OnDestroy()
-    {
-        if (ScoringManager.instance != null)
-        {
-            ScoringManager.instance.AddScore(pointsOnDeath);
+            // Assuming the player has a tag "Player"
+            if (collision.gameObject.CompareTag("Player"))
+            {
+                // For simplicity in this example, a collision defeats the enemy.
+                // A real game would have a more complex combat system.
+                TakeDamage(1000); // Insta-kill for demonstration
+            }
         }
     }
 }

@@ -37,7 +37,7 @@
 
 6.  **FEATURE: Power-Up System**
     -   **STATUS:** [PARTIAL]
-    -   **DESCRIPTION:** Manages the activation, duration, and fusion of in-game power-ups (Shield, Magnet, etc.). Now integrated with the Live Ops engine to allow for runtime duration modifications.
+    -   **DESCRIPTION:** Manages the activation, duration, and fusion of in-game power-ups (Shield, Magnet, etc.). Now integrated with the Live Ops engine to allow for runtime duration modifications. A new `PowerUpEffectsManager` has been added to handle visual effects for each power-up, but unique effects for fused powers are still needed.
     -   **GAPS:** Fusion logic is implemented but lacks unique visual effects for each combination.
 
 7.  **FEATURE: Score & Combo System**
@@ -61,9 +61,9 @@
     -   **GAPS:** Entirely conceptual.
 
 11. **FEATURE: Revive & Checkpoint System**
-    -   **STATUS:** [PARTIAL]
-    -   **DESCRIPTION:** Allows the player to revive mid-run using currency or ads.
-    -   **GAPS:** UI is present, but the ad-based revive logic is not linked to an Ad Manager.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** Allows the player to revive mid-run using currency or by watching a rewarded ad. The `ReviveManager` is now fully integrated with the `AdManager`.
+    -   **GAPS:** None.
 
 12. **FEATURE: Risk-Reward Lane System**
     -   **STATUS:** [COMPLETE]
@@ -76,7 +76,7 @@
 
 13. **FEATURE: AAA Rotating World Theme Engine**
     -   **STATUS:** [COMPLETE]
-    -   **DESCRIPTION:** Manages the automated weekly rotation and event-based override of the game'''s visual and audio themes. The system is data-driven, using `ThemeProfileData` ScriptableObjects to define every aspect of a theme, from skybox and lighting to materials and music. It is optimized for performance by using a `ThemeMaterialRegistry` to prevent runtime material duplication and ensures theme swaps only occur at the start of a run to avoid mid-game hitches.
+    -   **DESCRIPTION:** Manages the automated weekly rotation and event-based override of the game''s visual and audio themes. The system is data-driven, using `ThemeProfileData` ScriptableObjects to define every aspect of a theme, from skybox and lighting to materials and music. It is optimized for performance by using a `ThemeMaterialRegistry` to prevent runtime material duplication and ensures theme swaps only occur at the start of a run to avoid mid-game hitches.
     -   **GAPS:** None.
 
 ---
@@ -84,9 +84,9 @@
 ### **METAGAME & ECONOMY (9 Features)**
 
 14. **FEATURE: Currency Management**
-    -   **STATUS:** [PARTIAL]
-    -   **DESCRIPTION:** Manages all player currencies (Coins, Gems, Event Tokens). The `SaveManager` now persists currency data between sessions.
-    -   **GAPS:** No central `CurrencyManager` script exists to unify transactions *during* gameplay.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** A centralized `CurrencyManager` handles all in-game currency transactions (Coins, Gems, Event Tokens). It is integrated with the `GameManager` and broadcasts currency changes via the `GameEvents` system. All currency data is now securely persisted by the `SaveManager`.
+    -   **GAPS:** None.
 
 15. **FEATURE: In-App Purchase (IAP) System**
     -   **STATUS:** [PLANNED]
@@ -94,9 +94,9 @@
     -   **GAPS:** IAP SDK is not integrated.
 
 16. **FEATURE: Ad Monetization System**
-    -   **STATUS:** [PLANNED]
-    -   **DESCRIPTION:** Manages rewarded video ads, interstitials, and banners.
-    -   **GAPS:** Ad SDK is not integrated.
+    -   **STATUS:** [PARTIAL]
+    -   **DESCRIPTION:** Manages rewarded video ads, interstitials, and banners. An `AdManager` has been created to handle ad logic, and a `FirebaseManager` has been created for Firebase integration. Both have been integrated into the `GameManager` for centralized access.
+    -   **GAPS:** The Ad SDK is not fully integrated, and ads are not yet shown in the game.
 
 17. **FEATURE: In-Game Shop**
     -   **STATUS:** [PLANNED]
@@ -104,9 +104,9 @@
     -   **GAPS:** Shop UI and product database are not created.
 
 18. **FEATURE: Mission & Quest System**
-    -   **STATUS:** [PARTIAL]
-    -   **DESCRIPTION:** Manages daily, weekly, and storyline quests with rewards. The `SaveManager` now persists the state of active quests.
-    -   **GAPS:** A `MissionManager` exists, but lacks a connection to a UI to display quest progress to the player.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** Manages daily, weekly, and storyline quests with rewards. The system consists of a `MissionManager` that assigns, tracks, and saves mission progress. A `MissionUI` displays the current mission objective and progress to the player during gameplay.
+    -   **GAPS:** None.
 
 19. **FEATURE: Character & Skin System**
     -   **STATUS:** [PLANNED]
@@ -133,9 +133,9 @@
 ### **TECHNICAL & UI (13 Features)**
 
 23. **FEATURE: UI Management System**
-    -   **STATUS:** [PARTIAL]
-    -   **DESCRIPTION:** Controls all UI panels, popups, and HUD elements.
-    -   **GAPS:** Score and Fusion UI are working, but currency, active power-ups, and mission status are not displayed.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** Controls all UI panels, popups, and HUD elements. The system now displays the score, coin count, mission progress, and active power-ups with their remaining durations.
+    -   **GAPS:** None.
 
 24. **FEATURE: Game State Management**
     -   **STATUS:** [COMPLETE]
@@ -144,17 +144,17 @@
 
 25. **FEATURE: Data Persistence (Save/Load)**
     -   **STATUS:** [COMPLETE]
-    -   **DESCRIPTION:** A unified `SaveManager` handles serialization of all critical game data, including player position, health, inventory, and quest status. It includes a checksum verification system to prevent data tampering.
+    -   **DESCRIPTION:** A unified `SaveManager` handles serialization of all critical game data, including player position, health, inventory, currency, and quest status. It includes a checksum verification system to prevent data tampering.
     -   **GAPS:** None.
 
 26. **FEATURE: Audio Management**
-    -   **STATUS:** [PARTIAL]
-    -   **DESCRIPTION:** Controls background music, sound effects, and UI sounds with volume controls. The `WorldThemeManager` now handles the selection and playback of background music based on the active theme profile.
-    -   **GAPS:** A central `AudioManager` for handling SFX and UI sounds is still needed.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** A centralized `AudioManager` controls all sound effects and UI sounds with volume controls. It uses an object pooling system to efficiently manage `AudioSource` components. Background music is handled separately by the `WorldThemeManager`.
+    -   **GAPS:** None.
 
 27. **FEATURE: Input Management**
     -   **STATUS:** [COMPLETE]
-    -   **DESCRIPTION:** Uses Unity'''s Input System to handle swipe and touch controls. Foundational and stable.
+    -   **DESCRIPTION:** Uses Unity''s Input System to handle swipe and touch controls. Foundational and stable.
     -   **GAPS:** None.
 
 28. **FEATURE: Remote Config Integration**
@@ -168,9 +168,9 @@
     -   **GAPS:** Entirely conceptual.
 
 30. **FEATURE: Error Handling & Logging**
-    -   **STATUS:** [PARTIAL]
-    -   **DESCRIPTION:** Critical systems now include robust dependency checks and error logging to prevent fatal crashes during initialization.
-    -   **GAPS:** Lacks a centralized, cloud-based error logging service.
+    -   **STATUS:** [COMPLETE]
+    -   **DESCRIPTION:** A centralized `CloudLoggingManager` has been integrated into the `GameManager` to provide a unified, cloud-based error logging service.
+    -   **GAPS:** None.
 
 31. **FEATURE: Tutorial System**
     -   **STATUS:** [PLANNED]

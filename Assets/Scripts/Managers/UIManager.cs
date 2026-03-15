@@ -3,122 +3,116 @@ using System;
 using UnityEngine;
 using EndlessRunner.Core;
 using EndlessRunner.UI;
+using EndlessRunner.Missions;
 
 namespace EndlessRunner.Managers
 {
     public class UIManager : Singleton<UIManager>
     {
+        #region Events
+        public event Action OnPlayButtonPressed;
         public event Action OnRestartButtonPressed;
         public event Action OnMainMenuButtonPressed;
+        public event Action OnPauseButtonPressed;
+        #endregion
 
+        #region Serialized Fields
         [Header("UI Panels")]
-        [SerializeField] private UIPanel_InGame hudPanel;
-        [SerializeField] private UIPanel_GameOver gameOverPanel;
-        [SerializeField] private UIPanel_MainMenu mainMenuPanel;
-        [SerializeField] private UIPanel_Pause pausePanel;
-        [SerializeField] private UIPanel_Tutorial tutorialPanel;
+        [SerializeField] private MainMenuPanel mainMenuPanel;
+        [SerializeField] private GameplayPanel gameplayPanel;
+        [SerializeField] private PausePanel pausePanel;
+        [SerializeField] private GameOverPanel gameOverPanel;
 
-        protected override void Awake()
-        {
-            base.Awake();
-            // Ensure all panels are found if not wired in the inspector
-            hudPanel = hudPanel ?? FindObjectOfType<UIPanel_InGame>(true);
-            gameOverPanel = gameOverPanel ?? FindObjectOfType<UIPanel_GameOver>(true);
-            mainMenuPanel = mainMenuPanel ?? FindObjectOfType<UIPanel_MainMenu>(true);
-            pausePanel = pausePanel ?? FindObjectOfType<UIPanel_Pause>(true);
-            tutorialPanel = tutorialPanel ?? FindObjectOfType<UIPanel_Tutorial>(true);
-        }
+        [Header("UI Elements")]
+        [SerializeField] private MissionUI missionUI;
+        #endregion
 
+        #region Unity Lifecycle
         private void Start()
         {
-            SubscribeToEvents();
+            SetupPanels();
+            SubscribeToGameManager();
 
-            if (GameManager.Instance != null)
-            {
-                HandleGameStateChanged(GameManager.Instance.CurrentState);
-            }
-            else
-            {
-                Debug.LogError("Guardian Architect CRITICAL ERROR: GameManager not found!");
-            }
+            // Initial state
+            mainMenuPanel.Show();
+            gameplayPanel.Hide();
+            pausePanel.Hide();
+            gameOverPanel.Hide();
+            missionUI.gameObject.SetActive(false);
         }
 
         private void OnDestroy()
         {
-            UnsubscribeFromEvents();
+            UnsubscribeFromGameManager();
+        }
+        
+        private void Update()
+        {
+            if(GameManager.Instance != null && GameManager.Instance.CurrentGameState == GameManager.GameState.Playing)
+            {
+                if (MissionManager.Instance != null && MissionManager.Instance.GetCurrentMission() != null)
+                {
+                    missionUI.UpdateMission(MissionManager.Instance.GetCurrentMission());
+                }
+            }
+        }
+        #endregion
+
+        #region Setup
+        private void SetupPanels()
+        {
+            mainMenuPanel.Setup(this);
+            gameplayPanel.Setup(this);
+            pausePanel.Setup(this);
+            gameOverPanel.Setup(this);
         }
 
-        private void SubscribeToEvents()
+        private void SubscribeToGameManager()
         {
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
-                GameManager.Instance.OnScoreChanged += UpdateScore;
-                GameManager.Instance.OnCoinsChanged += UpdateCoins;
             }
-
-            if (gameOverPanel != null) gameOverPanel.OnRestartClicked += HandleRestartClicked;
-            if (gameOverPanel != null) gameOverPanel.OnMainMenuClicked += HandleMainMenuClicked;
-            if (pausePanel != null) pausePanel.OnMainMenuClicked += HandleMainMenuClicked;
-            if (mainMenuPanel != null) mainMenuPanel.OnPlayClicked += HandlePlayClicked;
         }
 
-        private void UnsubscribeFromEvents()
+        private void UnsubscribeFromGameManager()
         {
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
-                GameManager.Instance.OnScoreChanged -= UpdateScore;
-                GameManager.Instance.OnCoinsChanged -= UpdateCoins;
             }
         }
+        #endregion
 
+        #region Game State Handling
         private void HandleGameStateChanged(GameManager.GameState newState)
         {
-            hudPanel?.gameObject.SetActive(newState == GameManager.GameState.Playing);
-            gameOverPanel?.gameObject.SetActive(newState == GameManager.GameState.GameOver);
-            mainMenuPanel?.gameObject.SetActive(newState == GameManager.GameState.MainMenu);
-            pausePanel?.gameObject.SetActive(newState == GameManager.GameState.Paused);
+            mainMenuPanel.Hide();
+            gameplayPanel.Hide();
+            pausePanel.Hide();
+            gameOverPanel.Hide();
+            missionUI.gameObject.SetActive(false);
 
-            if (newState == GameManager.GameState.GameOver && GameManager.Instance != null)
+            switch (newState)
             {
-                gameOverPanel?.SetFinalScore(GameManager.Instance.Score);
+                case GameManager.GameState.MainMenu:
+                    mainMenuPanel.Show();
+                    break;
+                case GameManager.GameState.Playing:
+                    gameplayPanel.Show();
+                    missionUI.gameObject.SetActive(true);
+                    break;
+                case GameManager.GameState.Paused:
+                    gameplayPanel.Show(); // Keep gameplay UI visible
+                    pausePanel.Show();
+                    missionUI.gameObject.SetActive(true);
+                    break;
+                case GameManager.GameState.GameOver:
+                    gameplayPanel.Show(); // Keep final score visible
+                    gameOverPanel.Show();
+                    break;
             }
         }
-
-        private void UpdateScore(int newScore)
-        {
-            hudPanel?.UpdateScore(newScore);
-        }
-
-        private void UpdateCoins(int newCoins)
-        {
-            hudPanel?.UpdateCoins(newCoins);
-        }
-
-        private void HandleRestartClicked()
-        {
-            OnRestartButtonPressed?.Invoke();
-        }
-        
-        private void HandleMainMenuClicked()
-        {
-            OnMainMenuButtonPressed?.Invoke();
-        }
-
-        private void HandlePlayClicked()
-        {
-            GameManager.Instance.UpdateGameState(GameManager.GameState.Playing);
-        }
-
-        public void ShowTutorialMessage(string message, float duration)
-        {
-            tutorialPanel?.Show(message, duration);
-        }
-
-        public void HideTutorialMessage()
-        {
-            tutorialPanel?.Hide();
-        }
+        #endregion
     }
 }

@@ -1,122 +1,141 @@
 
 using UnityEngine;
 using System.Collections.Generic;
+using EndlessRunner.Core;
+using EndlessRunner.Data;
 
-/// <summary>
-/// Manages player missions and tracks their progress.
-/// This system is responsible for loading, saving, and updating mission objectives.
-/// Created by Supreme Guardian Architect v12.
-/// </summary>
-
-// Defines a single mission's structure
-[System.Serializable]
-public class Mission
+namespace EndlessRunner.Missions
 {
-    public string missionId;
-    public string description;
-    public int requiredCount;
-    [System.NonSerialized] public int currentCount; // Runtime progress
-    public bool isCompleted;
-    public int rewardAmount;
-
-    public void LoadProgress()
-    {
-        currentCount = PlayerPrefs.GetInt("MissionProgress_" + missionId, 0);
-        isCompleted = PlayerPrefs.GetInt("MissionCompleted_" + missionId, 0) == 1;
-    }
-
-    public void SaveProgress()
-    {
-        PlayerPrefs.SetInt("MissionProgress_" + missionId, currentCount);
-        PlayerPrefs.SetInt("MissionCompleted_" + missionId, isCompleted ? 1 : 0);
-    }
-
-    public void UpdateProgress(int amount)
-    {
-        if (isCompleted) return;
-
-        currentCount += amount;
-        if (currentCount >= requiredCount)
-        {
-            currentCount = requiredCount;
-            Complete();
-        }
-    }
-
-    private void Complete()
-    {
-        isCompleted = true;
-        Debug.Log($"Guardian Architect Log: Mission ''{missionId}'' completed!");
-        // You would typically grant a reward here
-        FindObjectOfType<ScoreManager>()?.AddCoins(rewardAmount);
-        SaveProgress();
-        // Maybe show a UI notification
-    }
-}
-
-public class MissionManager : Singleton<MissionManager>
-{
-    [Header("Mission Database")]
-    [SerializeField] private List<Mission> allMissions = new List<Mission>();
-
-    void Start()
-    {
-        LoadAllMissions();
-    }
-
-    private void LoadAllMissions()
-    {
-        foreach (var mission in allMissions)
-        {
-            mission.LoadProgress();
-        }
-        Debug.Log("Guardian Architect Log: All mission progress loaded.");
-    }
-
-    private void SaveAllMissions()
-    {
-        foreach (var mission in allMissions)
-        {
-            mission.SaveProgress();
-        }
-        PlayerPrefs.Save();
-        Debug.Log("Guardian Architect Log: All mission progress saved.");
-    }
-
     /// <summary>
-    /// Updates the progress of a specific mission type.
+    /// Manages the player's missions, tracking progress and assigning new ones.
     /// </summary>
-    /// <param name="missionTypeIdentifier">The identifier for the mission type (e.g., "runDistance", "collectCoins").</param>
-    /// <param name="amount">The amount to add to the progress.</param>
-    public void UpdateMissionProgress(string missionTypeIdentifier, int amount)
+    public class MissionManager : Singleton<MissionManager>
     {
-        foreach (var mission in allMissions)
-        {
-            // This logic assumes the missionId is structured like "runDistance_1", "collectCoins_3", etc.
-            if (!mission.isCompleted && mission.missionId.StartsWith(missionTypeIdentifier))
-            {
-                mission.UpdateProgress(amount);
-            }
-        }
-    }
+        [Header("Mission Pool")]
+        [SerializeField] private List<MissionDefinition> allMissions;
 
-    // Save progress when the application quits
-    void OnApplicationQuit()
-    {
-        SaveAllMissions();
-    }
-    
-    // Example: A method to get a list of currently active (non-completed) missions for UI display
-    public List<Mission> GetActiveMissions()
-    {
-        List<Mission> activeMissions = new List<Mission>();
-        foreach (var mission in allMissions)
+        private Mission currentMission;
+        private int lastPlayerXPosition = 0; // For distance tracking
+
+        #region Unity Lifecycle
+        protected override void Awake()
         {
-            if (!mission.isCompleted)
+            base.Awake();
+            LoadMission();
+        }
+
+        private void OnEnable()
+        {
+            GameEvents.OnGameStart += HandleGameStart;
+            GameEvents.OnScoreGained += HandleScoreGained;
+            GameEvents.OnCoinsGained += HandleCoinsGained;
+            GameEvents.OnMissionCompleted += HandleMissionCompleted;
+        }
+
+        private void OnDisable()
+        {
+            GameEvents.OnGameStart -= HandleGameStart;
+            GameEvents.OnScoreGained -= HandleScoreGained;
+            GameEvents.OnCoinsGained -= HandleCoinsGained;
+            GameEvents.OnMissionCompleted -= HandleMissionCompleted;
+            SaveMission();
+        }
+
+        private void Update()
+        {
+            if (currentMission != null && !currentMission.isCompleted && currentMission.type == MissionType.RunDistance && Player.PlayerController.Instance != null)
             {
-                activeMissions.Add(mission);
+                int currentPlayerX = (int)Player.PlayerController.Instance.transform.position.x;
+                if(currentPlayerX > lastPlayerXPosition)
+                {
+                    currentMission.UpdateProgress(currentPlayerX - lastPlayerXPosition);
+                    lastPlayerXPosition = currentPlayerX;
+                }
             }
         }
-        return activeMissions;
+        #endregion
+
+        #region Public Accessors
+        public Mission GetCurrentMission()
+        {
+            return currentMission;
+        }
+        #endregion
+
+        #region Event Handlers
+        private void HandleGameStart()
+        {
+            lastPlayerXPosition = 0;
+        }
+
+        private void HandleScoreGained(int amount)
+        {
+            if (currentMission != null && !currentMission.isCompleted && currentMission.type == MissionType.ScorePoints)
+            {
+                currentMission.UpdateProgress(amount);
+            }
+        }
+
+        private void HandleCoinsGained(int amount)
+        {
+            if (currentMission != null && !currentMission.isCompleted && currentMission.type == MissionType.CollectCoins)
+            {
+                currentMission.UpdateProgress(amount);
+            }
+        }
+        
+        private void HandleMissionCompleted(Mission mission)
+        {
+            AssignNewMission();
+        }
+        #endregion
+
+        #region Data Management
+        private void LoadMission()
+        {
+            if (DataManager.Instance != null)
+            {
+                currentMission = DataManager.Instance.GameData.currentMission;
+                if (currentMission == null || currentMission.isCompleted)
+                {
+                    AssignNewMission();
+                }
+            }
+            else
+            {
+                AssignNewMission();
+            }
+        }
+
+        private void SaveMission()
+        {
+            if (DataManager.Instance != null && currentMission != null)
+            {
+                DataManager.Instance.GameData.currentMission = currentMission;
+                DataManager.Instance.SaveData();
+            }
+        }
+
+        private void AssignNewMission()
+        {
+            // Simple logic: pick a random mission. Could be more complex.
+            if (allMissions != null && allMissions.Count > 0)
+            {
+                MissionDefinition newMissionDef;
+                do
+                {
+                    newMissionDef = allMissions[Random.Range(0, allMissions.Count)];
+                } while (currentMission != null && newMissionDef.description == currentMission.description); // Avoid assigning the same mission twice
+
+                currentMission = newMissionDef.CreateMission();
+                lastPlayerXPosition = 0; // Reset for distance missions
+                Debug.Log("MISSION_SYSTEM: New mission assigned: " + currentMission.description);
+            }
+            else
+            { 
+                Debug.LogWarning("MISSION_SYSTEM: No missions defined in the MissionManager!");
+            }
+        }
+        #endregion
     }
 }

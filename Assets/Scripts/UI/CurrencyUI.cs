@@ -1,48 +1,35 @@
 
 using UnityEngine;
 using TMPro;
+using EndlessRunner.Core;
 
-/// <summary>
-/// Displays the player's currency (coins and gems) and updates it in real-time.
-/// </summary>
-public class CurrencyUI : MonoBehaviour
+namespace EndlessRunner.UI
 {
-    [Header("UI Elements")]
-    [SerializeField] private TMP_Text coinsText;
-    [SerializeField] private TMP_Text gemsText;
-
-    private void OnEnable()
+    public class CurrencyUI : MonoBehaviour
     {
-        CurrencyManager.OnCoinsChanged += UpdateCoinsDisplay;
-        CurrencyManager.OnGemsChanged += UpdateGemsDisplay;
+        [SerializeField] private TextMeshProUGUI currencyText;
 
-        // Initial display update
-        if (CurrencyManager.Instance != null)
+        private void OnEnable()
         {
-            UpdateCoinsDisplay(CurrencyManager.Instance.Coins);
-            UpdateGemsDisplay(CurrencyManager.Instance.Gems);
+            GameEvents.OnCoinsGained += UpdateCurrencyText;
         }
-    }
 
-    private void OnDisable()
-    {
-        CurrencyManager.OnCoinsChanged -= UpdateCoinsDisplay;
-        CurrencyManager.OnGemsChanged -= UpdateGemsDisplay;
-    }
-
-    private void UpdateCoinsDisplay(int newAmount)
-    {
-        if (coinsText != null)
+        private void OnDisable()
         {
-            coinsText.text = newAmount.ToString();
+            GameEvents.OnCoinsGained -= UpdateCurrencyText;
         }
-    }
 
-    private void UpdateGemsDisplay(int newAmount)
-    {
-        if (gemsText != null)
+        private void Start()
         {
-            gemsText.text = newAmount.ToString();
+            UpdateCurrencyText(0); // Initialize with 0 coins
+        }
+
+        public void UpdateCurrencyText(int amount)
+        {
+            if (currencyText != null)
+            {
+                currencyText.text = $"Coins: {amount}";
+            }
         }
     }
 }

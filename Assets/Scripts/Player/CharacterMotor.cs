@@ -1,177 +1,164 @@
 
-using System;
+using System.Collections;
 using UnityEngine;
 
 namespace EndlessRunner.Player
 {
-    [RequireComponent(typeof(CharacterController))]
+    /// <summary>
+    /// Handles all physical movement of the player character, including running, jumping, and lane switching.
+    /// It receives commands from the PlayerController and translates them into motion.
+    /// </summary>
+    [RequireComponent(typeof(Rigidbody))]
+    [RequireComponent(typeof(CapsuleCollider))]
     public class CharacterMotor : MonoBehaviour
     {
-        #region Configuration
-        [Header("Movement Dynamics")]
-        [SerializeField] private float baseMoveSpeed = 15f;
-        [SerializeField] private float laneChangeSpeed = 20f;
-        [SerializeField] private float jumpForce = 8f;
-        [SerializeField] private float gravity = -25f;
-        [SerializeField] private float slideDuration = 0.75f;
+        #region Serialized Fields
+        [Header("Movement Settings")]
+        [SerializeField] private float forwardSpeed = 10f;
+        [SerializeField] private float laneWidth = 4f;
+        [SerializeField] private float laneSwitchSpeed = 15f;
 
-        [Header("Lane Configuration")]
-        [SerializeField] private float laneWidth = 3.0f;
-        private const int INITIAL_LANE = 0; // Center lane
+        [Header("Jump Settings")]
+        [SerializeField] private float jumpForce = 10f;
+        [SerializeField] private float gravityMultiplier = 2f;
+
+        [Header("Slide Settings")]
+        [SerializeField] private float slideDuration = 1.0f;
+        [SerializeField] private float slideColliderHeight = 0.5f;
+
+        [Header("Ground Check")]
+        [SerializeField] private LayerMask groundLayer;
+        [SerializeField] private float groundCheckDistance = 0.2f;
         #endregion
 
-        #region State
-        private CharacterController _controller;
-        private Vector3 _initialPosition;
-        private float _initialControllerHeight;
-        private Vector3 _initialControllerCenter;
+        #region Private State
+        private Rigidbody _rigidbody;
+        private CapsuleCollider _collider;
 
-        private float _currentMoveSpeed;
-        private Vector3 _verticalVelocity;
-        private int _currentLane = INITIAL_LANE;
+        private int currentLane = 0; // -1 for left, 0 for middle, 1 for right
+        private bool isGrounded = true;
+        private bool isSliding = false;
 
-        private int _maxJumps = 1;
-        private int _jumpsRemaining;
-
-        private float _slideTimer;
-        #endregion
-
-        #region Public State & Events
-        public event Action OnJump;
-        public event Action OnSlideStart;
-        public event Action OnSlideEnd;
-        public event Action<int> OnLaneChange;
-
-        public bool IsGrounded => _controller.isGrounded;
-        public bool IsSliding { get; private set; }
-        public Vector3 Velocity => _controller.velocity;
+        private float originalColliderHeight;
+        private Vector3 originalColliderCenter;
         #endregion
 
         #region Unity Lifecycle
-        void Awake()
+        private void Awake()
         {
-            _controller = GetComponent<CharacterController>();
-            _initialPosition = transform.position;
-            _initialControllerHeight = _controller.height;
-            _initialControllerCenter = _controller.center;
+            _rigidbody = GetComponent<Rigidbody>();
+            _collider = GetComponent<CapsuleCollider>();
 
-            ResetState();
+            // Store original collider dimensions for resetting after a slide
+            originalColliderHeight = _collider.height;
+            originalColliderCenter = _collider.center;
         }
 
-        void Update()
+        private void FixedUpdate()
         {
-            // --- Horizontal Movement (Lane Changing) ---
-            float targetX = _currentLane * laneWidth;
-            Vector3 currentPosition = transform.position;
-            float newX = Mathf.MoveTowards(currentPosition.x, targetX, laneChangeSpeed * Time.deltaTime);
+            // --- Constant Forward Movement ---
+            Vector3 forwardMove = transform.forward * forwardSpeed * Time.fixedDeltaTime;
 
-            // --- Forward Movement ---
-            float forwardZ = _currentMoveSpeed * Time.deltaTime;
+            // --- Lane Switching Interpolation ---
+            Vector3 targetPosition = _rigidbody.position + forwardMove;
+            targetPosition.x = Mathf.Lerp(_rigidbody.position.x, currentLane * laneWidth, Time.fixedDeltaTime * laneSwitchSpeed);
 
-            // --- Vertical Movement (Gravity & Jumping) ---
-            if (IsGrounded && _verticalVelocity.y < 0)
-            {
-                _verticalVelocity.y = -2f; // Keep the character grounded
-                if (_jumpsRemaining < _maxJumps) _jumpsRemaining = _maxJumps; // Reset jumps on grounding
-            }
-            _verticalVelocity.y += gravity * Time.deltaTime;
+            // --- Apply Gravity ---
+            _rigidbody.AddForce(Physics.gravity * gravityMultiplier, ForceMode.Acceleration);
+            
+            _rigidbody.MovePosition(targetPosition);
+        }
 
-            // --- Sliding Logic ---
-            HandleSlideTimer();
-
-            // --- Combine & Apply Movement ---
-            Vector3 moveVector = new Vector3(newX - currentPosition.x, _verticalVelocity.y * Time.deltaTime, forwardZ);
-            _controller.Move(moveVector);
+        private void Update()
+        {
+            CheckIfGrounded();
         }
         #endregion
 
         #region Public API
-        public void Jump()
-        {
-            if (_jumpsRemaining > 0)
-            {
-                _jumpsRemaining--;
-                _verticalVelocity.y = jumpForce;
-                OnJump?.Invoke();
-            }
-        }
-
-        public void Slide()
-        {
-            if (!IsSliding && IsGrounded)
-            {
-                IsSliding = true;
-                _slideTimer = slideDuration;
-                // Scale the controller collider for the slide
-                _controller.height = _initialControllerHeight / 2;
-                _controller.center = _initialControllerCenter / 2;
-                OnSlideStart?.Invoke();
-            }
-        }
-
+        /// <summary>
+        /// Moves the character one lane to the left or right.
+        /// </summary>
         public void ChangeLane(int direction)
         {
-            int newLane = Mathf.Clamp(_currentLane + direction, -1, 1); // Lanes are -1 (left), 0 (center), 1 (right)
-            if (newLane != _currentLane)
+            if (isSliding) return; // Prevent lane changing while sliding
+            int newLane = currentLane + direction;
+            currentLane = Mathf.Clamp(newLane, -1, 1);
+        }
+
+        /// <summary>
+        /// Makes the character jump if they are on the ground and not sliding.
+        /// </summary>
+        public void Jump()
+        {
+            if (isGrounded && !isSliding)
             {
-                _currentLane = newLane;
-                OnLaneChange?.Invoke(direction);
+                _rigidbody.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                isGrounded = false;
+            }
+        }
+        
+        /// <summary>
+        /// Initiates the slide sequence if the character is grounded and not already sliding.
+        /// </summary>
+        public void Slide()
+        {
+            if (isGrounded && !isSliding)
+            {
+                StartCoroutine(SlideCoroutine());
             }
         }
 
-        public void ApplySpeedModifier(float modifier)
-        {
-            _currentMoveSpeed = baseMoveSpeed * modifier;
-        }
-
-        public void ResetSpeedModifier()
-        {
-            _currentMoveSpeed = baseMoveSpeed;
-        }
-
-        public void SetMaxJumps(int count)
-        {
-            _maxJumps = Mathf.Max(1, count); // Ensure at least one jump
-            _jumpsRemaining = _maxJumps;
-        }
-
-        public void ResetMaxJumps()
-        {
-            SetMaxJumps(1);
-        }
-
+        /// <summary>
+        /// Resets the motor to its default state for a new game.
+        /// </summary>
         public void ResetState()
         {
-            transform.position = _initialPosition;
-            _controller.enabled = true;
-            _currentLane = INITIAL_LANE;
-            _verticalVelocity = Vector3.zero;
-            _currentMoveSpeed = baseMoveSpeed;
-            ResetMaxJumps();
-            StopSlide(true); // Instantly stop sliding
+            // Stop any active coroutines
+            StopAllCoroutines();
+
+            // Reset movement state
+            currentLane = 0;
+            transform.position = new Vector3(0, transform.position.y, 0);
+            _rigidbody.velocity = Vector3.zero;
+            isGrounded = true;
+            isSliding = false;
+
+            // Reset collider to its original state
+            _collider.height = originalColliderHeight;
+            _collider.center = originalColliderCenter;
         }
         #endregion
 
-        #region Private Helpers
-        private void HandleSlideTimer()
+        #region Internal Logic
+        /// <summary>
+        /// Coroutine that handles the duration and collider changes for sliding.
+        /// </summary>
+        private IEnumerator SlideCoroutine()
         {
-            if (!IsSliding) return;
+            isSliding = true;
 
-            _slideTimer -= Time.deltaTime;
-            if (_slideTimer <= 0)
-            {
-                StopSlide(false);
-            }
+            // Shrink collider
+            _collider.height = slideColliderHeight;
+            _collider.center = new Vector3(0, slideColliderHeight / 2f, 0);
+
+            yield return new WaitForSeconds(slideDuration);
+
+            // Restore collider
+            _collider.height = originalColliderHeight;
+            _collider.center = originalColliderCenter;
+
+            isSliding = false;
         }
 
-        private void StopSlide(bool instant = false)
+        /// <summary>
+        /// Checks if the character is currently on the ground.
+        /// </summary>
+        private void CheckIfGrounded()
         {
-            if (!IsSliding && !instant) return;
-
-            IsSliding = false;
-            _controller.height = _initialControllerHeight;
-            _controller.center = _initialControllerCenter;
-            if (!instant) OnSlideEnd?.Invoke();
+            // Use a sphere cast to check for ground beneath the player
+            Vector3 spherePosition = transform.position + Vector3.up * (groundCheckDistance * 0.5f);
+            isGrounded = Physics.CheckSphere(spherePosition, groundCheckDistance, groundLayer, QueryTriggerInteraction.Ignore);
         }
         #endregion
     }

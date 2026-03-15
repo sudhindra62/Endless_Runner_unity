@@ -1,109 +1,60 @@
 
 using UnityEngine;
 using System.Collections.Generic;
+using EndlessRunner.Core;
 
-/// <summary>
-/// Manages all audio playback for the game, including music and sound effects.
-/// This is a singleton that persists across all scenes.
-/// Logic has been fully implemented by Supreme Guardian Architect v12.
-/// </summary>
-public class AudioManager : MonoBehaviour
+namespace EndlessRunner.Managers
 {
-    public static AudioManager Instance { get; private set; }
-
-    [Header("Audio Sources")]
-    [SerializeField] private AudioSource musicSource;
-    [SerializeField] private AudioSource sfxSource;
-
-    [Header("Audio Clips")]
-    public List<Sound> sounds;
-    private Dictionary<string, AudioClip> soundBank;
-
-    private void Awake()
+    public class AudioManager : Singleton<AudioManager>
     {
-        if (Instance != null && Instance != this)
+        [SerializeField] private int initialPoolSize = 10;
+        private List<AudioSource> audioSourcePool;
+
+        protected override void Awake()
         {
-            Destroy(gameObject);
-            return;
+            base.Awake();
+            InitializeAudioPool();
         }
 
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-
-        // --- ARCHITECTURAL WIRING: Initialize the sound bank. ---
-        soundBank = new Dictionary<string, AudioClip>();
-        foreach (var sound in sounds)
+        private void InitializeAudioPool()
         {
-            if (!soundBank.ContainsKey(sound.name))
+            audioSourcePool = new List<AudioSource>();
+            for (int i = 0; i < initialPoolSize; i++)
             {
-                soundBank.Add(sound.name, sound.clip);
+                CreateAudioSource();
             }
         }
-    }
 
-    /// <summary>
-    /// Plays a music track by name. If a track is already playing, it will be stopped and replaced.
-    /// </summary>
-    /// <param name="trackName">The name of the music track to play.</param>
-    public void PlayMusic(string trackName)
-    {
-        if (soundBank.TryGetValue(trackName, out AudioClip clip))
+        private AudioSource CreateAudioSource()
         {
-            musicSource.clip = clip;
-            musicSource.Play();
+            GameObject audioHost = new GameObject("AudioSource_Pooled");
+            audioHost.transform.SetParent(transform);
+            AudioSource audioSource = audioHost.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSourcePool.Add(audioSource);
+            return audioSource;
         }
-        else
-        {
-            Debug.LogWarning("Guardian Architect Warning: Music track not found - " + trackName);
-        }
-    }
 
-    /// <summary>
-    /// Stops the currently playing music track.
-    /// </summary>
-    public void StopMusic()
-    {
-        musicSource.Stop();
-    }
-
-    /// <summary>
-    /// Plays a sound effect one time.
-    /// </summary>
-    /// <param name="sfxName">The name of the sound effect to play.</param>
-    public void PlaySFX(string sfxName)
-    {
-        if (soundBank.TryGetValue(sfxName, out AudioClip clip))
+        public void PlaySoundEffect(AudioClip clip, float volume = 1.0f)
         {
-            sfxSource.PlayOneShot(clip);
+            AudioSource source = GetAvailableAudioSource();
+            source.clip = clip;
+            source.volume = volume;
+            source.Play();
         }
-        else
+
+        private AudioSource GetAvailableAudioSource()
         {
-            Debug.LogWarning("Guardian Architect Warning: SFX not found - " + sfxName);
+            foreach (var source in audioSourcePool)
+            {
+                if (!source.isPlaying)
+                {
+                    return source;
+                }
+            }
+
+            // If no available source is found, create a new one
+            return CreateAudioSource();
         }
     }
-
-    /// <summary>
-    /// Sets the volume for the music source.
-    /// </summary>
-    /// <param name="volume">Volume level between 0.0 and 1.0.</param>
-    public void SetMusicVolume(float volume)
-    {
-        musicSource.volume = Mathf.Clamp01(volume);
-    }
-
-    /// <summary>
-    /// Sets the volume for the sound effects source.
-    /// </summary>
-    /// <param name="volume">Volume level between 0.0 and 1.0.</param>
-    public void SetSFXVolume(float volume)
-    {
-        sfxSource.volume = Mathf.Clamp01(volume);
-    }
-}
-
-[System.Serializable]
-public class Sound
-{
-    public string name;
-    public AudioClip clip;
 }

@@ -1,167 +1,90 @@
 
-using System;
 using UnityEngine;
 using EndlessRunner.Core;
 using EndlessRunner.Data;
-using EndlessRunner.Managers;
 
 namespace EndlessRunner.Managers
 {
+    /// <summary>
+    /// Manages the player's score and coin collection, integrated with the GameEvents system.
+    /// </summary>
     public class ScoreManager : Singleton<ScoreManager>
     {
-        // --- EVENTS ---
-        public event Action<int> OnScoreChanged;
-        public event Action<int> OnCoinsChanged;
-        public event Action<int> OnHighScoreChanged;
+        [Header("Scoring Settings")]
+        [SerializeField] private float scorePerSecond = 10f;
 
-        // --- PUBLIC PROPERTIES ---
-        public int HighScore { get; private set; }
         public int CurrentScore { get; private set; }
         public int CurrentCoins { get; private set; }
 
-        // --- PRIVATE STATE ---
-        private float _scoreAccumulator;
-        private int _scoreMultiplier = 1;
-        private int _coinMultiplier = 1;
+        private float scoreAccumulator;
+        private bool isRunActive = false;
 
-        // --- UNITY LIFECYCLE & EVENT WIRING ---
-        protected override void Awake()
+        private void OnEnable()
         {
-            base.Awake();
-            SubscribeToEvents();
-            LoadPersistentData();
+            GameEvents.OnPlayerDeath += EndRun;
+            GameEvents.OnGameStart += StartRun;
         }
 
-        private void OnDestroy()
+        private void OnDisable()
         {
-            UnsubscribeFromEvents();
+            GameEvents.OnPlayerDeath -= EndRun;
+            GameEvents.OnGameStart -= StartRun;
         }
 
         private void Update()
         {
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.Playing)
+            if (!isRunActive) return;
+
+            scoreAccumulator += scorePerSecond * Time.deltaTime;
+            if (scoreAccumulator >= 1f)
             {
-                _scoreAccumulator += Time.deltaTime * 10;
-                if (_scoreAccumulator >= 1f)
-                {
-                    int scoreToAdd = Mathf.FloorToInt(_scoreAccumulator);
-                    AddScore(scoreToAdd * _scoreMultiplier);
-                    _scoreAccumulator -= scoreToAdd;
-                }
+                int scoreToAdd = Mathf.FloorToInt(scoreAccumulator);
+                AddScore(scoreToAdd, false); // Don't trigger event every frame, only on significant changes
             }
         }
 
-        // --- PUBLIC API ---
-        public void AddScore(int amount)
+        public void StartRun()
         {
-            if (amount <= 0) return;
-            CurrentScore += amount;
-            OnScoreChanged?.Invoke(CurrentScore);
+            CurrentScore = 0;
+            CurrentCoins = 0;
+            scoreAccumulator = 0f;
+            isRunActive = true;
 
-            if (CurrentScore > HighScore)
+            GameEvents.TriggerScoreGained(CurrentScore);
+            GameEvents.TriggerCoinsGained(CurrentCoins);
+        }
+
+        public void AddScore(int amount, bool triggerEvent = true)
+        {
+            if (!isRunActive) return;
+            CurrentScore += amount;
+            if (triggerEvent)
             {
-                HighScore = CurrentScore;
-                OnHighScoreChanged?.Invoke(HighScore);
+                GameEvents.TriggerScoreGained(CurrentScore);
             }
         }
 
         public void AddCoins(int amount)
         {
-            if (amount <= 0) return;
+            if (!isRunActive) return;
             CurrentCoins += amount;
-            OnCoinsChanged?.Invoke(CurrentCoins);
+            GameEvents.TriggerCoinsGained(CurrentCoins);
         }
 
-        public void ResetSession()
+        public void EndRun()
         {
-            CurrentScore = 0;
-            CurrentCoins = 0;
-            _scoreAccumulator = 0;
-            OnScoreChanged?.Invoke(CurrentScore);
-            OnCoinsChanged?.Invoke(CurrentCoins);
-        }
+            if (!isRunActive) return;
+            isRunActive = false;
+            Debug.Log($"SCORE_MANAGER: Run ended with Score: {CurrentScore} and Coins: {CurrentCoins}");
 
-        // --- PERSISTENCE ---
-        private void LoadPersistentData()
-        {
-            if (SaveManager.Instance == null) return;
-            SaveData data = SaveManager.Instance.LoadData();
-            HighScore = data.HighScore;
-            OnHighScoreChanged?.Invoke(HighScore);
-        }
-
-        public void SaveGameData()
-        {
-            if (SaveManager.Instance == null) return;
-
-            SaveData data = new SaveData
+            if (DataManager.Instance != null)
             {
-                HighScore = this.HighScore,
-                TotalCoins = this.CurrentCoins // This might need to be the total coins accumulated over time
-            };
-            SaveManager.Instance.SaveData(data);
-        }
-
-        // --- EVENT HANDLERS ---
-        private void SubscribeToEvents()
-        {
-            if (PowerUpManager.Instance != null)
-            {
-                PowerUpManager.Instance.OnPowerUpActivated += HandlePowerUpActivated;
-                PowerUpManager.Instance.OnPowerUpDeactivated += HandlePowerUpDeactivated;
-            }
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
-            }
-        }
-
-        private void UnsubscribeFromEvents()
-        {
-            if (PowerUpManager.Instance != null)
-            {
-                PowerUpManager.Instance.OnPowerUpActivated -= HandlePowerUpActivated;
-                PowerUpManager.Instance.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
-            }
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
-            }
-        }
-
-        private void HandleGameStateChanged(GameManager.GameState newState)
-        {
-            if (newState == GameManager.GameState.GameOver)
-            {
-                SaveGameData();
-            }
-            else if (newState == GameManager.GameState.Playing)
-            {
-                ResetSession();
-            }
-        }
-
-        private void HandlePowerUpActivated(PowerUpDefinition powerUpDef)
-        {
-            if (powerUpDef.type == PowerUpType.ScoreMultiplier)
-            {
-                _scoreMultiplier = (int)powerUpDef.value;
-            }
-            else if (powerUpDef.type == PowerUpType.CoinMagnet)
-            {
-                _coinMultiplier = (int)powerUpDef.value;
-            }
-        }
-
-        private void HandlePowerUpDeactivated(PowerUpType powerUpType)
-        {
-            if (powerUpType == PowerUpType.ScoreMultiplier)
-            {
-                _scoreMultiplier = 1;
-            }
-            else if (powerUpType == PowerUpType.CoinMagnet)
-            {
-                _coinMultiplier = 1;
+                if (CurrentScore > DataManager.Instance.GameData.highScore)
+                {
+                    DataManager.Instance.GameData.highScore = CurrentScore;
+                }
+                DataManager.Instance.GameData.totalCoins += CurrentCoins;
+                DataManager.Instance.SaveData();
             }
         }
     }

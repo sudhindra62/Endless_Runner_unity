@@ -1,85 +1,59 @@
 
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
+using EndlessRunner.Core;
 
-/// <summary>
-/// Manages the display of all active power-up icons and their radial timers in the HUD.
-/// It listens to PowerUpManager events to dynamically create, update, and destroy UI elements.
-/// </summary>
-public class PowerUpHUDController : MonoBehaviour
+namespace EndlessRunner.UI
 {
-    [Header("UI Prefabs and Layout")]
-    [SerializeField] private PowerUpIconUI powerUpIconPrefab;
-    [SerializeField] private Transform iconContainer;
-
-    // A dictionary to keep track of the active UI icons, mapping a PowerUpEffect type to its UI representation.
-    private readonly Dictionary<System.Type, PowerUpIconUI> activeIcons = new Dictionary<System.Type, PowerUpIconUI>();
-
-    private void OnEnable()
+    public class PowerUpHUDController : MonoBehaviour
     {
-        // Subscribe to power-up events to update the HUD accordingly.
-        PowerUpManager.OnPowerUpActivated += HandlePowerUpActivated;
-        PowerUpManager.OnPowerUpExpired += HandlePowerUpExpired;
-        PowerUpManager.OnPowerUpTicked += HandlePowerUpTicked;
-    }
+        [SerializeField] private GameObject powerUpIconPrefab;
+        [SerializeField] private Transform iconContainer;
 
-    private void OnDisable()
-    {
-        // Always unsubscribe to prevent memory leaks.
-        PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivated;
-        PowerUpManager.OnPowerUpExpired -= HandlePowerUpExpired;
-        PowerUpManager.OnPowerUpTicked -= HandlePowerUpTicked;
-    }
+        private Dictionary<PowerUpDefinition, PowerUpIconUI> activeIcons = new Dictionary<PowerUpDefinition, PowerUpIconUI>();
 
-    private void HandlePowerUpActivated(PowerUpEffect powerUp)
-    {
-        // If an icon for this power-up type doesn't already exist, create one.
-        if (!activeIcons.ContainsKey(powerUp.GetType()))
+        private void OnEnable()
         {
-            PowerUpIconUI newIcon = Instantiate(powerUpIconPrefab, iconContainer);
-            newIcon.Initialize(powerUp); // The icon sets up its own visuals based on the power-up data.
-            activeIcons[powerUp.GetType()] = newIcon;
+            GameEvents.OnPowerUpActivated += HandlePowerUpActivated;
+            GameEvents.OnPowerUpDeactivated += HandlePowerUpDeactivated;
         }
-    }
 
-    private void HandlePowerUpExpired(PowerUpEffect powerUp)
-    {
-        // If an icon for the expired power-up exists, destroy it.
-        if (activeIcons.TryGetValue(powerUp.GetType(), out PowerUpIconUI iconToDestroy))
+        private void OnDisable()
         {
-            Destroy(iconToDestroy.gameObject);
-            activeIcons.Remove(powerUp.GetType());
+            GameEvents.OnPowerUpActivated -= HandlePowerUpActivated;
+            GameEvents.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
         }
-    }
 
-    private void HandlePowerUpTicked(PowerUpEffect powerUp)
-    {
-        // If an icon for the ticking power-up exists, update its timer.
-        if (activeIcons.TryGetValue(powerUp.GetType(), out PowerUpIconUI iconToUpdate))
+        private void Update()
         {
-            iconToUpdate.UpdateFill(powerUp.TimeRemaining, powerUp.Duration);
+            foreach (var icon in activeIcons.Values)
+            {
+                icon.UpdateTimer(Time.deltaTime);
+            }
         }
-    }
 
-    /// <summary>
-    /// Hides all icons. This can be used when the HUD is hidden.
-    /// </summary>
-    public void HideAll()
-    {
-        foreach (var icon in activeIcons.Values)
+        private void HandlePowerUpActivated(PowerUpDefinition powerUp)
         {
-            icon.gameObject.SetActive(false);
+            if (activeIcons.ContainsKey(powerUp))
+            {
+                activeIcons[powerUp].SetPowerUp(powerUp); // Reset timer
+            }
+            else
+            {
+                GameObject iconGO = Instantiate(powerUpIconPrefab, iconContainer);
+                PowerUpIconUI iconUI = iconGO.GetComponent<PowerUpIconUI>();
+                iconUI.SetPowerUp(powerUp);
+                activeIcons.Add(powerUp, iconUI);
+            }
         }
-    }
 
-    /// <summary>
-    /// Shows all icons. This can be used when the HUD is shown.
-    /// </summary>
-    public void ShowAll()
-    {
-        foreach (var icon in activeIcons.Values)
+        private void HandlePowerUpDeactivated(PowerUpDefinition powerUp)
         {
-            icon.gameObject.SetActive(true);
+            if (activeIcons.ContainsKey(powerUp))
+            {
+                Destroy(activeIcons[powerUp].gameObject);
+                activeIcons.Remove(powerUp);
+            }
         }
     }
 }

@@ -1,51 +1,47 @@
 
-using System;
+using EndlessRunner.Core;
+using UnityEngine;
 
-public enum MissionType
+namespace EndlessRunner.Missions
 {
-    Score,
-    Distance,
-    Coins,
-    NearMiss,
-    FeverTime
-}
-
-[Serializable]
-public class Mission
-{
-    public string MissionId;
-    public MissionType Type;
-    public float Target;
-    public float CurrentProgress;
-    public bool IsCompleted;
-
-    public Mission(string missionId, MissionType type, float target)
+    [System.Serializable]
+    public enum MissionType
     {
-        MissionId = missionId;
-        Type = type;
-        Target = target;
-        CurrentProgress = 0;
-        IsCompleted = false;
+        RunDistance,
+        CollectCoins,
+        ScorePoints
     }
 
-    public void UpdateProgress(float value)
+    [System.Serializable]
+    public class Mission
     {
-        if (IsCompleted) return;
-        CurrentProgress += value;
-        if (CurrentProgress >= Target)
+        public string description;
+        public MissionType type;
+        public float target;
+        public float progress;
+        public bool isCompleted;
+
+        public Mission(string description, MissionType type, float target)
         {
-            CurrentProgress = Target;
-            IsCompleted = true;
+            this.description = description;
+            this.type = type;
+            this.target = target;
+            this.progress = 0;
+            this.isCompleted = false;
         }
-    }
 
-    public float GetProgressPercentage()
-    {
-        return (CurrentProgress / Target) * 100f;
-    }
+        public void UpdateProgress(float amount)
+        {
+            if (isCompleted) return;
 
-    public float GetDifference()
-    {
-        return Target - CurrentProgress;
+            progress += amount;
+            if (progress >= target)
+            {
+                progress = target;
+                isCompleted = true;
+                Debug.Log("MISSION_SYSTEM: Mission completed! '" + description + "'");
+                GameEvents.TriggerMissionCompleted(this);
+            }
+        }
     }
 }

@@ -1,52 +1,41 @@
 
 using UnityEngine;
+using EndlessRunner.Core;
+using EndlessRunner.Player;
 
-namespace EndlessRunner
+namespace EndlessRunner.Camera
 {
-    public class CameraController : MonoBehaviour
+    /// <summary>
+    /// Manages the camera, making it smoothly follow the player.
+    /// </summary>
+    public class CameraController : Singleton<CameraController>
     {
-        [Header("Target Settings")]
-        [Tooltip("The target for the camera to follow. This is typically the player.")]
-        public Transform target;
+        [Header("Camera Settings")]
+        [SerializeField] private Vector3 cameraOffset;
+        [SerializeField] private float smoothSpeed = 10f;
 
-        [Header("Camera Positioning")]
-        [Tooltip("The offset from the target's position.")]
-        public Vector3 offset = new Vector3(0, 7f, -10f);
+        private Transform playerTarget;
 
-        [Header("Movement Smoothing")]
-        [Tooltip("How quickly the camera follows the target's position. Lower values are slower and smoother.")]
-        [Range(0.01f, 1.0f)]
-        public float smoothSpeed = 0.125f;
-
-        private Vector3 desiredPosition;
-        private Vector3 smoothedPosition;
+        private void Start()
+        {
+            // Find the player target automatically. 
+            // This is more robust than a direct Inspector reference which can be lost.
+            if (PlayerController.Instance != null)
+            {
+                playerTarget = PlayerController.Instance.transform;
+            }
+        }
 
         private void LateUpdate()
         {
-            if (target == null)
-            {
-                Debug.LogWarning("CameraController: Target not assigned. Disabling component.");
-                this.enabled = false;
-                return;
-            }
+            if (playerTarget == null) return;
 
-            // Calculate the desired position for the camera
-            desiredPosition = target.position + offset;
-
-            // Smoothly interpolate between the camera's current position and the desired position
-            smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed);
-
-            // Update the camera's position
+            // Target position maintains the offset from the player
+            Vector3 desiredPosition = playerTarget.position + cameraOffset;
+            
+            // Smoothly interpolate from the current camera position to the desired position
+            Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
             transform.position = smoothedPosition;
-        }
-
-        /// <summary>
-        /// Instantly sets the camera's position to the desired follow position without smoothing.
-        /// </summary>
-        public void SetPositionInstantly()
-        {
-            if (target == null) return;
-            transform.position = target.position + offset;
         }
     }
 }

@@ -1,80 +1,65 @@
 
-using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
-using System;
+using UnityEngine;
 using EndlessRunner.Core;
-using Random = UnityEngine.Random;
+using EndlessRunner.PowerUps;
 
 namespace EndlessRunner.Managers
 {
+    /// <summary>
+    /// Manages the activation and lifecycle of power-ups.
+    /// </summary>
     public class PowerUpManager : Singleton<PowerUpManager>
     {
-        public event Action<PowerUpDefinition> OnPowerUpActivated;
-        public event Action<PowerUpType> OnPowerUpDeactivated;
+        private List<PowerUpDefinition> activePowerUps = new List<PowerUpDefinition>();
+        private PowerUpEffectsManager effectsManager;
 
-        [Header("Power-Up Registry")]
-        [SerializeField] private List<PowerUpDefinition> availablePowerUps;
-
-        [Header("Spawning")]
-        [SerializeField] private string powerUpPoolTag = "PowerUp";
-        
-        private readonly Dictionary<PowerUpType, Coroutine> _activePowerUpRoutines = new Dictionary<PowerUpType, Coroutine>();
-        private readonly Dictionary<PowerUpType, PowerUpDefinition> _activePowerUpDefinitions = new Dictionary<PowerUpType, PowerUpDefinition>();
-
-        public void ActivatePowerUp(PowerUpDefinition powerUpDef)
+        protected override void Awake()
         {
-            if (powerUpDef == null) return;
-
-            if (_activePowerUpRoutines.TryGetValue(powerUpDef.type, out Coroutine existingCoroutine))
-            {
-                StopCoroutine(existingCoroutine);
-            }
-
-            Coroutine powerUpCoroutine = StartCoroutine(PowerUpTimerCoroutine(powerUpDef));
-            _activePowerUpRoutines[powerUpDef.type] = powerUpCoroutine;
-            _activePowerUpDefinitions[powerUpDef.type] = powerUpDef;
-
-            OnPowerUpActivated?.Invoke(powerUpDef);
-
-            if (powerUpDef.activationEffect != null) Instantiate(powerUpDef.activationEffect, transform.position, Quaternion.identity);
-            // if (powerUpDef.activationSound != null && SoundManager.Instance != null) SoundManager.Instance.PlayEffect(powerUpDef.activationSound);
+            base.Awake();
+            effectsManager = GetComponent<PowerUpEffectsManager>();
         }
 
-        public void SpawnRandomPowerUp(Vector3 position, Quaternion rotation)
+        void Update()
         {
-            if (ObjectPooler.Instance != null)
+            // Iterate backwards to allow for safe removal
+            for (int i = activePowerUps.Count - 1; i >= 0; i--)
             {
-                ObjectPooler.Instance.SpawnFromPool(powerUpPoolTag, position, rotation);
+                PowerUpDefinition powerUp = activePowerUps[i];
+                powerUp.Tick(Time.deltaTime);
+
+                if (!powerUp.IsActive())
+                {
+                    DeactivatePowerUp(powerUp);
+                }
             }
         }
 
-        public bool IsPowerUpActive(PowerUpType powerUpType)
+        public void ActivatePowerUp(PowerUpDefinition powerUp)
         {
-            return _activePowerUpRoutines.ContainsKey(powerUpType);
-        }
-
-        public PowerUpDefinition GetActivePowerUp(PowerUpType powerUpType)
-        {
-            _activePowerUpDefinitions.TryGetValue(powerUpType, out PowerUpDefinition powerUpDef);
-            return powerUpDef;
-        }
-
-        private IEnumerator PowerUpTimerCoroutine(PowerUpDefinition powerUpDef)
-        {
-            yield return new WaitForSeconds(powerUpDef.duration);
-            DeactivatePowerUp(powerUpDef.type);
-        }
-
-        private void DeactivatePowerUp(PowerUpType powerUpType)
-        {
-            if (_activePowerUpRoutines.ContainsKey(powerUpType))
+            powerUp.Activate();
+            if (!activePowerUps.Contains(powerUp))
             {
-                _activePowerUpRoutines.Remove(powerUpType);
-                _activePowerUpDefinitions.Remove(powerUpType);
-
-                OnPowerUpDeactivated?.Invoke(powerUpType);
+                activePowerUps.Add(powerUp);
             }
+            
+            GameEvents.TriggerPowerUpActivated(powerUp);
+            if (effectsManager != null)
+            {
+                effectsManager.PlayEffect(powerUp.type);
+            }
+            Debug.Log($"POWERUP_MANAGER: {powerUp.type} activated!");
+        }
+
+        private void DeactivatePowerUp(PowerUpDefinition powerUp)
+        {
+            activePowerUps.Remove(powerUp);
+            GameEvents.TriggerPowerUpDeactivated(powerUp);
+            if (effectsManager != null)
+            {
+                effectsManager.StopEffect(powerUp.type);
+            }
+            Debug.Log($"POWERUP_MANAGER: {powerUp.type} deactivated!");
         }
     }
 }

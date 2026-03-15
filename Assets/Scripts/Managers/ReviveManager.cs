@@ -97,6 +97,24 @@ public class ReviveManager : MonoBehaviour
             HandleReviveDecline();
         }
     }
+    
+    public void AttemptReviveWithAd()
+    {
+        if (!canRevive) return;
+
+        GameManager.Instance.Ads.ShowRewardedVideo(success =>
+        {
+            if (success)
+            {
+                HandleReviveSuccess();
+            }
+            else
+            {
+                Debug.Log("Ad not shown, revive failed.");
+                HandleReviveDecline();
+            }
+        });
+    }
 
     public void DeclineRevive()
     {
