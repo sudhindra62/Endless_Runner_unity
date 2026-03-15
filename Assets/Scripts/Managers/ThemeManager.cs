@@ -1,16 +1,14 @@
 
 using EndlessRunner.Themes;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace EndlessRunner.Managers
 {
     public class ThemeManager : MonoBehaviour
     {
-        public static ThemeManager Instance { get; private set; }
+        public static ThemeManager Instance;
 
-        public List<ThemeSO> themes;
-        private int currentThemeIndex;
+        public ThemeSO currentTheme;
 
         private void Awake()
         {
@@ -23,30 +21,19 @@ namespace EndlessRunner.Managers
             {
                 Destroy(gameObject);
             }
-
-            // Load the saved theme index, or default to 0
-            currentThemeIndex = PlayerPrefs.GetInt("CurrentTheme", 0);
         }
 
-        public void SetTheme(int themeIndex)
+        public void SetTheme(ThemeSO theme)
         {
-            if (themeIndex >= 0 && themeIndex < themes.Count)
-            {
-                currentThemeIndex = themeIndex;
-                PlayerPrefs.SetInt("CurrentTheme", currentThemeIndex);
-                PlayerPrefs.Save();
-            }
+            currentTheme = theme;
+            ApplyTheme();
         }
 
-        public ThemeSO GetCurrentTheme()
+        private void ApplyTheme()
         {
-            if (themes.Count == 0) return null;
-            return themes[currentThemeIndex];
-        }
+            if (currentTheme == null) return;
 
-        public ThemeSO[] GetThemes()
-        {
-            return themes.ToArray();
+            RenderSettings.skybox.SetColor("_SkyTint", currentTheme.skyColor);
         }
     }
 }

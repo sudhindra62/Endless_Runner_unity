@@ -1,80 +1,41 @@
 
 using UnityEngine;
-using EndlessRunner.Core;
 
 namespace EndlessRunner.Managers
 {
-    public class CurrencyManager : Singleton<CurrencyManager>
+    public class CurrencyManager : MonoBehaviour
     {
-        public int Coins { get; private set; }
-        public int Gems { get; private set; }
+        public static CurrencyManager Instance;
 
-        protected override void Awake()
-        {
-            base.Awake();
-            ServiceLocator.Register(this);
-        }
+        public int CurrentCoins { get; private set; }
 
-        private void Start()
+        private void Awake()
         {
-            LoadCurrency();
+            if (Instance == null)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+
+            CurrentCoins = PlayerPrefs.GetInt("Coins", 0);
         }
 
         public void AddCoins(int amount)
         {
-            if (amount < 0) return;
-            Coins += amount;
-            GameEvents.TriggerCoinsGained(Coins);
-            SaveCurrency();
+            CurrentCoins += amount;
+            PlayerPrefs.SetInt("Coins", CurrentCoins);
+            PlayerPrefs.Save();
         }
 
-        public bool SpendCoins(int amount)
+        public void RemoveCoins(int amount)
         {
-            if (amount < 0 || Coins < amount) return false;
-            Coins -= amount;
-            GameEvents.TriggerCoinsGained(Coins);
-            SaveCurrency();
-            return true;
-        }
-
-        public void AddGems(int amount)
-        {
-            if (amount < 0) return;
-            Gems += amount;
-            SaveCurrency();
-        }
-
-        public bool TrySpendGems(int amount)
-        {
-            if (amount < 0 || Gems < amount) return false;
-            Gems -= amount;
-            SaveCurrency();
-            return true;
-        }
-
-        public bool HasEnoughGems(int amount)
-        {
-            return Gems >= amount;
-        }
-
-        private void SaveCurrency()
-        {
-            if (SaveManager.Instance != null)
-            {
-                SaveManager.Instance.Data.coins = Coins;
-                SaveManager.Instance.Data.gems = Gems;
-                SaveManager.Instance.SaveGame();
-            }
-        }
-
-        private void LoadCurrency()
-        {
-            if (SaveManager.Instance != null)
-            {
-                Coins = SaveManager.Instance.Data.coins;
-                Gems = SaveManager.Instance.Data.gems;
-                GameEvents.TriggerCoinsGained(Coins);
-            }
+            CurrentCoins -= amount;
+            PlayerPrefs.SetInt("Coins", CurrentCoins);
+            PlayerPrefs.Save();
         }
     }
 }

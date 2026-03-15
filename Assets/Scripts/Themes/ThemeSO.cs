@@ -3,11 +3,12 @@ using UnityEngine;
 
 namespace EndlessRunner.Themes
 {
-    [CreateAssetMenu(fileName = "Theme", menuName = "Endless Runner/Theme")]
+    [CreateAssetMenu(fileName = "ThemeSO", menuName = "EndlessRunner/ThemeSO", order = 0)]
     public class ThemeSO : ScriptableObject
     {
         public string themeName;
-        public GameObject[] environmentPrefabs;
-        public Material skyboxMaterial;
+        public Material groundMaterial;
+        public Material obstacleMaterial;
+        public Color skyColor;
     }
 }

@@ -1,6 +1,7 @@
 
 using EndlessRunner.Environment;
 using EndlessRunner.Managers;
+using EndlessRunner.Themes;
 using UnityEngine;
 
 public class GameFlowController : MonoBehaviour
@@ -50,6 +51,10 @@ public class GameFlowController : MonoBehaviour
     public void StartGame()
     {
         GameStateManager.Instance.SetState(GameStateManager.GameState.Playing);
-        EnvironmentGenerator.Instance.Generate();
+        ThemeSO currentTheme = ThemeManager.Instance.GetCurrentTheme();
+        if (currentTheme != null)
+        {
+            EnvironmentVariationManager.Instance.SpawnInitialEnvironment(currentTheme);
+        }
     }
 }

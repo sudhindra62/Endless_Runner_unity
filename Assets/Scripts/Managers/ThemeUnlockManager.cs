@@ -1,13 +1,12 @@
 
+using EndlessRunner.Themes;
 using UnityEngine;
 
 namespace EndlessRunner.Managers
 {
-    public class GameManager : MonoBehaviour
+    public class ThemeUnlockManager : MonoBehaviour
     {
-        public static GameManager Instance;
-
-        public bool IsGameStarted { get; private set; }
+        public static ThemeUnlockManager Instance;
 
         private void Awake()
         {
@@ -22,14 +21,15 @@ namespace EndlessRunner.Managers
             }
         }
 
-        public void StartGame()
+        public bool IsThemeUnlocked(ThemeSO theme)
         {
-            IsGameStarted = true;
+            return PlayerPrefs.GetInt(theme.themeName, 0) == 1;
         }
 
-        public void GameOver()
+        public void UnlockTheme(ThemeSO theme)
         {
-            IsGameStarted = false;
+            PlayerPrefs.SetInt(theme.themeName, 1);
+            PlayerPrefs.Save();
         }
     }
 }
