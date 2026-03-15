@@ -1,45 +1,52 @@
 
 using UnityEngine;
 using System.IO;
-using Core;
-using Data;
+using System.Runtime.Serialization.Formatters.Binary;
+using EndlessRunner.Core;
+using EndlessRunner.Data;
 
-namespace Managers
+namespace EndlessRunner.Managers
 {
     public class SaveManager : Singleton<SaveManager>
     {
-        private PlayerData _playerData;
-        private string _savePath;
+        private readonly string _saveFileName = "player.dat";
 
-        protected override void Awake()
+        public SaveData LoadData()
         {
-            base.Awake();
-            _savePath = Path.Combine(Application.persistentDataPath, "playerData.json");
-            LoadPlayerData();
-        }
-
-        public PlayerData GetPlayerData()
-        {
-            return _playerData;
-        }
-
-        public void SavePlayerData(PlayerData data)
-        {
-            _playerData = data;
-            string json = JsonUtility.ToJson(_playerData, true);
-            File.WriteAllText(_savePath, json);
-        }
-
-        public void LoadPlayerData()
-        {
-            if (File.Exists(_savePath))
+            string path = Path.Combine(Application.persistentDataPath, _saveFileName);
+            if (File.Exists(path))
             {
-                string json = File.ReadAllText(_savePath);
-                _playerData = JsonUtility.FromJson<PlayerData>(json);
+                try
+                {
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    using (FileStream stream = new FileStream(path, FileMode.Open))
+                    {
+                        return formatter.Deserialize(stream) as SaveData;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Guardian Architect Save System Error: Failed to load data from {path}. Reason: {e.Message}");
+                    return new SaveData(); // Return a fresh instance on error
+                }
             }
-            else
+            return new SaveData(); // No save file found, return a fresh instance
+        }
+
+        public void SaveData(SaveData data)
+        {
+            string path = Path.Combine(Application.persistentDataPath, _saveFileName);
+            try
             {
-                _playerData = new PlayerData();
+                BinaryFormatter formatter = new BinaryFormatter();
+                using (FileStream stream = new FileStream(path, FileMode.Create))
+                {
+                    formatter.Serialize(stream, data);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Guardian Architect Save System Error: Failed to save data to {path}. Reason: {e.Message}");
             }
         }
     }

@@ -1,34 +1,33 @@
 
 using UnityEngine;
-using Core;
+using EndlessRunner.Core;
+using EndlessRunner.Managers;
 
-namespace Core
+namespace EndlessRunner.Generation
 {
-    public class LevelChunk : MonoBehaviour
+    public class LevelChunk : MonoBehaviour, IPoolable
     {
-        private int[] _pattern;
+        [Header("Power-Up Spawning")]
+        [Range(0, 1)]
+        [SerializeField] private float powerUpSpawnChance = 0.1f;
 
-        public void Initialize(int[] pattern)
+        public void OnObjectSpawn()
         {
-            _pattern = pattern;
-            PopulateChunk();
+            // Attempt to spawn a power-up when the chunk is activated.
+            if (Random.value < powerUpSpawnChance)
+            {
+                SpawnPowerUp();
+            }
         }
 
-        private void PopulateChunk()
+        private void SpawnPowerUp()
         {
-            if (_pattern == null) return;
-
-            for (int i = 0; i < _pattern.Length; i++)
+            if (PowerUpManager.Instance != null)
             {
-                switch (_pattern[i])
-                {
-                    case 1: // Obstacle
-                        ObjectPooler.Instance.SpawnFromPool("Obstacle", transform.position + new Vector3(0, 0, i * 2), Quaternion.identity);
-                        break;
-                    case 2: // Coin
-                        ObjectPooler.Instance.SpawnFromPool("Coin", transform.position + new Vector3(0, 1, i * 2), Quaternion.identity);
-                        break;
-                }
+                // Choose a random position within this chunk.
+                // This is a simplified example; a real implementation would be more sophisticated.
+                Vector3 spawnPosition = transform.position + new Vector3(Random.Range(-1, 2), 1, Random.Range(5, 25));
+                PowerUpManager.Instance.SpawnRandomPowerUp(spawnPosition, Quaternion.identity);
             }
         }
     }

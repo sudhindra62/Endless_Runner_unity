@@ -1,12 +1,11 @@
 
-using UnityEngine;
+using EndlessRunner.Data;
 
-namespace Data
+[System.Serializable]
+public class ShopItem
 {
-    [System.Serializable]
-    public class ShopItem
-    {
-        public string itemName;
-        public int cost;
-    }
+    public string Name;
+    public string Description;
+    public int Price;
+    public ItemType Type;
 }

@@ -1,67 +1,90 @@
 
 using UnityEngine;
+using EndlessRunner.Player;
 
-/// <summary>
-/// Handles all character animations, listening to events from the CharacterMotor.
-/// This keeps animation logic separate from movement logic.
-/// </summary>
-[RequireComponent(typeof(Animator), typeof(CharacterMotor))]
-public class CharacterAnimator : MonoBehaviour
+namespace EndlessRunner.Animation
 {
-    private Animator animator;
-    private CharacterMotor motor;
-
-    void Awake()
+    [RequireComponent(typeof(Animator))]
+    public class CharacterAnimator : MonoBehaviour
     {
-        animator = GetComponent<Animator>();
-        motor = GetComponent<CharacterMotor>();
-    }
+        // --- Animator Parameter Hashes ---
+        private readonly int _isRunningHash = Animator.StringToHash("IsRunning");
+        private readonly int _jumpHash = Animator.StringToHash("Jump");
+        private readonly int _isSlidingHash = Animator.StringToHash("IsSliding");
+        private readonly int _turnRightHash = Animator.StringToHash("TurnRight");
+        private readonly int _turnLeftHash = Animator.StringToHash("TurnLeft");
 
-    private void OnEnable()
-    {
-        motor.OnJump += HandleJump;
-        motor.OnSlideStart += HandleSlideStart;
-        motor.OnSlideEnd += HandleSlideEnd;
-        motor.OnLaneChange += HandleLaneChange;
-    }
+        // --- Dependencies ---
+        private Animator _animator;
+        private CharacterMotor _motor;
 
-    private void OnDisable()
-    {
-        motor.OnJump -= HandleJump;
-        motor.OnSlideStart -= HandleSlideStart;
-        motor.OnSlideEnd -= HandleSlideEnd;
-        motor.OnLaneChange -= HandleLaneChange;
-    }
-
-    void Start()
-    {
-        animator.SetBool("IsRunning", true);
-    }
-
-    private void HandleJump()
-    {
-        animator.SetTrigger("Jump");
-    }
-
-    private void HandleSlideStart()
-    {
-        animator.SetBool("IsSliding", true);
-    }
-
-    private void HandleSlideEnd()
-    {
-        animator.SetBool("IsSliding", false);
-    }
-
-    private void HandleLaneChange(int direction)
-    {
-        if (direction > 0)
+        private void Awake()
         {
-            animator.SetTrigger("TurnRight");
+            _animator = GetComponent<Animator>();
+            _motor = GetComponentInParent<CharacterMotor>(); // Get motor from parent to support model hierarchies
+
+            if (_motor == null)
+            {
+                Debug.LogError("Guardian Architect CRITICAL ERROR: CharacterAnimator requires a CharacterMotor in its parent hierarchy!");
+                this.enabled = false;
+            }
         }
-        else
+
+        private void OnEnable()
         {
-            animator.SetTrigger("TurnLeft");
+            if (_motor != null)
+            {
+                _motor.OnJump += HandleJump;
+                _motor.OnSlideStart += HandleSlideStart;
+                _motor.OnSlideEnd += HandleSlideEnd;
+                _motor.OnLaneChange += HandleLaneChange;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (_motor != null)
+            {
+                _motor.OnJump -= HandleJump;
+                _motor.OnSlideStart -= HandleSlideStart;
+                _motor.OnSlideEnd -= HandleSlideEnd;
+                _motor.OnLaneChange -= HandleLaneChange;
+            }
+        }
+
+        private void Start()
+        {
+            // The character is always running in this game
+            _animator.SetBool(_isRunningHash, true);
+        }
+
+        // --- Event Handlers ---
+
+        private void HandleJump()
+        {
+            _animator.SetTrigger(_jumpHash);
+        }
+
+        private void HandleSlideStart()
+        {
+            _animator.SetBool(_isSlidingHash, true);
+        }
+
+        private void HandleSlideEnd()
+        {
+            _animator.SetBool(_isSlidingHash, false);
+        }
+
+        private void HandleLaneChange(int direction)
+        {
+            if (direction > 0)
+            {
+                _animator.SetTrigger(_turnRightHash);
+            }
+            else if (direction < 0)
+            {
+                _animator.SetTrigger(_turnLeftHash);
+            }
         }
     }
 }

@@ -2,8 +2,9 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using Core;
-using Managers;
+using EndlessRunner.Data;
+using EndlessRunner.Core;
+using EndlessRunner.Managers;
 
 /// <summary>
 /// Manages the step-by-step tutorial sequence for new players.
@@ -142,31 +143,7 @@ public class TutorialManager : Singleton<TutorialManager>
         TutorialStep currentStep = tutorialSteps[_currentStepIndex];
         if (currentStep.requiredAction == TutorialAction.SwipeLeft && direction == SwipeDirection.Left) _actionWasPerformed = true;
         if (currentStep.requiredAction == TutorialAction.SwipeRight && direction == SwipeDirection.Right) _actionWasPerformed = true;
-        if (currentStep.requiredAction == TutorialAction.SwipeUp && direction == SwipeDirection.Up) _actionWasPerformed = true;
-        if (currentStep.requiredAction == TutorialAction.SwipeDown && direction == SwipeDirection.Down) _actionWasPerformed = true;
+        if (currentStep.requiredAction == TutorialAction.Jump && direction == SwipeDirection.Up) _actionWasPerformed = true;
+        if (currentStep.requiredAction == TutorialAction.Slide && direction == SwipeDirection.Down) _actionWasPerformed = true;
     }
-}
-
-/// <summary>
-/// Data structure for a single step in the tutorial.
-/// </summary>
-[System.Serializable]
-public class TutorialStep
-{
-    [TextArea(3, 5)]
-    public string instructionText = "Default instruction.";
-    public float duration = 3f;
-    public TutorialAction requiredAction = TutorialAction.None;
-}
-
-/// <summary>
-/// The set of actions a player can be required to perform to advance the tutorial.
-/// </summary>
-public enum TutorialAction
-{
-    None, 
-    SwipeLeft,
-    SwipeRight,
-    SwipeUp,
-    SwipeDown
 }

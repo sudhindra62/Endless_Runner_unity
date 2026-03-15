@@ -1,92 +1,142 @@
 
-using UnityEngine;
 using System;
+using UnityEngine;
+using EndlessRunner.Core;
+using EndlessRunner.Player;
+using EndlessRunner.Generation;
 
-/// <summary>
-/// The central nervous system of the game. Manages game state, score, and the overall game loop.
-/// This is a singleton that persists across all scenes.
-/// Logic has been fully implemented by Supreme Guardian Architect v12.
-/// </summary>
-public class GameManager : MonoBehaviour
+namespace EndlessRunner.Managers
 {
-    public static GameManager Instance { get; private set; }
-
-    public enum GameState { MainMenu, Playing, Paused, GameOver }
-    private GameState _currentState;
-    public static event Action<GameState> OnGameStateChanged;
-
-    public int Score { get; private set; }
-    public int Currency { get; private set; }
-
-    private void Awake()
+    public class GameManager : Singleton<GameManager>
     {
-        if (Instance != null && Instance != this)
+        public enum GameState { MainMenu, Playing, Paused, GameOver }
+
+        public event Action<GameState> OnGameStateChanged;
+        public event Action<int> OnScoreChanged;
+        public event Action<int> OnCoinsChanged;
+
+        public GameState CurrentState { get; private set; }
+        public int Score { get; private set; }
+        public int Coins { get; private set; }
+
+        // --- System References ---
+        private UIManager _uiManager;
+        private PlayerController _playerController;
+        private LevelGenerator _levelGenerator;
+
+        protected override void Awake()
         {
-            Destroy(gameObject);
-            return;
+            base.Awake();
+            // Set a high target frame rate for smooth gameplay
+            Application.targetFrameRate = 60;
         }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-    }
 
-    private void Start()
-    {
-        // Initial state of the game
-        UpdateGameState(GameState.MainMenu);
-    }
-
-    /// <summary>
-    /// Updates the game state and notifies all subscribed systems.
-    /// </summary>
-    /// <param name="newState">The state to transition to.</param>
-    public void UpdateGameState(GameState newState)
-    {
-        _currentState = newState;
-        OnGameStateChanged?.Invoke(newState);
-
-        switch (newState)
+        private void Start()
         {
-            case GameState.MainMenu:
-                Time.timeScale = 1f;
-                break;
-            case GameState.Playing:
-                Time.timeScale = 1f;
-                // Reset score or other values at the start of a new game if needed
-                Score = 0;
-                break;
-            case GameState.Paused:
-                Time.timeScale = 0f;
-                break;
-            case GameState.GameOver:
-                Time.timeScale = 0f;
-                // Here you might trigger a game over UI, save high scores, etc.
-                break;
+            // Locate and cache core system references
+            _uiManager = UIManager.Instance;
+            _playerController = PlayerController.Instance;
+            _levelGenerator = LevelGenerator.Instance;
+            
+            // Error handling for missing critical components
+            if (_uiManager == null) Debug.LogError("Guardian Architect CRITICAL ERROR: UIManager not found!");
+            if (_playerController == null) Debug.LogError("Guardian Architect CRITICAL ERROR: PlayerController not found!");
+            if (_levelGenerator == null) Debug.LogError("Guardian Architect CRITICAL ERROR: LevelGenerator not found!");
+
+            // Subscribe to UI events
+            _uiManager.OnRestartButtonPressed += RestartGame;
+            _uiManager.OnMainMenuButtonPressed += GoToMainMenu;
+
+            // Load persistent data
+            // TODO: Replace with a dedicated SaveManager call
+            // Coins = LoadCoins(); 
+
+            // Begin the game in the Main Menu state
+            UpdateGameState(GameState.MainMenu);
         }
-    }
 
-    public GameState GetCurrentState()
-    {
-        return _currentState;
-    }
+        public void UpdateGameState(GameState newState)
+        {
+            if (CurrentState == newState) return;
+            CurrentState = newState;
 
-    /// <summary>
-    /// Adds a specified amount to the player's score.
-    /// </summary>
-    public void AddScore(int amount)
-    {
-        if (_currentState != GameState.Playing) return;
-        Score += amount;
-        // Optional: Add an event for score changes to update UI
-        // OnScoreChanged?.Invoke(Score);
-    }
+            switch (newState)
+            {
+                case GameState.MainMenu:
+                    HandleMainMenuState();
+                    break;
+                case GameState.Playing:
+                    HandlePlayingState();
+                    break;
+                case GameState.Paused:
+                    HandlePausedState();
+                    break;
+                case GameState.GameOver:
+                    HandleGameOverState();
+                    break;
+            }
 
-    /// <summary>
-    /// Adds a specified amount of currency.
-    /// </summary>
-    public void AddCurrency(int amount)
-    {
-        Currency += amount;
-        // Optional: Add an event for currency changes
-        // OnCurrencyChanged?.Invoke(Currency);
+            OnGameStateChanged?.Invoke(newState);
+        }
+
+        private void HandleMainMenuState()
+        {
+            Time.timeScale = 1f;
+            _levelGenerator.StopGenerating();
+        }
+
+        private void HandlePlayingState()
+        {
+            Time.timeScale = 1f;
+            Score = 0;
+            OnScoreChanged?.Invoke(Score);
+            _levelGenerator.StartGenerating();
+        }
+
+        private void HandlePausedState()
+        {
+            Time.timeScale = 0f;
+        }
+
+        private void HandleGameOverState()
+        {
+            Time.timeScale = 0f;
+             _levelGenerator.StopGenerating();
+            // TODO: Save score and coins
+        }
+
+        private void RestartGame()
+        {
+            UpdateGameState(GameState.Playing);
+        }
+
+        private void GoToMainMenu()
+        {
+            UpdateGameState(GameState.MainMenu);
+        }
+
+        public void AddScore(int amount)
+        {
+            if (CurrentState != GameState.Playing) return;
+            Score += amount;
+            OnScoreChanged?.Invoke(Score);
+        }
+
+        public void AddCoins(int amount)
+        { 
+            Coins += amount;
+            OnCoinsChanged?.Invoke(Coins);
+            // TODO: Trigger UI feedback for coin collection
+        }
+
+        private void OnDestroy()
+        {
+            // Unsubscribe from events to prevent memory leaks
+            if (_uiManager != null)
+            {
+                _uiManager.OnRestartButtonPressed -= RestartGame;
+                _uiManager.OnMainMenuButtonPressed -= GoToMainMenu;
+            }
+        }
     }
 }

@@ -1,84 +1,30 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
+using EndlessRunner.Managers;
 using System.Collections.Generic;
-using Core;
-using Managers;
 
-namespace UI
+namespace EndlessRunner.UI
 {
-    public class ShopUIManager : Singleton<ShopUIManager>
+    public class ShopUIManager : MonoBehaviour
     {
-        [Header("Shop UI")]
-        [SerializeField] private GameObject shopPanel;
-        [SerializeField] private Button openShopButton;
-        [SerializeField] private Button closeShopButton;
-        [SerializeField] private Transform shopItemContainer;
-        [SerializeField] private TextMeshProUGUI purchaseFailedText;
-
-        private Coroutine purchaseFailedCoroutine;
-
-        protected override void Awake()
-        {
-            base.Awake();
-            openShopButton.onClick.AddListener(() => ToggleShopPanel(true));
-            closeShopButton.onClick.AddListener(() => ToggleShopPanel(false));
-        }
+        public GameObject ShopItemPrefab;
+        public Transform ShopItemContainer;
 
         private void Start()
         {
-            shopPanel.SetActive(false);
-            purchaseFailedText.gameObject.SetActive(false);
+            InitializeShopUI();
         }
 
-        public void ToggleShopPanel(bool state)
+        private void InitializeShopUI()
         {
-            shopPanel.SetActive(state);
-            if (state)
-            {
-                PopulateShop();
-            }
-            else
-            {
-                ClearShop();
-            }
-        }
+            List<ShopItem> shopItems = ShopManager.Instance.ShopItems;
 
-        private void PopulateShop()
-        {
-            foreach (var item in ShopManager.Instance.shopItems)
+            foreach (ShopItem item in shopItems)
             {
-                GameObject itemGO = ObjectPooler.Instance.SpawnFromPool("ShopItem", shopItemContainer.position, Quaternion.identity);
-                itemGO.transform.SetParent(shopItemContainer);
-                itemGO.transform.Find("ItemName").GetComponent<TextMeshProUGUI>().text = item.itemName;
-                itemGO.transform.Find("ItemCost").GetComponent<TextMeshProUGUI>().text = item.cost.ToString();
-                itemGO.GetComponent<Button>().onClick.AddListener(() => ShopManager.Instance.PurchaseItem(item));
+                GameObject shopItemGO = Instantiate(ShopItemPrefab, ShopItemContainer);
+                shopItemGO.GetComponent<ShopItemUI>().Initialize(item);
             }
-        }
-
-        private void ClearShop()
-        {
-            foreach (Transform child in shopItemContainer)
-            {
-                child.gameObject.SetActive(false);
-            }
-        }
-
-        public void ShowPurchaseFailedMessage(float duration)
-        {
-            if (purchaseFailedCoroutine != null)
-            {
-                StopCoroutine(purchaseFailedCoroutine);
-            }
-            purchaseFailedCoroutine = StartCoroutine(ShowPurchaseFailedMessageRoutine(duration));
-        }
-
-        private System.Collections.IEnumerator ShowPurchaseFailedMessageRoutine(float duration)
-        {
-            purchaseFailedText.gameObject.SetActive(true);
-            yield return new WaitForSeconds(duration);
-            purchaseFailedText.gameObject.SetActive(false);
         }
     }
 }

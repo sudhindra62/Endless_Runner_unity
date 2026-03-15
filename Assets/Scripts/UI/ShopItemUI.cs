@@ -1,79 +1,44 @@
 
 using UnityEngine;
 using UnityEngine.UI;
+using EndlessRunner.Managers;
 using TMPro;
 
-/// <summary>
-/// Manages the UI for a single item in the shop.
-/// Handles button interactions for purchasing or equipping a skin.
-/// </summary>
-public class ShopItemUI : MonoBehaviour
+namespace EndlessRunner.UI
 {
-    [Header("UI Elements")]
-    [SerializeField] private Image skinIcon;
-    [SerializeField] private TMP_Text skinNameText;
-    [SerializeField] private Button purchaseButton;
-    [SerializeField] private Button equipButton;
-    [SerializeField] private TMP_Text priceText;
-    [SerializeField] private GameObject lockedOverlay;
-    [SerializeField] private GameObject equippedIndicator;
-
-    private SkinData assignedSkin;
-
-    public void Setup(SkinData skin)
+    public class ShopItemUI : MonoBehaviour
     {
-        assignedSkin = skin;
-        skinIcon.sprite = skin.skinIcon;
-        skinNameText.text = skin.skinName;
-        
-        purchaseButton.onClick.AddListener(OnPurchaseClicked);
-        equipButton.onClick.AddListener(OnEquipClicked);
-        
-        RefreshState();
-    }
+        public TextMeshProUGUI ItemNameText;
+        public TextMeshProUGUI ItemDescriptionText;
+        public TextMeshProUGUI ItemPriceText;
+        public Button PurchaseButton;
 
-    public void RefreshState()
-    {
-        if (SkinManager.Instance.IsSkinUnlocked(assignedSkin.skinID))
+        private ShopItem _shopItem;
+
+        public void Initialize(ShopItem shopItem)
         {
-            // Unlocked State
-            lockedOverlay.SetActive(false);
-            purchaseButton.gameObject.SetActive(false);
-            equipButton.gameObject.SetActive(true);
+            _shopItem = shopItem;
 
-            bool isEquipped = SkinManager.Instance.GetEquippedSkinID() == assignedSkin.skinID;
-            equippedIndicator.SetActive(isEquipped);
-            equipButton.interactable = !isEquipped;
+            ItemNameText.text = _shopItem.Name;
+            ItemDescriptionText.text = _shopItem.Description;
+            ItemPriceText.text = _shopItem.Price.ToString();
+
+            PurchaseButton.onClick.AddListener(OnPurchaseButtonClicked);
         }
-        else
+
+        private void OnPurchaseButtonClicked()
         {
-            // Locked State
-            lockedOverlay.SetActive(true);
-            purchaseButton.gameObject.SetActive(true);
-            equipButton.gameObject.SetActive(false);
-            equippedIndicator.SetActive(false);
-            priceText.text = $"{assignedSkin.price} {assignedSkin.currencyType}";
+            bool purchased = ShopManager.Instance.PurchaseItem(_shopItem);
+
+            if (purchased)
+            {
+                // TODO: Update the UI to reflect the purchase
+                PurchaseButton.interactable = false;
+            }
+            else
+            {
+                // TODO: Show a message to the user that they don't have enough coins
+            }
         }
-    }
-
-    private void OnPurchaseClicked()
-    {
-        ShopManager.Instance.PurchaseSkin(assignedSkin.skinID);
-    }
-
-    private void OnEquipClicked()
-    {
-        SkinManager.Instance.EquipSkin(assignedSkin.skinID);
-        // A global event could be fired here to tell all other ShopItemUIs to refresh.
-        // For now, we rely on the parent ShopUI to handle refreshes if needed.
-        RefreshState(); // Refresh this button
-    }
-
-    public string GetSkinID() => assignedSkin.skinID;
-
-    private void OnDestroy()
-    {
-        purchaseButton.onClick.RemoveListener(OnPurchaseClicked);
-        equipButton.onClick.RemoveListener(OnEquipClicked);
     }
 }

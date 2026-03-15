@@ -1,21 +1,43 @@
-using UnityEngine;
 
-namespace MyGame.Managers
+using UnityEngine;
+using EndlessRunner.Core;
+
+namespace EndlessRunner.Managers
 {
-    public class SoundManager : MonoBehaviour
+    public class SoundManager : Singleton<SoundManager>
     {
-        public AudioSource musicSource;
-        public AudioSource sfxSource;
+        [Header("Audio Sources")]
+        [SerializeField] private AudioSource musicSource;
+        [SerializeField] private AudioSource sfxSource;
+
+        public void PlaySound(AudioClip clip, bool loop = false)
+        {
+            if (clip == null || sfxSource == null) return;
+            
+            if (loop)
+            {
+                sfxSource.clip = clip;
+                sfxSource.loop = true;
+                sfxSource.Play();
+            }
+            else
+            {
+                sfxSource.PlayOneShot(clip);
+            }
+        }
 
         public void PlayMusic(AudioClip clip)
         {
+            if (clip == null || musicSource == null) return;
+
             musicSource.clip = clip;
+            musicSource.loop = true;
             musicSource.Play();
         }
 
-        public void PlaySfx(AudioClip clip)
+        public void StopMusic()
         {
-            sfxSource.PlayOneShot(clip);
+            if (musicSource != null) musicSource.Stop();
         }
     }
 }

@@ -1,8 +1,10 @@
 
 using System.Collections.Generic;
 using UnityEngine;
+using EndlessRunner.Core;
+using EndlessRunner.Managers;
 
-namespace Core
+namespace EndlessRunner.Generation
 {
     public class LevelGenerator : Singleton<LevelGenerator>
     {
@@ -22,41 +24,55 @@ namespace Core
         private Queue<GameObject> _activeChunks = new Queue<GameObject>();
         private Vector3 _nextChunkPosition;
         private Vector3 _initialPosition;
+        private bool _isGenerating = false;
 
         protected override void Awake()
         {
             base.Awake();
             if (playerTransform == null)
             {
-                playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
+                var player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null) playerTransform = player.transform;
             }
             _initialPosition = transform.position;
         }
 
-        private void Start()
-        {
-            InitializeLevel();
-        }
-
         private void Update()
         {
-            if (GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
+            if (!_isGenerating || playerTransform == null) return;
 
+            // Check if the player has advanced far enough to trigger generating the next chunk.
             if (playerTransform.position.z + generationTriggerDistance > _nextChunkPosition.z)
             {
                 GenerateAndPlaceChunk();
             }
 
-            if (_activeChunks.Count > chunksToMaintain)
+            // Maintain the desired number of active chunks, recycling the oldest ones.
+            while (_activeChunks.Count > chunksToMaintain)
             {
-                GameObject chunkToDeactivate = _activeChunks.Dequeue();
-                chunkToDeactivate.SetActive(false);
+                GameObject chunkToRecycle = _activeChunks.Dequeue();
+                chunkToRecycle.SetActive(false); // Return to pool instead of destroying
             }
+        }
+
+        public void StartGenerating()
+        {
+            if (_isGenerating) return;
+
+            ResetGeneratorState();
+            InitializeLevel();
+            _isGenerating = true;
+            this.enabled = true; // Ensure the Update loop runs.
+        }
+
+        public void StopGenerating()
+        {
+            _isGenerating = false;
+            this.enabled = false; // Stop the Update loop to save performance.
         }
 
         private void InitializeLevel()
         {
-            _nextChunkPosition = _initialPosition;
             for (int i = 0; i < initialChunks; i++)
             {
                 GenerateAndPlaceChunk();
@@ -65,28 +81,28 @@ namespace Core
 
         private void GenerateAndPlaceChunk()
         {
-            int[] pattern = patternGenerator.GeneratePattern(chunkLength);
+            // Use an Object Pooler to get a recycled Level Chunk
             GameObject newChunk = ObjectPooler.Instance.SpawnFromPool("LevelChunk", _nextChunkPosition, Quaternion.identity);
             _nextChunkPosition.z += chunkLength;
 
-            LevelChunk chunkComponent = newChunk.GetComponent<LevelChunk>();
-            if (chunkComponent != null)
-            {
-                chunkComponent.Initialize(pattern);
-            }
+            // TODO: In a full implementation, you would generate a pattern for obstacles here.
+            // For now, we just place the chunk.
 
             _activeChunks.Enqueue(newChunk);
         }
 
-        public void Reset()
+        private void ResetGeneratorState()
         {
+            // Return all active chunks to the pool
             foreach (var chunk in _activeChunks)
             {
                 chunk.SetActive(false);
             }
             _activeChunks.Clear();
+
+            // Reset the generator's position to its starting point.
             transform.position = _initialPosition;
-            InitializeLevel();
+            _nextChunkPosition = _initialPosition;
         }
     }
 }

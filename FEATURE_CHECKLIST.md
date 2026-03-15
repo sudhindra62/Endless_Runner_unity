@@ -1,72 +1,9 @@
-
-# Feature Checklist
-
-## Core Gameplay
-- [x] Player Movement
-- [x] Collision
-- [x] Score system
-- [x] Timer system
-- [x] Power-ups
-- [x] Magnet
-- [x] Shield
-- [x] Coin doubler
-- [x] Score multiplier
-- [x] Revive system
-
-## Track Generation
-- [x] Tile spawning
-- [x] Obstacle spawning
-- [x] Procedural pattern engine
-
-## Advanced Gameplay
-- [x] Combo system
-- [x] Power-up fusion
-- [x] Adaptive difficulty
-- [x] Dynamic environment events
-- [x] Boss chase system
-- [x] Run modifiers
-- [x] Fever mode
-- [x] Momentum system
-- [x] Near miss detection
-- [x] Style scoring
-
-## Progression Systems
-- [x] **Saving/Loading:** Player data (coins, high score) persistence implemented.
-- [x] XP system
-- [x] Rank system
-- [x] Milestones
-- [x] Achievements
-- [x] Missions
-- [x] Daily missions
-- [x] Weekly missions
-
-## Retention Systems
-- [x] Daily login rewards
-- [x] Chest system
-- [x] Offline progress
-- [x] Reward chest UI
-
-## Economy Systems
-- [x] **Currency Manager:** Coin and score management implemented.
-- [x] **Shop System:** Basic shop UI and purchasing logic implemented.
-- [x] Skin system
-- [x] Purchase validation
-
-## Live Service Systems
-- [x] LiveOps manager
-- [x] Remote config tuning
-- [x] Event manager
-- [x] Battle pass system
-- [x] Cosmetic customization
-- [x] Collection system
-- [x] Daily challenge runs
-- [x] Friend challenges
-- [x] Leaderboards
-
-## Advanced Systems
-- [x] Analytics manager
-- [x] Integrity manager
-- [x] Performance scaler
-- [x] Reward boost system
-- [x] Revive economy system
-- [x] Smart ad scheduling
+- [x] Implement the visual UI sequence for the TutorialManager
+- [x] Create a robust Save/Load system using PlayerPrefs or a file-based approach.
+- [x] Develop a dynamic Shop system for purchasing cosmetic items and power-ups.
+- [ ] Implement a daily reward system to incentivize player retention.
+- [ ] Design and integrate a comprehensive achievement system with unlockable rewards.
+- [ ] Build a leaderboard system to foster competition among players.
+- [ ] Add a settings menu with options for audio control and graphics quality.
+- [ ] Create a character customization system for unlocking and equipping different skins.
+- A-to-Z_CONNECTIVITY: Every feature must operate from Trigger to Result (Input -> Movement -> UI -> Backend) without any 'dead' or missing logic.
