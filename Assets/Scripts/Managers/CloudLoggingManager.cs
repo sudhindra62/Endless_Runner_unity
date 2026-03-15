@@ -1,10 +1,17 @@
 
+using EndlessRunner.Core;
 using UnityEngine;
 
 namespace EndlessRunner.Managers
 {
-    public class CloudLoggingManager : MonoBehaviour
+    public class CloudLoggingManager : Singleton<CloudLoggingManager>
     {
+        protected override void Awake()
+        {
+            base.Awake();
+            ServiceLocator.Register(this);
+        }
+
         public void LogError(string message, string stackTrace)
         {
             // In a real implementation, this would send the error to a cloud service

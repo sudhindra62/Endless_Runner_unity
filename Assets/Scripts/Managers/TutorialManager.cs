@@ -33,7 +33,7 @@ namespace EndlessRunner.Managers
 
         private void CheckTutorialStatus()
         {
-            if (DataManager.Instance != null && !DataManager.Instance.GameData.hasCompletedTutorial)
+            if (SaveManager.Instance != null && !SaveManager.Instance.Data.hasCompletedTutorial)
             {
                 StartTutorial();
             }
@@ -85,10 +85,10 @@ namespace EndlessRunner.Managers
                 tutorialUI.Hide();
             }
 
-            if (completed && DataManager.Instance != null)
+            if (completed && SaveManager.Instance != null)
             {
-                DataManager.Instance.GameData.hasCompletedTutorial = true;
-                DataManager.Instance.SaveData();
+                SaveManager.Instance.Data.hasCompletedTutorial = true;
+                SaveManager.Instance.SaveGame();
                 Debug.Log("TUTORIAL_MANAGER: Tutorial completed and saved.");
             }
         }

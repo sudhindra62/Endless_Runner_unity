@@ -2,54 +2,83 @@
 using System.Collections.Generic;
 using UnityEngine;
 using EndlessRunner.Core;
+using EndlessRunner.Player;
 using EndlessRunner.Generation.Patterns;
 
 namespace EndlessRunner.Generation
 {
     /// <summary>
     /// Manages the instantiation and destruction of level segments (patterns).
-    /// It works in conjunction with the ProceduralPatternEngine to build the level.
     /// </summary>
     public class LevelGenerator : Singleton<LevelGenerator>
     {
         [Header("Generator Settings")]
-        [SerializeField] private Transform playerTransform;
-        [SerializeField] private float generationLookAhead = 50.0f; // How far ahead of the player to generate
-        [SerializeField] private float destructionLookBehind = 30.0f; // How far behind the player to destroy
+        [SerializeField] private float generationLookAhead = 50.0f;
+        [SerializeField] private float destructionLookBehind = 30.0f;
 
+        private Transform playerTransform;
         private List<GameObject> activePatterns = new List<GameObject>();
         private Vector3 nextPatternPosition = Vector3.zero;
         private LevelPattern lastPattern;
         private bool isGenerating = false;
 
-        public void StartGenerating()
+        private void Start()
         {
-            isGenerating = true;
-            GenerateInitialSegments();
+            playerTransform = PlayerController.Instance.transform;
+            GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
         }
 
-        public void StopGenerating()
+        private void OnDestroy()
         {
-            isGenerating = false;
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
+            }
         }
 
         private void Update()
         {
             if (!isGenerating) return;
 
-            // Continuously generate new segments as the player moves forward
             if (playerTransform.position.z + generationLookAhead > nextPatternPosition.z)
             {
                 GenerateNextSegment();
             }
 
-            // Clean up old segments that are behind the player
             CleanupOldSegments();
+        }
+
+        private void HandleGameStateChanged(GameManager.GameState newState)
+        {
+            if (newState == GameManager.GameState.Playing)
+            {
+                StartGenerating();
+            }
+            else
+            {
+                StopGenerating();
+            }
+        }
+
+        private void StartGenerating()
+        {
+            if(isGenerating) return;
+
+            isGenerating = true;
+            if (activePatterns.Count == 0)
+            {
+                ResetGenerator();
+                GenerateInitialSegments();
+            }
+        }
+
+        private void StopGenerating()
+        {
+            isGenerating = false;
         }
 
         private void GenerateInitialSegments()
         {
-            // Always start with the designated starting pattern
             lastPattern = ProceduralPatternEngine.Instance.GetStartingPattern();
             if (lastPattern != null)
             {
@@ -57,11 +86,10 @@ namespace EndlessRunner.Generation
             }
             else
             {
-                Debug.LogError("LEVEL_GENERATOR: No valid starting pattern found!");
+                Debug.LogError("No valid starting pattern found!");
                 return;
             }
 
-            // Pre-warm the level with a few segments
             for (int i = 0; i < 5; i++)
             {
                 GenerateNextSegment();
@@ -78,7 +106,7 @@ namespace EndlessRunner.Generation
             }
             else
             {
-                Debug.LogWarning("LEVEL_GENERATOR: Failed to select a next pattern.");
+                Debug.LogWarning("Failed to select a next pattern.");
             }
         }
 
@@ -86,17 +114,14 @@ namespace EndlessRunner.Generation
         {
             GameObject patternInstance = Instantiate(pattern.patternPrefab, nextPatternPosition, Quaternion.identity, transform);
             activePatterns.Add(patternInstance);
-            nextPatternPosition.z += pattern.patternLength; // Move the spawn point forward
+            nextPatternPosition.z += pattern.patternLength;
         }
 
         private void CleanupOldSegments()
         {
-            // Use a temporary list to avoid modifying the list while iterating
             List<GameObject> patternsToDestroy = new List<GameObject>();
-
             foreach (var pattern in activePatterns)
             {
-                // Check if the pattern's end position is well behind the player
                 if (pattern.transform.position.z + 50 < playerTransform.position.z - destructionLookBehind)
                 {
                     patternsToDestroy.Add(pattern);
@@ -110,9 +135,6 @@ namespace EndlessRunner.Generation
             }
         }
 
-        /// <summary>
-        /// Resets the generator to its initial state for a new game.
-        /// </summary>
         public void ResetGenerator()
         {
             StopGenerating();

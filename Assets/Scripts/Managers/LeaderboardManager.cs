@@ -1,47 +1,74 @@
 
 using UnityEngine;
 using System.Collections.Generic;
-using System;
+using System.Linq;
+using EndlessRunner.Data;
+using EndlessRunner.Core;
 
-/// <summary>
-/// Handles submitting scores to a backend service and fetching leaderboard data.
-/// Created by OMNI_LOGIC_COMPLETION_v2.
-/// </summary>
-public class LeaderboardManager : Singleton<LeaderboardManager>
+namespace EndlessRunner.Managers
 {
-    public static event Action<List<LeaderboardEntry>> OnLeaderboardDataReceived;
-
-    // This would be your backend API endpoint
-    private const string LEADERBOARD_API_URL = "https://your-leaderboard-api.com/";
-
-    public void SubmitScore(int score, string playerName)
+    public class LeaderboardManager : Singleton<LeaderboardManager>
     {
-        Debug.Log($"Submitting score {score} for player {playerName}.");
-        // In a real project, you'd make a web request here.
-        // StartCoroutine(SubmitScoreRequest(score, playerName));
-    }
+        private const int MaxLeaderboardEntries = 10;
+        private const string LeaderboardDataKey = "LeaderboardData";
 
-    public void FetchLeaderboard()
-    {
-        Debug.Log("Fetching leaderboard data.");
-        // In a real project, you'd make a web request here.
-        // StartCoroutine(FetchLeaderboardRequest());
-        
-        // For now, simulate receiving data
-        List<LeaderboardEntry> dummyData = new List<LeaderboardEntry>
+        public List<LeaderboardEntry> LeaderboardEntries { get; private set; }
+
+        protected override void Awake()
         {
-            new LeaderboardEntry { rank = 1, playerName = "PlayerOne", score = 100000 },
-            new LeaderboardEntry { rank = 2, playerName = "PlayerTwo", score = 95000 },
-            new LeaderboardEntry { rank = 3, playerName = "PlayerThree", score = 90000 },
-        };
-        OnLeaderboardDataReceived?.Invoke(dummyData);
-    }
-}
+            base.Awake();
+            LoadLeaderboard();
+        }
 
-[System.Serializable]
-public class LeaderboardEntry
-{
-    public int rank;
-    public string playerName;
-    public int score;
+        private void OnEnable()
+        {
+            GameEvents.OnGameOver += HandleGameOver;
+        }
+
+        private void OnDisable()
+        {
+            GameEvents.OnGameOver -= HandleGameOver;
+        }
+
+        public void AddEntry(string playerName, int score)
+        {
+            LeaderboardEntries.Add(new LeaderboardEntry { playerName = playerName, score = score });
+            LeaderboardEntries = LeaderboardEntries.OrderByDescending(e => e.score).Take(MaxLeaderboardEntries).ToList();
+            SaveLeaderboard();
+        }
+
+        private void SaveLeaderboard()
+        {
+            LeaderboardSaveData saveData = new LeaderboardSaveData { Entries = LeaderboardEntries };
+            string json = JsonUtility.ToJson(saveData);
+            PlayerPrefs.SetString(LeaderboardDataKey, json);
+            PlayerPrefs.Save();
+        }
+
+        private void LoadLeaderboard()
+        {
+            if (PlayerPrefs.HasKey(LeaderboardDataKey))
+            {
+                string json = PlayerPrefs.GetString(LeaderboardDataKey);
+                LeaderboardSaveData saveData = JsonUtility.FromJson<LeaderboardSaveData>(json);
+                LeaderboardEntries = saveData.Entries;
+            }
+            else
+            {
+                LeaderboardEntries = new List<LeaderboardEntry>();
+            }
+        }
+
+        private void HandleGameOver()
+        {
+            // Example of adding an entry. In a real game, you would get the player's name.
+            AddEntry("Player", ScoreManager.Instance.Score);
+        }
+    }
+
+    [System.Serializable]
+    public class LeaderboardSaveData
+    {
+        public List<LeaderboardEntry> Entries;
+    }
 }

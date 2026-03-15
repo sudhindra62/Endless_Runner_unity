@@ -1,6 +1,5 @@
 
 using EndlessRunner.Core;
-using UnityEngine;
 
 namespace EndlessRunner.Missions
 {
@@ -39,7 +38,7 @@ namespace EndlessRunner.Missions
             {
                 progress = target;
                 isCompleted = true;
-                Debug.Log("MISSION_SYSTEM: Mission completed! '" + description + "'");
+                Logger.Log("MISSION_SYSTEM", $"Mission completed! '{description}'");
                 GameEvents.TriggerMissionCompleted(this);
             }
         }

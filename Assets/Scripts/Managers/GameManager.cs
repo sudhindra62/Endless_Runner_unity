@@ -1,17 +1,9 @@
 
-using UnityEngine;
 using EndlessRunner.Core;
+using UnityEngine;
 
 namespace EndlessRunner.Managers
 {
-    public enum GameState
-    {
-        MainMenu,
-        Starting,
-        Playing,
-        GameOver
-    }
-
     /// <summary>
     /// The central nervous system of the game. Manages game state and the overall game loop.
     /// </summary>
@@ -19,23 +11,7 @@ namespace EndlessRunner.Managers
     {
         public GameState CurrentState { get; private set; }
 
-        public CurrencyManager Currency { get; private set; }
-        public AudioManager Audio { get; private set; }
-        public CloudLoggingManager CloudLogging { get; private set; }
-        public AdManager Ads { get; private set; }
-        public FirebaseManager Firebase { get; private set; }
-        public ReviveManager Revives { get; private set; }
-
-        protected override void Awake()
-        {
-            base.Awake();
-            Currency = GetComponent<CurrencyManager>();
-            Audio = GetComponent<AudioManager>();
-            CloudLogging = GetComponent<CloudLoggingManager>();
-            Ads = GetComponent<AdManager>();
-            Firebase = GetComponent<FirebaseManager>();
-            Revives = GetComponent<ReviveManager>();
-        }
+        // Managers are now accessed via ServiceLocator, so no direct references here.
 
         private void Start()
         {
@@ -51,32 +27,58 @@ namespace EndlessRunner.Managers
             }
         }
 
+        public void GoToMainMenu()
+        {
+            if (CurrentState == GameState.GameOver)
+            {
+                SetState(GameState.MainMenu);
+            }
+        }
+
         public void SetState(GameState newState)
         {
             if (CurrentState == newState) return;
 
+            ExitState(CurrentState);
             CurrentState = newState;
-            Debug.Log($"GAME_MANAGER: State changed to {newState}");
+            EnterState(CurrentState);
+        }
 
-            switch (newState)
+        private void EnterState(GameState state)
+        {
+            Logger.Log("GAME_MANAGER", $"Entering state: {state}");
+            switch (state)
             {
                 case GameState.MainMenu:
+                    ServiceLocator.Get<TimeManager>().Resume();
                     // TODO: Show main menu UI
-                    Time.timeScale = 1; // Unpause in case we came from a game over
                     break;
                 case GameState.Starting:
-                    // Start the game run
-                    Time.timeScale = 1;
+                    ServiceLocator.Get<TimeManager>().Resume();
                     GameEvents.TriggerGameStart();
                     SetState(GameState.Playing);
                     break;
                 case GameState.Playing:
-                    // The main game loop is active
                     break;
                 case GameState.GameOver:
-                    // Handle game over logic
-                    Time.timeScale = 0; // Pause the game
+                    ServiceLocator.Get<TimeManager>().Pause();
                     GameEvents.TriggerShowGameOverPanel();
+                    break;
+            }
+        }
+
+        private void ExitState(GameState state)
+        {
+            Logger.Log("GAME_MANAGER", $"Exiting state: {state}");
+            switch (state)
+            {
+                case GameState.MainMenu:
+                    break;
+                case GameState.Starting:
+                    break;
+                case GameState.Playing:
+                    break;
+                case GameState.GameOver:
                     break;
             }
         }

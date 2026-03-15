@@ -102,6 +102,9 @@ namespace EndlessRunner.Managers
     {
         public int coins;
         public int gems;
+        public bool hasCompletedTutorial;
+        public long lastDailyRewardTimestamp;
+        public int dailyRewardStreak;
         public string checksum;
     }
 }

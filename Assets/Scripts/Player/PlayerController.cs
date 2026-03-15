@@ -2,6 +2,7 @@
 using UnityEngine;
 using EndlessRunner.Core;
 using EndlessRunner.Input;
+using EndlessRunner.Managers;
 
 namespace EndlessRunner.Player
 {
@@ -22,11 +23,16 @@ namespace EndlessRunner.Player
         [SerializeField] private float laneWidth = 2.5f;
         private int currentLane = 0; // -1 for left, 0 for middle, 1 for right
 
+        [Header("Visuals")]
+        [SerializeField] private Renderer playerRenderer;
+
         private CharacterController controller;
         private Animator animator;
         private Vector3 verticalVelocity;
         private bool isJumping = false;
         private bool isDead = false;
+        private bool _isInvincible = false;
+        private float _originalSpeed;
 
         private const string ANIM_RUN = "Run";
         private const string ANIM_JUMP = "Jump";
@@ -37,6 +43,11 @@ namespace EndlessRunner.Player
             base.Awake();
             controller = GetComponent<CharacterController>();
             animator = GetComponent<Animator>();
+            if (playerRenderer == null)
+            {
+                playerRenderer = GetComponentInChildren<Renderer>();
+            }
+            _originalSpeed = forwardSpeed;
         }
 
         private void OnEnable()
@@ -45,6 +56,10 @@ namespace EndlessRunner.Player
             {
                 InputManager.Instance.OnLaneChange += HandleLaneChange;
                 InputManager.Instance.OnJump += HandleJump;
+            }
+            if (CharacterCustomizationManager.Instance != null)
+            {
+                CharacterCustomizationManager.Instance.OnSkinChanged += ApplySkin;
             }
         }
 
@@ -55,11 +70,16 @@ namespace EndlessRunner.Player
                 InputManager.Instance.OnLaneChange -= HandleLaneChange;
                 InputManager.Instance.OnJump -= HandleJump;
             }
+            if (CharacterCustomizationManager.Instance != null)
+            {
+                CharacterCustomizationManager.Instance.OnSkinChanged -= ApplySkin;
+            }
         }
 
         private void Start()
         {
             animator.Play(ANIM_RUN);
+            ApplyCurrentSkin();
         }
 
         void Update()
@@ -111,16 +131,47 @@ namespace EndlessRunner.Player
             isDead = true;
             forwardSpeed = 0;
             animator.SetTrigger(ANIM_DEATH);
-            Debug.Log("PLAYER: Player has died. Triggering death event.");
+            Logger.Log("PLAYER", "Player has died. Triggering death event.");
             GameEvents.TriggerPlayerDeath(); // Use the event system
         }
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
+            if (_isInvincible) return;
+            
             if (hit.gameObject.CompareTag("Obstacle"))
             {
                 OnDeath();
             }
+        }
+
+        public void ApplySkin(Skin skin)
+        {
+            if (skin != null && skin.skinMaterial != null)
+            {
+                playerRenderer.material = skin.skinMaterial;
+            }
+        }
+
+        private void ApplyCurrentSkin()
+        {
+            Skin currentSkin = CharacterCustomizationManager.Instance.GetCurrentSkin();
+            ApplySkin(currentSkin);
+        }
+        
+        public void SetSpeed(float newSpeed)
+        {
+            forwardSpeed = newSpeed;
+        }
+
+        public void ResetSpeed()
+        {
+            forwardSpeed = _originalSpeed;
+        }
+
+        public void SetInvincibility(bool isInvincible)
+        {
+            _isInvincible = isInvincible;
         }
     }
 }

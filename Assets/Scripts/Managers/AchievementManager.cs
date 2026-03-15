@@ -1,118 +1,131 @@
 
+using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
-using EndlessRunner.Core;
 using EndlessRunner.Data;
-using EndlessRunner.Achievements;
+using EndlessRunner.Core;
 
 namespace EndlessRunner.Managers
 {
-    /// <summary>
-    /// Manages player achievements by listening to game events and tracking progress.
-    /// </summary>
     public class AchievementManager : Singleton<AchievementManager>
     {
-        private List<Achievement> allAchievements;
-        private Dictionary<string, AchievementData> playerProgress;
+        public static event System.Action<Achievement> OnAchievementUnlocked;
+        public static event System.Action<Achievement> OnAchievementProgress;
+
+        [SerializeField] private List<Achievement> achievements;
+
+        private Dictionary<string, Achievement> achievementDictionary;
 
         protected override void Awake()
         {
             base.Awake();
+            InitializeAchievements();
             LoadAchievements();
         }
 
         private void OnEnable()
         {
-            GameEvents.OnPlayerJump += HandlePlayerJump;
             GameEvents.OnScoreGained += HandleScoreGained;
             GameEvents.OnCoinsGained += HandleCoinsGained;
+            GameEvents.OnDistanceUpdated += HandleDistanceUpdated;
+            GameEvents.OnPowerUpUsed += HandlePowerUpUsed;
         }
 
         private void OnDisable()
         {
-            GameEvents.OnPlayerJump -= HandlePlayerJump;
             GameEvents.OnScoreGained -= HandleScoreGained;
             GameEvents.OnCoinsGained -= HandleCoinsGained;
+            GameEvents.OnDistanceUpdated -= HandleDistanceUpdated;
+            GameEvents.OnPowerUpUsed -= HandlePowerUpUsed;
         }
 
-        private void Start()
+        private void InitializeAchievements()
         {
-            LoadProgress();
+            achievementDictionary = new Dictionary<string, Achievement>();
+            foreach (var achievement in achievements)
+            {
+                achievement.isUnlocked = false;
+                achievement.isRewardClaimed = false;
+                achievementDictionary[achievement.id] = achievement;
+            }
+        }
+
+        public void CheckProgress(AchievementType type, int value)
+        {
+            foreach (var achievement in achievements.Where(a => a.type == type && !a.isUnlocked))
+            {
+                if (value >= achievement.requiredValue)
+                {
+                    UnlockAchievement(achievement.id);
+                }
+                else
+                {
+                    OnAchievementProgress?.Invoke(achievement);
+                }
+            }
+        }
+
+        public void UnlockAchievement(string id)
+        {
+            if (achievementDictionary.TryGetValue(id, out Achievement achievement) && !achievement.isUnlocked)
+            {
+                achievement.isUnlocked = true;
+                OnAchievementUnlocked?.Invoke(achievement);
+                SaveAchievements();
+                Debug.Log($"ACHIEVEMENT_UNLOCKED: {achievement.title}");
+            }
+        }
+
+        public void ClaimReward(string id)
+        {
+            if (achievementDictionary.TryGetValue(id, out Achievement achievement) && achievement.isUnlocked && !achievement.isRewardClaimed)
+            {
+                achievement.isRewardClaimed = true;
+                CurrencyManager.Instance.AddCoins(achievement.rewardCoins);
+                SaveAchievements();
+                Debug.Log($"ACHIEVEMENT_REWARD_CLAIMED: {achievement.title}");
+            }
+        }
+
+        private void SaveAchievements()
+        {
+            // In a real project, this would use a robust saving system.
+            // For this example, we'll use PlayerPrefs for simplicity.
+            string achievementData = JsonUtility.ToJson(new AchievementSaveData { Achievements = achievements });
+            PlayerPrefs.SetString("AchievementData", achievementData);
+            PlayerPrefs.Save();
         }
 
         private void LoadAchievements()
         {
-            allAchievements = Resources.LoadAll<Achievement>("Achievements").ToList();
-            Debug.Log($"ACHIEVEMENT_MANAGER: Loaded {allAchievements.Count} achievements from Resources.");
-        }
-
-        private void LoadProgress()
-        {
-            if (DataManager.Instance != null)
+            if (PlayerPrefs.HasKey("AchievementData"))
             {
-                playerProgress = DataManager.Instance.GameData.achievementData;
-                // Ensure all achievements have a corresponding progress entry
-                foreach (var achievement in allAchievements)
+                string achievementData = PlayerPrefs.GetString("AchievementData");
+                AchievementSaveData saveData = JsonUtility.FromJson<AchievementSaveData>(achievementData);
+
+                foreach (var savedAchievement in saveData.Achievements)
                 {
-                    if (!playerProgress.ContainsKey(achievement.id))
+                    if (achievementDictionary.TryGetValue(savedAchievement.id, out Achievement achievement))
                     {
-                        playerProgress[achievement.id] = new AchievementData(achievement.id);
+                        achievement.isUnlocked = savedAchievement.isUnlocked;
+                        achievement.isRewardClaimed = savedAchievement.isRewardClaimed;
                     }
                 }
             }
-            else
-            {
-                playerProgress = new Dictionary<string, AchievementData>();
-            }
         }
 
-        private void SaveProgress()
-        {
-            if (DataManager.Instance != null)
-            {
-                DataManager.Instance.GameData.achievementData = playerProgress;
-                DataManager.Instance.SaveData();
-            }
-        }
+        // --- Event Handlers ---
+        private void HandleScoreGained(int score) => CheckProgress(AchievementType.Score, score);
+        private void HandleCoinsGained(int coins) => CheckProgress(AchievementType.CoinsCollected, coins);
+        private void HandleDistanceUpdated(float distance) => CheckProgress(AchievementType.Distance, (int)distance);
+        private void HandlePowerUpUsed() => CheckProgress(AchievementType.PowerUpsUsed, 1); // Incremental
 
-        private void HandlePlayerJump()
-        {
-            IncrementAchievementProgress(AchievementType.Jumps, 1);
-        }
+        public List<Achievement> GetAchievements() => achievements;
+    }
 
-        private void HandleScoreGained(int score)
-        {
-            IncrementAchievementProgress(AchievementType.Score, score);
-        }
-
-        private void HandleCoinsGained(int coins)
-        {
-            IncrementAchievementProgress(AchievementType.Coins, coins);
-        }
-
-        private void IncrementAchievementProgress(AchievementType type, int amount)
-        {
-            var achievements = allAchievements.Where(a => a.achievementType == type);
-            foreach (var achievement in achievements)
-            {
-                if (playerProgress.TryGetValue(achievement.id, out AchievementData progress) && !progress.isUnlocked)
-                {
-                    progress.currentProgress += amount;
-                    CheckForUnlock(achievement, progress);
-                }
-            }
-            SaveProgress();
-        }
-
-        private void CheckForUnlock(Achievement achievement, AchievementData progress)
-        {
-            if (progress.currentProgress >= achievement.unlockThreshold)
-            {
-                progress.isUnlocked = true;
-                GameEvents.TriggerAchievementUnlocked(achievement);
-                Debug.Log($"ACHIEVEMENT_MANAGER: Unlocked '{achievement.title}'!");
-            }
-        }
+    [System.Serializable]
+    public class AchievementSaveData
+    {
+        public List<Achievement> Achievements;
     }
 }

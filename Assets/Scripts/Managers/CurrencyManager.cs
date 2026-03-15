@@ -9,6 +9,12 @@ namespace EndlessRunner.Managers
         public int Coins { get; private set; }
         public int Gems { get; private set; }
 
+        protected override void Awake()
+        {
+            base.Awake();
+            ServiceLocator.Register(this);
+        }
+
         private void Start()
         {
             LoadCurrency();

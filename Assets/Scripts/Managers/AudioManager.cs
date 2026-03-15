@@ -1,60 +1,66 @@
 
 using UnityEngine;
-using System.Collections.Generic;
 using EndlessRunner.Core;
 
 namespace EndlessRunner.Managers
 {
     public class AudioManager : Singleton<AudioManager>
     {
-        [SerializeField] private int initialPoolSize = 10;
-        private List<AudioSource> audioSourcePool;
+        [Header("Audio Sources")]
+        [SerializeField] private AudioSource musicSource;
+        [SerializeField] private AudioSource sfxSource;
+
+        public float MusicVolume { get; private set; }
+        public float SFXVolume { get; private set; }
 
         protected override void Awake()
         {
             base.Awake();
-            InitializeAudioPool();
+            ServiceLocator.Register(this);
+            // Keep this object alive across scenes
+            DontDestroyOnLoad(gameObject);
         }
 
-        private void InitializeAudioPool()
+        private void Start()
         {
-            audioSourcePool = new List<AudioSource>();
-            for (int i = 0; i < initialPoolSize; i++)
-            {
-                CreateAudioSource();
-            }
+            // Load volume settings from SettingsManager
+            MusicVolume = ServiceLocator.Get<SettingsManager>().MusicVolume;
+            SFXVolume = ServiceLocator.Get<SettingsManager>().SFXVolume;
+
+            // Apply the loaded volume settings
+            musicSource.volume = MusicVolume;
+            sfxSource.volume = SFXVolume;
         }
 
-        private AudioSource CreateAudioSource()
+        public void PlayMusic(AudioClip musicClip)
         {
-            GameObject audioHost = new GameObject("AudioSource_Pooled");
-            audioHost.transform.SetParent(transform);
-            AudioSource audioSource = audioHost.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            audioSourcePool.Add(audioSource);
-            return audioSource;
+            if (musicSource.clip == musicClip) return;
+            musicSource.clip = musicClip;
+            musicSource.Play();
         }
 
-        public void PlaySoundEffect(AudioClip clip, float volume = 1.0f)
+        public void StopMusic()
         {
-            AudioSource source = GetAvailableAudioSource();
-            source.clip = clip;
-            source.volume = volume;
-            source.Play();
+            musicSource.Stop();
         }
 
-        private AudioSource GetAvailableAudioSource()
+        public void PlaySFX(AudioClip sfxClip)
         {
-            foreach (var source in audioSourcePool)
-            {
-                if (!source.isPlaying)
-                {
-                    return source;
-                }
-            }
+            sfxSource.PlayOneShot(sfxClip, SFXVolume);
+        }
 
-            // If no available source is found, create a new one
-            return CreateAudioSource();
+        public void SetMusicVolume(float volume)
+        {
+            MusicVolume = Mathf.Clamp01(volume);
+            musicSource.volume = MusicVolume;
+            ServiceLocator.Get<SettingsManager>().SetMusicVolume(MusicVolume); // Save the setting
+        }
+
+        public void SetSFXVolume(float volume)
+        {
+            SFXVolume = Mathf.Clamp01(volume);
+            sfxSource.volume = SFXVolume; // This is a template for one-shot clips
+            ServiceLocator.Get<SettingsManager>().SetSFXVolume(SFXVolume); // Save the setting
         }
     }
 }

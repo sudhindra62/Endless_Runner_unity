@@ -1,14 +1,18 @@
 
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using EndlessRunner.Core;
 using EndlessRunner.Managers;
 
 namespace EndlessRunner.UI
 {
-    /// <summary>
-    /// Manages all UI elements in the game, responding to game events.
-    /// </summary>
+    [RequireComponent(typeof(TutorialUI))]
+    [RequireComponent(typeof(DailyRewardUI))]
+    [RequireComponent(typeof(AchievementUI))]
+    [RequireComponent(typeof(LeaderboardUI))]
+    [RequireComponent(typeof(SettingsUI))]
+    [RequireComponent(typeof(CharacterCustomizationUI))]
     public class UIManager : Singleton<UIManager>
     {
         [Header("HUD Elements")]
@@ -17,55 +21,72 @@ namespace EndlessRunner.UI
         [SerializeField] private PowerUpHUDController powerUpHUDController;
 
         [Header("UI Panels")]
+        [SerializeField] private GameObject mainMenuPanel;
         [SerializeField] private GameObject gameOverPanel;
         [SerializeField] private RevivePopupUI revivePopup;
-        
+        [SerializeField] private TutorialUI tutorialUI;
+        [SerializeField] private DailyRewardUI dailyRewardUI;
+        [SerializeField] private AchievementUI achievementUI;
+        [SerializeField] private LeaderboardUI leaderboardUI;
+        [SerializeField] private SettingsUI settingsUI;
+        [SerializeField] private CharacterCustomizationUI characterCustomizationUI;
+
+        [Header("Buttons")]
+        [SerializeField] private Button achievementsButton;
+        [SerializeField] private Button leaderboardButton;
+        [SerializeField] private Button settingsButton;
+        [SerializeField] private Button characterCustomizationButton;
+
         private void OnEnable()
         {
+            GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
             GameEvents.OnScoreGained += UpdateScoreUI;
-            GameEvents.OnShowGameOverPanel += ShowGameOverPanel;
-            GameEvents.OnGameStart += OnGameStart;
-            ReviveManager.OnRevivePrompt += ShowRevivePopup;
-            ReviveManager.OnReviveSuccess += HideRevivePopup;
-            ReviveManager.OnReviveDecline += HideRevivePopup;
         }
 
         private void OnDisable()
         {
+            if(GameManager.Instance != null)
+            {
+                GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
+            }
             GameEvents.OnScoreGained -= UpdateScoreUI;
-            GameEvents.OnShowGameOverPanel -= ShowGameOverPanel;
-            GameEvents.OnGameStart -= OnGameStart;
-            ReviveManager.OnRevivePrompt -= ShowRevivePopup;
-            ReviveManager.OnReviveSuccess -= HideRevivePopup;
-            ReviveManager.OnReviveDecline -= HideRevivePopup;
         }
 
         private void Start()
         {
-            // Initialize UI state
-            gameOverPanel.SetActive(false);
-            revivePopup.gameObject.SetActive(false);
-            if (powerUpHUDController != null)
-            {
-                powerUpHUDController.gameObject.SetActive(true);
-            }
-            if (currencyUI != null)
-            {
-                currencyUI.gameObject.SetActive(true);
-            }
-            UpdateScoreUI(0);
+            InitializeUI();
+            achievementsButton.onClick.AddListener(ShowAchievementsPanel);
+            leaderboardButton.onClick.AddListener(ShowLeaderboardPanel);
+            settingsButton.onClick.AddListener(ShowSettingsPanel);
+            characterCustomizationButton.onClick.AddListener(ShowCharacterCustomizationPanel);
         }
 
-        private void OnGameStart()
+        private void InitializeUI()
         {
-            gameOverPanel.SetActive(false);
-            if (powerUpHUDController != null)
+            UpdateScoreUI(0);
+            SetPanelActive(mainMenuPanel, true);
+            SetPanelActive(gameOverPanel, false);
+            SetPanelActive(revivePopup.gameObject, false);
+            SetPanelActive(tutorialUI.gameObject, false);
+            SetPanelActive(achievementUI.gameObject, false);
+            SetPanelActive(leaderboardUI.gameObject, false);
+            SetPanelActive(settingsUI.gameObject, false);
+            SetPanelActive(characterCustomizationUI.gameObject, false);
+        }
+
+        private void HandleGameStateChanged(GameManager.GameState newState)
+        {
+            SetPanelActive(mainMenuPanel, newState == GameManager.GameState.MainMenu);
+            SetPanelActive(gameOverPanel, newState == GameManager.GameState.GameOver);
+            SetPanelActive(powerUpHUDController.gameObject, newState == GameManager.GameState.Playing);
+            SetPanelActive(currencyUI.gameObject, newState == GameManager.GameState.Playing || newState == GameManager.GameState.MainMenu);
+        }
+
+        private void SetPanelActive(GameObject panel, bool isActive)
+        {
+            if (panel != null)
             {
-                powerUpHUDController.gameObject.SetActive(true);
-            }
-            if (currencyUI != null)
-            {
-                currencyUI.gameObject.SetActive(true);
+                panel.SetActive(isActive);
             }
         }
 
@@ -77,33 +98,26 @@ namespace EndlessRunner.UI
             }
         }
 
-        private void ShowGameOverPanel()
+        public void ShowAchievementsPanel()
         {
-            if (gameOverPanel != null)
-            {
-                gameOverPanel.SetActive(true);
-            }
-            if (powerUpHUDController != null)
-            {
-                powerUpHUDController.gameObject.SetActive(false);
-            }
-            if (currencyUI != null)
-            {
-                currencyUI.gameObject.SetActive(false);
-            }
+            achievementUI.ShowPanel();
         }
 
-        private void ShowRevivePopup()
+        public void ShowLeaderboardPanel()
         {
-            revivePopup.Show();
+            leaderboardUI.ShowPanel();
         }
 
-        private void HideRevivePopup()
+        public void ShowSettingsPanel()
         {
-            revivePopup.Hide();
+            settingsUI.ShowPanel();
         }
 
-        // Called from a UI button OnClick event
+        public void ShowCharacterCustomizationPanel()
+        {
+            characterCustomizationUI.ShowPanel();
+        }
+
         public void OnRestartButtonPressed()
         {
             GameManager.Instance.StartGame();

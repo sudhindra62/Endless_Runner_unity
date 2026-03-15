@@ -1,9 +1,9 @@
 - [x] Implement the visual UI sequence for the TutorialManager
 - [x] Create a robust Save/Load system using PlayerPrefs or a file-based approach.
 - [x] Develop a dynamic Shop system for purchasing cosmetic items and power-ups.
-- [ ] Implement a daily reward system to incentivize player retention.
-- [ ] Design and integrate a comprehensive achievement system with unlockable rewards.
-- [ ] Build a leaderboard system to foster competition among players.
-- [ ] Add a settings menu with options for audio control and graphics quality.
-- [ ] Create a character customization system for unlocking and equipping different skins.
+- [x] Implement a daily reward system to incentivize player retention.
+- [x] Design and integrate a comprehensive achievement system with unlockable rewards.
+- [x] Build a leaderboard system to foster competition among players.
+- [x] Add a settings menu with options for audio control and graphics quality.
+- [x] Create a character customization system for unlocking and equipping different skins.
 - A-to-Z_CONNECTIVITY: Every feature must operate from Trigger to Result (Input -> Movement -> UI -> Backend) without any 'dead' or missing logic.

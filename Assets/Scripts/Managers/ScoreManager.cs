@@ -39,7 +39,8 @@ namespace EndlessRunner.Managers
             if (scoreAccumulator >= 1f)
             {
                 int scoreToAdd = Mathf.FloorToInt(scoreAccumulator);
-                AddScore(scoreToAdd, false); // Don't trigger event every frame, only on significant changes
+                AddScore(scoreToAdd);
+                scoreAccumulator -= scoreToAdd;
             }
         }
 
@@ -49,33 +50,27 @@ namespace EndlessRunner.Managers
             CurrentCoins = 0;
             scoreAccumulator = 0f;
             isRunActive = true;
-
-            GameEvents.TriggerScoreGained(CurrentScore);
-            GameEvents.TriggerCoinsGained(CurrentCoins);
         }
 
-        public void AddScore(int amount, bool triggerEvent = true)
+        public void AddScore(int amount)
         {
             if (!isRunActive) return;
             CurrentScore += amount;
-            if (triggerEvent)
-            {
-                GameEvents.TriggerScoreGained(CurrentScore);
-            }
+            GameEvents.TriggerScoreGained(amount);
         }
 
         public void AddCoins(int amount)
         {
             if (!isRunActive) return;
             CurrentCoins += amount;
-            GameEvents.TriggerCoinsGained(CurrentCoins);
+            GameEvents.TriggerCoinsGained(amount);
         }
 
         public void EndRun()
         {
             if (!isRunActive) return;
             isRunActive = false;
-            Debug.Log($"SCORE_MANAGER: Run ended with Score: {CurrentScore} and Coins: {CurrentCoins}");
+            Logger.Log("SCORE_MANAGER", $"Run ended with Score: {CurrentScore} and Coins: {CurrentCoins}");
 
             if (DataManager.Instance != null)
             {
