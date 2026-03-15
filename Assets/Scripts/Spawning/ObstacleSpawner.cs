@@ -11,6 +11,13 @@ public class ObstacleSpawner : MonoBehaviour
     {
         if (pattern == null || pattern.obstacles == null) return;
 
+        ThemeConfig currentTheme = ThemeManager.Instance.CurrentTheme;
+        if (currentTheme == null || currentTheme.obstaclePrefabs == null || currentTheme.obstaclePrefabs.Length == 0)
+        {
+            Debug.LogWarning("Current theme does not have any obstacle prefabs defined.");
+            return;
+        }
+
         float tileZPosition = transform.position.z;
 
         foreach (var obstacleData in pattern.obstacles)
@@ -27,7 +34,11 @@ public class ObstacleSpawner : MonoBehaviour
             // A more advanced implementation could use a Z offset from the pattern data.
             Vector3 spawnPosition = new Vector3(spawnX, 0, tileZPosition);
 
-            GameObject obstacle = ObjectPool.Instance.GetObject(obstacleData.obstaclePrefab, spawnPosition, Quaternion.identity);
+            // Get a random obstacle prefab from the current theme
+            int randomObstacleIndex = Random.Range(0, currentTheme.obstaclePrefabs.Length);
+            GameObject obstaclePrefab = currentTheme.obstaclePrefabs[randomObstacleIndex];
+
+            GameObject obstacle = ObjectPool.Instance.GetObject(obstaclePrefab, spawnPosition, Quaternion.identity);
             obstacle.transform.SetParent(this.transform);
         }
     }

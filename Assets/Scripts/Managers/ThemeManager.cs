@@ -1,32 +1,52 @@
 
+using EndlessRunner.Themes;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class ThemeManager : MonoBehaviour
+namespace EndlessRunner.Managers
 {
-    public static ThemeManager Instance { get; private set; }
-
-    private void Awake()
+    public class ThemeManager : MonoBehaviour
     {
-        if (Instance == null)
+        public static ThemeManager Instance { get; private set; }
+
+        public List<ThemeSO> themes;
+        private int currentThemeIndex;
+
+        private void Awake()
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            if (Instance == null)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+
+            // Load the saved theme index, or default to 0
+            currentThemeIndex = PlayerPrefs.GetInt("CurrentTheme", 0);
         }
-        else
+
+        public void SetTheme(int themeIndex)
         {
-            Destroy(gameObject);
+            if (themeIndex >= 0 && themeIndex < themes.Count)
+            {
+                currentThemeIndex = themeIndex;
+                PlayerPrefs.SetInt("CurrentTheme", currentThemeIndex);
+                PlayerPrefs.Save();
+            }
         }
-    }
 
-    public void ApplyTheme(string themeId)
-    {
-        // In a real implementation, this would involve loading and applying
-        // different assets, like skyboxes, lighting settings, and UI themes.
-        Debug.Log($"Applying visual theme: {themeId}");
-    }
+        public ThemeSO GetCurrentTheme()
+        {
+            if (themes.Count == 0) return null;
+            return themes[currentThemeIndex];
+        }
 
-    public void RevertToDefaultTheme()
-    {
-        Debug.Log("Reverting to default visual theme.");
+        public ThemeSO[] GetThemes()
+        {
+            return themes.ToArray();
+        }
     }
 }

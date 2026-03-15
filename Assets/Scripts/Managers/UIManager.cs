@@ -1,118 +1,129 @@
 
-using System;
-using UnityEngine;
 using EndlessRunner.Core;
-using EndlessRunner.UI;
-using EndlessRunner.Missions;
+using EndlessRunner.Events;
+using EndlessRunner.Managers;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
-namespace EndlessRunner.Managers
+namespace EndlessRunner.UI
 {
     public class UIManager : Singleton<UIManager>
     {
-        #region Events
-        public event Action OnPlayButtonPressed;
-        public event Action OnRestartButtonPressed;
-        public event Action OnMainMenuButtonPressed;
-        public event Action OnPauseButtonPressed;
-        #endregion
+        [Header("Main Menu Panel")]
+        [SerializeField] private GameObject mainMenuPanel;
+        [SerializeField] private Button startButton;
+        [SerializeField] private Button themeSwitcherButton;
 
-        #region Serialized Fields
-        [Header("UI Panels")]
-        [SerializeField] private MainMenuPanel mainMenuPanel;
-        [SerializeField] private GameplayPanel gameplayPanel;
-        [SerializeField] private PausePanel pausePanel;
-        [SerializeField] private GameOverPanel gameOverPanel;
+        [Header("Gameplay Panel")]
+        [SerializeField] private GameObject gameplayPanel;
+        [SerializeField] private TextMeshProUGUI scoreText;
+        [SerializeField] private TextMeshProUGUI highScoreText;
 
-        [Header("UI Elements")]
-        [SerializeField] private MissionUI missionUI;
-        #endregion
+        [Header("Game Over Panel")]
+        [SerializeField] private GameObject gameOverPanel;
+        [SerializeField] private Button restartButton;
 
-        #region Unity Lifecycle
+        private ScoreManager scoreManager;
+        private ThemeSwitcher themeSwitcher;
+        private ThemeColorApplicator themeColorApplicator;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            ServiceLocator.Register(this);
+            DontDestroyOnLoad(gameObject);
+            themeSwitcher = gameObject.AddComponent<ThemeSwitcher>();
+            themeColorApplicator = gameObject.AddComponent<ThemeColorApplicator>();
+        }
+
         private void Start()
         {
-            SetupPanels();
-            SubscribeToGameManager();
+            scoreManager = ServiceLocator.Get<ScoreManager>();
+            
+            // Subscribe to events
+            ServiceLocator.Get<GameManager>().OnGameStateChanged += OnGameStateChanged;
+            scoreManager.OnScoreChanged += UpdateScoreText;
+            scoreManager.OnHighScoreChanged += UpdateHighScoreText;
 
-            // Initial state
-            mainMenuPanel.Show();
-            gameplayPanel.Hide();
-            pausePanel.Hide();
-            gameOverPanel.Hide();
-            missionUI.gameObject.SetActive(false);
+            // Add button listeners
+            startButton.onClick.AddListener(OnStartButtonPressed);
+            restartButton.onClick.AddListener(OnRestartButtonPressed);
+            themeSwitcherButton.onClick.AddListener(OnThemeSwitcherButtonPressed);
+
+            // Initial UI state
+            ShowMainMenu();
+            UpdateScoreText(0);
+            UpdateHighScoreText(scoreManager.HighScore);
         }
 
         private void OnDestroy()
         {
-            UnsubscribeFromGameManager();
-        }
-        
-        private void Update()
-        {
-            if(GameManager.Instance != null && GameManager.Instance.CurrentGameState == GameManager.GameState.Playing)
-            {
-                if (MissionManager.Instance != null && MissionManager.Instance.GetCurrentMission() != null)
-                {
-                    missionUI.UpdateMission(MissionManager.Instance.GetCurrentMission());
-                }
-            }
-        }
-        #endregion
-
-        #region Setup
-        private void SetupPanels()
-        {
-            mainMenuPanel.Setup(this);
-            gameplayPanel.Setup(this);
-            pausePanel.Setup(this);
-            gameOverPanel.Setup(this);
+            ServiceLocator.Get<GameManager>().OnGameStateChanged -= OnGameStateChanged;
+            scoreManager.OnScoreChanged -= UpdateScoreText;
+            scoreManager.OnHighScoreChanged -= UpdateHighScoreText;
         }
 
-        private void SubscribeToGameManager()
+        private void OnGameStateChanged(GameManager.GameState newState)
         {
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
-            }
-        }
-
-        private void UnsubscribeFromGameManager()
-        {
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
-            }
-        }
-        #endregion
-
-        #region Game State Handling
-        private void HandleGameStateChanged(GameManager.GameState newState)
-        {
-            mainMenuPanel.Hide();
-            gameplayPanel.Hide();
-            pausePanel.Hide();
-            gameOverPanel.Hide();
-            missionUI.gameObject.SetActive(false);
-
             switch (newState)
             {
                 case GameManager.GameState.MainMenu:
-                    mainMenuPanel.Show();
+                    ShowMainMenu();
                     break;
                 case GameManager.GameState.Playing:
-                    gameplayPanel.Show();
-                    missionUI.gameObject.SetActive(true);
-                    break;
-                case GameManager.GameState.Paused:
-                    gameplayPanel.Show(); // Keep gameplay UI visible
-                    pausePanel.Show();
-                    missionUI.gameObject.SetActive(true);
+                    ShowGameplayPanel();
                     break;
                 case GameManager.GameState.GameOver:
-                    gameplayPanel.Show(); // Keep final score visible
-                    gameOverPanel.Show();
+                    ShowGameOverPanel();
                     break;
             }
         }
-        #endregion
+
+        private void ShowMainMenu()
+        {
+            mainMenuPanel.SetActive(true);
+            gameplayPanel.SetActive(false);
+            gameOverPanel.SetActive(false);
+        }
+
+        private void ShowGameplayPanel()
+        {
+            mainMenuPanel.SetActive(false);
+            gameplayPanel.SetActive(true);
+            gameOverPanel.SetActive(false);
+        }
+
+        private void ShowGameOverPanel()
+        {
+            mainMenuPanel.SetActive(false);
+            gameplayPanel.SetActive(false);
+            gameOverPanel.SetActive(true);
+        }
+
+        private void UpdateScoreText(int newScore)
+        {
+            scoreText.text = $"Score: {newScore}";
+        }
+
+        private void UpdateHighScoreText(int newHighScore)
+        {
+            highScoreText.text = $"High Score: {newHighScore}";
+        }
+
+        private void OnStartButtonPressed()
+        {
+            ServiceLocator.Get<GameFlowController>().StartGame();
+        }
+
+        private void OnRestartButtonPressed()
+        {
+            ServiceLocator.Get<GameFlowController>().StartGame();
+        }
+
+        private void OnThemeSwitcherButtonPressed()
+        {
+            themeSwitcher.SwitchTheme();
+        }
     }
 }

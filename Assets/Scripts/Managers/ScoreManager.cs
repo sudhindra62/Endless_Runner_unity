@@ -1,86 +1,77 @@
 
-using UnityEngine;
 using EndlessRunner.Core;
-using EndlessRunner.Data;
+using System;
+using UnityEngine;
 
 namespace EndlessRunner.Managers
 {
-    /// <summary>
-    /// Manages the player's score and coin collection, integrated with the GameEvents system.
-    /// </summary>
     public class ScoreManager : Singleton<ScoreManager>
     {
-        [Header("Scoring Settings")]
-        [SerializeField] private float scorePerSecond = 10f;
+        public event Action<int> OnScoreChanged;
+        public event Action<int> OnHighScoreChanged;
 
-        public int CurrentScore { get; private set; }
-        public int CurrentCoins { get; private set; }
+        public int Score { get; private set; }
+        public int HighScore { get; private set; }
 
-        private float scoreAccumulator;
-        private bool isRunActive = false;
+        private const string HighScoreKey = "HighScore";
 
-        private void OnEnable()
+        protected override void Awake()
         {
-            GameEvents.OnPlayerDeath += EndRun;
-            GameEvents.OnGameStart += StartRun;
+            base.Awake();
+            ServiceLocator.Register(this);
+            DontDestroyOnLoad(gameObject);
+            LoadHighScore();
         }
 
-        private void OnDisable()
+        private void Start()
         {
-            GameEvents.OnPlayerDeath -= EndRun;
-            GameEvents.OnGameStart -= StartRun;
+            ServiceLocator.Get<GameManager>().OnGameStateChanged += OnGameStateChanged;
         }
 
-        private void Update()
+        private void OnDestroy()
         {
-            if (!isRunActive) return;
-
-            scoreAccumulator += scorePerSecond * Time.deltaTime;
-            if (scoreAccumulator >= 1f)
+            if(ServiceLocator.Get<GameManager>() != null)
             {
-                int scoreToAdd = Mathf.FloorToInt(scoreAccumulator);
-                AddScore(scoreToAdd);
-                scoreAccumulator -= scoreToAdd;
+                ServiceLocator.Get<GameManager>().OnGameStateChanged -= OnGameStateChanged;
             }
         }
 
-        public void StartRun()
+        private void OnGameStateChanged(GameManager.GameState newState)
         {
-            CurrentScore = 0;
-            CurrentCoins = 0;
-            scoreAccumulator = 0f;
-            isRunActive = true;
+            if (newState == GameManager.GameState.Playing)
+            {
+                ResetScore();
+            }
         }
 
         public void AddScore(int amount)
         {
-            if (!isRunActive) return;
-            CurrentScore += amount;
-            GameEvents.TriggerScoreGained(amount);
-        }
+            Score += amount;
+            OnScoreChanged?.Invoke(Score);
 
-        public void AddCoins(int amount)
-        {
-            if (!isRunActive) return;
-            CurrentCoins += amount;
-            GameEvents.TriggerCoinsGained(amount);
-        }
-
-        public void EndRun()
-        {
-            if (!isRunActive) return;
-            isRunActive = false;
-            Logger.Log("SCORE_MANAGER", $"Run ended with Score: {CurrentScore} and Coins: {CurrentCoins}");
-
-            if (DataManager.Instance != null)
+            if (Score > HighScore)
             {
-                if (CurrentScore > DataManager.Instance.GameData.highScore)
-                {
-                    DataManager.Instance.GameData.highScore = CurrentScore;
-                }
-                DataManager.Instance.GameData.totalCoins += CurrentCoins;
-                DataManager.Instance.SaveData();
+                HighScore = Score;
+                OnHighScoreChanged?.Invoke(HighScore);
+                SaveHighScore();
             }
+        }
+
+        private void ResetScore()
+        {
+            Score = 0;
+            OnScoreChanged?.Invoke(Score);
+        }
+
+        private void LoadHighScore()
+        {
+            HighScore = PlayerPrefs.GetInt(HighScoreKey, 0);
+            OnHighScoreChanged?.Invoke(HighScore);
+        }
+
+        private void SaveHighScore()
+        {
+            PlayerPrefs.SetInt(HighScoreKey, HighScore);
         }
     }
 }

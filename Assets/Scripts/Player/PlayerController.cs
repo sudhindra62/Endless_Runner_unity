@@ -1,177 +1,149 @@
 
-using UnityEngine;
 using EndlessRunner.Core;
-using EndlessRunner.Input;
 using EndlessRunner.Managers;
+using UnityEngine;
 
 namespace EndlessRunner.Player
 {
     /// <summary>
-    /// Manages player movement, state, and triggers game events.
+    /// Manages player movement, jumping, and game state interactions.
     /// </summary>
-    [RequireComponent(typeof(CharacterController))]
-    [RequireComponent(typeof(Animator))]
-    public class PlayerController : Singleton<PlayerController>
+    [RequireComponent(typeof(Rigidbody))]
+    public class PlayerController : MonoBehaviour
     {
         [Header("Movement Settings")]
+        [Tooltip("Controls the side-to-side movement speed of the player.")]
+        [SerializeField] private float moveSpeed = 5f;
+
+        [Tooltip("Controls the automatic forward movement speed of the player.")]
         [SerializeField] private float forwardSpeed = 10f;
-        [SerializeField] private float laneChangeSpeed = 15f;
-        [SerializeField] private float jumpHeight = 2f;
-        [SerializeField] private float gravity = -20f;
 
-        [Header("Lane Configuration")]
-        [SerializeField] private float laneWidth = 2.5f;
-        private int currentLane = 0; // -1 for left, 0 for middle, 1 for right
+        [Header("Jumping Settings")]
+        [Tooltip("The force applied to the player when they jump.")]
+        [SerializeField] private float jumpForce = 10f;
 
-        [Header("Visuals")]
-        [SerializeField] private Renderer playerRenderer;
+        [Header("Game Over Settings")]
+        [Tooltip("The Y position below which the game will end.")]
+        [SerializeField] private float fallThreshold = -5f;
 
-        private CharacterController controller;
-        private Animator animator;
-        private Vector3 verticalVelocity;
-        private bool isJumping = false;
-        private bool isDead = false;
-        private bool _isInvincible = false;
-        private float _originalSpeed;
+        private Rigidbody rb;
+        private bool isGrounded = true;
+        private GameManager gameManager;
 
-        private const string ANIM_RUN = "Run";
-        private const string ANIM_JUMP = "Jump";
-        private const string ANIM_DEATH = "Death";
-
-        protected override void Awake()
+        /// <summary>
+        /// Caches the Rigidbody component.
+        /// </summary>
+        private void Awake()
         {
-            base.Awake();
-            controller = GetComponent<CharacterController>();
-            animator = GetComponent<Animator>();
-            if (playerRenderer == null)
-            {
-                playerRenderer = GetComponentInChildren<Renderer>();
-            }
-            _originalSpeed = forwardSpeed;
+            rb = GetComponent<Rigidbody>();
         }
 
-        private void OnEnable()
-        {
-            if(InputManager.Instance != null)
-            {
-                InputManager.Instance.OnLaneChange += HandleLaneChange;
-                InputManager.Instance.OnJump += HandleJump;
-            }
-            if (CharacterCustomizationManager.Instance != null)
-            {
-                CharacterCustomizationManager.Instance.OnSkinChanged += ApplySkin;
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (InputManager.Instance != null)
-            {
-                InputManager.Instance.OnLaneChange -= HandleLaneChange;
-                InputManager.Instance.OnJump -= HandleJump;
-            }
-            if (CharacterCustomizationManager.Instance != null)
-            {
-                CharacterCustomizationManager.Instance.OnSkinChanged -= ApplySkin;
-            }
-        }
-
+        /// <summary>
+        /// Subscribes to the game state change event.
+        /// </summary>
         private void Start()
         {
-            animator.Play(ANIM_RUN);
-            ApplyCurrentSkin();
+            gameManager = ServiceLocator.Get<GameManager>();
+            if (gameManager != null)
+            {
+                gameManager.OnGameStateChanged += OnGameStateChanged;
+            }
         }
 
-        void Update()
+        /// <summary>
+        /// Unsubscribes from the game state change event to prevent memory leaks.
+        /// </summary>
+        private void OnDestroy()
         {
-            if (isDead) return;
-
-            Vector3 targetPosition = transform.position;
-            targetPosition.x = Mathf.Lerp(transform.position.x, currentLane * laneWidth, laneChangeSpeed * Time.deltaTime);
-
-            Vector3 moveVector = (targetPosition - transform.position);
-            moveVector.z = forwardSpeed;
-
-            if (controller.isGrounded)
+            if (gameManager != null)
             {
-                verticalVelocity.y = -2f;
-                if (isJumping)
+                gameManager.OnGameStateChanged -= OnGameStateChanged;
+            }
+        }
+
+        /// <summary>
+        /// Handles player input and checks for the fall condition each frame.
+        /// </summary>
+        private void Update()
+        {
+            // End the game if the player falls below the threshold
+            if (transform.position.y < fallThreshold)
+            {
+                if (gameManager != null && gameManager.CurrentGameState == GameManager.GameState.Playing)
                 {
-                    verticalVelocity.y = Mathf.sqrt(jumpHeight * -2f * gravity);
-                    animator.SetTrigger(ANIM_JUMP);
-                    GameEvents.TriggerPlayerJump(); // Trigger jump event
-                    isJumping = false;
+                    gameManager.SetState(GameManager.GameState.GameOver);
                 }
+                return; // Stop further processing after game over
             }
 
-            verticalVelocity.y += gravity * Time.deltaTime;
-            moveVector.y = verticalVelocity.y;
-
-            controller.Move(moveVector * Time.deltaTime);
+            // Only allow movement and jumping when the game is in the 'Playing' state
+            if (gameManager.CurrentGameState == GameManager.GameState.Playing)
+            {
+                HandleHorizontalMovement();
+                HandleJump();
+                HandleForwardMovement();
+            }
         }
 
-        private void HandleLaneChange(int direction)
+        /// <summary>
+        /// Handles the player's side-to-side movement based on input.
+        /// </summary>
+        private void HandleHorizontalMovement()
         {
-            if(isDead) return;
-            currentLane = Mathf.Clamp(currentLane + direction, -1, 1);
+            float moveInput = Input.GetAxis("Horizontal");
+            rb.velocity = new Vector3(moveInput * moveSpeed, rb.velocity.y, rb.velocity.z);
         }
 
+        /// <summary>
+        /// Manages the constant forward movement of the player.
+        /// </summary>
+        private void HandleForwardMovement()
+        {
+            rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y, forwardSpeed);
+        }
+
+        /// <summary>
+        /// Handles the player's jump action.
+        /// </summary>
         private void HandleJump()
         {
-            if (isDead) return;
-            if (controller.isGrounded)
-            { 
-                isJumping = true;
-            }
-        }
-
-        public void OnDeath()
-        {
-            if (isDead) return;
-            isDead = true;
-            forwardSpeed = 0;
-            animator.SetTrigger(ANIM_DEATH);
-            Logger.Log("PLAYER", "Player has died. Triggering death event.");
-            GameEvents.TriggerPlayerDeath(); // Use the event system
-        }
-
-        private void OnControllerColliderHit(ControllerColliderHit hit)
-        {
-            if (_isInvincible) return;
-            
-            if (hit.gameObject.CompareTag("Obstacle"))
+            if (Input.GetButtonDown("Jump") && isGrounded)
             {
-                OnDeath();
+                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                isGrounded = false;
             }
         }
 
-        public void ApplySkin(Skin skin)
+        /// <summary>
+        /// Detects when the player lands on the ground.
+        /// </summary>
+        private void OnCollisionEnter(Collision collision)
         {
-            if (skin != null && skin.skinMaterial != null)
+            // A more robust implementation might check for specific ground layers or tags
+            if (collision.gameObject.CompareTag("Ground"))
             {
-                playerRenderer.material = skin.skinMaterial;
+                isGrounded = true;
             }
         }
 
-        private void ApplyCurrentSkin()
+        /// <summary>
+        /// Responds to changes in the game state.
+        /// </summary>
+        /// <param name="newState">The new game state.</param>
+        private void OnGameStateChanged(GameManager.GameState newState)
         {
-            Skin currentSkin = CharacterCustomizationManager.Instance.GetCurrentSkin();
-            ApplySkin(currentSkin);
-        }
-        
-        public void SetSpeed(float newSpeed)
-        {
-            forwardSpeed = newSpeed;
-        }
+            // Enable/disable the controller based on whether the game is being played
+            enabled = (newState == GameManager.GameState.Playing);
 
-        public void ResetSpeed()
-        {
-            forwardSpeed = _originalSpeed;
-        }
-
-        public void SetInvincibility(bool isInvincible)
-        {
-            _isInvincible = isInvincible;
+            // If the game is not in the 'Playing' state, stop all player movement
+            if (newState != GameManager.GameState.Playing)
+            {
+                if (rb != null)
+                {
+                    rb.velocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero; // Also stop rotation
+                }
+            }
         }
     }
 }
