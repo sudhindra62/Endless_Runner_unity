@@ -1,28 +1,24 @@
-
 using UnityEngine;
 using UnityEngine.UI;
-using EndlessRunner.Managers;
-using EndlessRunner.Themes;
 
-namespace EndlessRunner.UI
+public class ThemeButtonUI : MonoBehaviour
 {
-    public class ThemeButtonUI : MonoBehaviour
+    [SerializeField] private Button themeButton;
+    private int themeIndex;
+
+    private void Start()
     {
-        public Text themeNameText;
-        public Button selectButton;
+        themeButton.onClick.AddListener(OnButtonClick);
+    }
 
-        private int themeIndex;
+    public void Setup(int index)
+    {
+        themeIndex = index;
+        // Set button appearance based on theme data
+    }
 
-        public void Setup(ThemeSO theme, int index)
-        {
-            themeIndex = index;
-            themeNameText.text = theme.themeName;
-            selectButton.onClick.AddListener(SelectTheme);
-        }
-
-        void SelectTheme()
-        {
-            ThemeManager.Instance.SetTheme(themeIndex);
-        }
+    private void OnButtonClick()
+    {
+        ThemeManager.Instance.SetTheme(themeIndex);
     }
 }

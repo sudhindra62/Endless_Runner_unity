@@ -1,0 +1,92 @@
+
+using UnityEngine;
+
+namespace EndlessRunner.Gameplay
+{
+    public class PlayerController : MonoBehaviour
+    {
+        [Header("Movement")]
+        [SerializeField] private float forwardSpeed = 10f;
+        [SerializeField] private float laneSwitchSpeed = 10f;
+        [SerializeField] private float jumpForce = 10f;
+        [SerializeField] private float gravity = -20f;
+        [SerializeField] private float groundCheckDistance = 0.1f;
+
+        private CharacterController controller;
+        private Vector3 velocity;
+        private int currentLane = 0;
+        private bool isGrounded;
+
+        private const float LaneWidth = 3f;
+
+        private void Awake()
+        {
+            controller = GetComponent<CharacterController>();
+        }
+
+        private void Update()
+        {
+            // Apply forward movement
+            velocity.z = forwardSpeed;
+
+            // Check for grounded state
+            isGrounded = Physics.Raycast(transform.position, Vector3.down, groundCheckDistance);
+
+            // Handle jumping
+            if (isGrounded && Input.GetButtonDown("Jump"))
+            {
+                velocity.y = jumpForce;
+            }
+
+            // Apply gravity
+            if (!isGrounded)
+            {
+                velocity.y += gravity * Time.deltaTime;
+            }
+            else
+            {
+                velocity.y = -1f; // Keep the player grounded
+            }
+
+            // Handle lane switching
+            float targetX = currentLane * LaneWidth;
+            float currentX = transform.position.x;
+            float newX = Mathf.MoveTowards(currentX, targetX, laneSwitchSpeed * Time.deltaTime);
+            transform.position = new Vector3(newX, transform.position.y, transform.position.z);
+
+            // Get lane switch input
+            if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+            {
+                SwitchLane(-1);
+            }
+            else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+            {
+                SwitchLane(1);
+            }
+
+            // Move the player
+            controller.Move(velocity * Time.deltaTime);
+        }
+
+        private void SwitchLane(int direction)
+        {
+            currentLane = Mathf.Clamp(currentLane + direction, -1, 1);
+        }
+
+        private void OnControllerColliderHit(ControllerColliderHit hit)
+        {
+            // Game over on obstacle collision
+            if (hit.gameObject.CompareTag("Obstacle"))
+            {
+                Debug.Log("Game Over!");
+
+                // Track obstacle hit event
+                if (AnalyticsManager.Instance != null)
+                {
+                    AnalyticsManager.Instance.TrackObstacleHitEvent(hit.gameObject.tag, controller.velocity.magnitude);
+                }
+                // Implement game over logic here
+            }
+        }
+    }
+}

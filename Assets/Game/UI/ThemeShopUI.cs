@@ -1,35 +1,37 @@
-
-using System.Collections.Generic;
 using UnityEngine;
-using EndlessRunner.Managers;
+using UnityEngine.UI;
 
-namespace EndlessRunner.UI
+public class ThemeShopUI : MonoBehaviour
 {
-    public class ThemeShopUI : MonoBehaviour
+    [SerializeField] private GameObject themeShopPanel;
+    [SerializeField] private Button closeButton;
+    [SerializeField] private Transform themeButtonsParent;
+    [SerializeField] private GameObject themeButtonPrefab;
+
+    private void Start()
     {
-        public GameObject shopItemPrefab;
-        public Transform shopItemContainer;
+        closeButton.onClick.AddListener(HidePanel);
+    }
 
-        void Start()
+    public void ShowPanel()
+    {
+        themeShopPanel.SetActive(true);
+        PopulateThemeButtons();
+    }
+
+    public void HidePanel()
+    {
+        themeShopPanel.SetActive(false);
+    }
+
+    private void PopulateThemeButtons()
+    {
+        // Clear existing buttons
+        foreach (Transform child in themeButtonsParent)
         {
-            PopulateShop();
+            Destroy(child.gameObject);
         }
 
-        void PopulateShop()
-        {
-            foreach (Transform child in shopItemContainer)
-            {
-                Destroy(child.gameObject);
-            }
-
-            List<Themes.ThemeUnlockData> themes = ThemeManager.Instance.GetThemes();
-
-            foreach (var themeData in themes)
-            {
-                GameObject shopItemGO = Instantiate(shopItemPrefab, shopItemContainer);
-                ThemeShopItemUI itemUI = shopItemGO.GetComponent<ThemeShopItemUI>();
-                itemUI.Setup(themeData);
-            }
-        }
+        // Populate with themes from ThemeManager
     }
 }

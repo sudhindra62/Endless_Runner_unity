@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02a7f5a635b54c848a4c13a34a8e2b85, type: 3}
+  m_Name: ApocalypticCityTheme
+  m_EditorClassIdentifier: 
+  skybox: {fileID: 0}
+  lightingColor: {r: 1, g: 0.8, b: 0.6, a: 1}
+  lightingIntensity: 0.8
+  fogColor: {r: 0.6, g: 0.5, b: 0.4, a: 1}
+  fogDensity: 0.02
+  uiAccentColor: {r: 1, g: 0.6, b: 0.2, a: 1}
+  groundMaterial: {fileID: 2100000, guid: 850a0a80e1de4e94abb9831757a3e3c0, type: 2}
+  obstacleMaterial: {fileID: 2100000, guid: 0be6a328352b46749807a9776f820c43, type: 2}
+  coinPrefab: {fileID: 2800000, guid: 9e1f8e4c25f340f4b9c1d1a6e2e50d60, type: 3}
+  enemyChaserPrefab: {fileID: 2800000, guid: 18a1a3848b304c04a9e5e9b7a424164b, type: 3}
+  environmentModules:
+  - {fileID: 2800000, guid: 3b1a203f563445b489a20352136a88b5, type: 3}
+  backgroundMusic: {fileID: 0}

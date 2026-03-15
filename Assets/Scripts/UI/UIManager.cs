@@ -13,6 +13,7 @@ namespace EndlessRunner.UI
     [RequireComponent(typeof(LeaderboardUI))]
     [RequireComponent(typeof(SettingsUI))]
     [RequireComponent(typeof(CharacterCustomizationUI))]
+    [RequireComponent(typeof(ThemeShopUI))]
     public class UIManager : Singleton<UIManager>
     {
         [Header("HUD Elements")]
@@ -30,12 +31,14 @@ namespace EndlessRunner.UI
         [SerializeField] private LeaderboardUI leaderboardUI;
         [SerializeField] private SettingsUI settingsUI;
         [SerializeField] private CharacterCustomizationUI characterCustomizationUI;
+        [SerializeField] private ThemeShopUI themeShopUI;
 
         [Header("Buttons")]
         [SerializeField] private Button achievementsButton;
         [SerializeField] private Button leaderboardButton;
         [SerializeField] private Button settingsButton;
         [SerializeField] private Button characterCustomizationButton;
+        [SerializeField] private Button themeShopButton;
 
         private void OnEnable()
         {
@@ -59,6 +62,7 @@ namespace EndlessRunner.UI
             leaderboardButton.onClick.AddListener(ShowLeaderboardPanel);
             settingsButton.onClick.AddListener(ShowSettingsPanel);
             characterCustomizationButton.onClick.AddListener(ShowCharacterCustomizationPanel);
+            themeShopButton.onClick.AddListener(ShowThemeShopPanel);
         }
 
         private void InitializeUI()
@@ -72,6 +76,7 @@ namespace EndlessRunner.UI
             SetPanelActive(leaderboardUI.gameObject, false);
             SetPanelActive(settingsUI.gameObject, false);
             SetPanelActive(characterCustomizationUI.gameObject, false);
+            SetPanelActive(themeShopUI.gameObject, false);
         }
 
         private void HandleGameStateChanged(GameManager.GameState newState)
@@ -116,6 +121,11 @@ namespace EndlessRunner.UI
         public void ShowCharacterCustomizationPanel()
         {
             characterCustomizationUI.ShowPanel();
+        }
+
+        public void ShowThemeShopPanel()
+        {
+            themeShopUI.ShowPanel();
         }
 
         public void OnRestartButtonPressed()
