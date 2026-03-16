@@ -32,6 +32,7 @@ namespace EndlessRunner.UI
         [SerializeField] private SettingsUI settingsUI;
         [SerializeField] private CharacterCustomizationUI characterCustomizationUI;
         [SerializeField] private ThemeShopUI themeShopUI;
+        [SerializeField] private Image mainPanelImage;
 
         [Header("Buttons")]
         [SerializeField] private Button achievementsButton;
@@ -42,8 +43,15 @@ namespace EndlessRunner.UI
 
         private void OnEnable()
         {
-            GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
+            }
             GameEvents.OnScoreGained += UpdateScoreUI;
+            if (ThemeManager.Instance != null)
+            {
+                ThemeManager.Instance.OnThemeChanged += HandleThemeChanged;
+            }
         }
 
         private void OnDisable()
@@ -53,6 +61,10 @@ namespace EndlessRunner.UI
                 GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
             }
             GameEvents.OnScoreGained -= UpdateScoreUI;
+            if (ThemeManager.Instance != null)
+            {
+                ThemeManager.Instance.OnThemeChanged -= HandleThemeChanged;
+            }
         }
 
         private void Start()
@@ -85,6 +97,22 @@ namespace EndlessRunner.UI
             SetPanelActive(gameOverPanel, newState == GameManager.GameState.GameOver);
             SetPanelActive(powerUpHUDController.gameObject, newState == GameManager.GameState.Playing);
             SetPanelActive(currencyUI.gameObject, newState == GameManager.GameState.Playing || newState == GameManager.GameState.MainMenu);
+        }
+
+        private void HandleThemeChanged(ThemeSO theme)
+        {
+            if (mainPanelImage != null)
+            {
+                mainPanelImage.sprite = theme.uiPanelSprite;
+            }
+
+            // Update the color of all buttons to match the theme's accent color
+            foreach (Button button in FindObjectsOfType<Button>())
+            {
+                ColorBlock colors = button.colors;
+                colors.normalColor = theme.uiAccentColor;
+                button.colors = colors;
+            }
         }
 
         private void SetPanelActive(GameObject panel, bool isActive)

@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: ff9a7f3e0a3544d418c35314e6b1f8f0
+MonoScript:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff9a7f3e0a3544d418c35314e6b1f8f0, type: 3}
+  m_Name: LevelGenerator
+  m_EditorClassIdentifier: 

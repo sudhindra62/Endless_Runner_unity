@@ -1,0 +1,1 @@
+This is a placeholder for the ThemeSO asset. Please create a ThemeSO asset named 'ThemeConfig.asset' in this folder and configure it for the CyberNeonCity theme.

@@ -11,7 +11,6 @@ namespace EndlessRunner.Managers
 
         public enum GameState { MainMenu, Playing, Paused, GameOver }
         private GameState currentState;
-        public ThemeManager themeManager; 
 
         private void Awake()
         {
@@ -24,15 +23,13 @@ namespace EndlessRunner.Managers
             {
                 Destroy(gameObject);
             }
-
-            themeManager = FindObjectOfType<ThemeManager>();
         }
 
         private void Start()
         {
-            if (themeManager != null)
+            if (ThemeManager.Instance != null)
             {
-                themeManager.SetTheme(0);
+                ThemeManager.Instance.SetTheme(0); // Set a default theme
             }
             SetState(GameState.Playing);
         }

@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using LootLocker.Requests;
 
 /// <summary>
@@ -57,6 +58,14 @@ public class MainMenu : MonoBehaviour
         { 
             Debug.LogError("GachaManager instance not found. Gacha pull cannot be performed.");
         }
+    }
+
+    /// <summary>
+    /// Called by a UI Button to open the theme selection screen.
+    /// </summary>
+    public void OnSelectThemePressed()
+    {
+        SceneManager.LoadScene("ThemeSelection");
     }
 
     // --- EVENT HANDLERS ---

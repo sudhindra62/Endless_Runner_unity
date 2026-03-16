@@ -9,15 +9,21 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1978d363c5a6e454c86819448a5299e1, type: 3}
-  m_Name: ThemeConfig
+  m_Script: {fileID: 11500000, guid: d5833f3a0a3544d418c35314e6b1f8f0, type: 3}
+  m_Name: HeavenWorld
   m_EditorClassIdentifier: 
-  themeName: BaseCity
-  environmentPrefabs: []
+  themeName: HeavenWorld
+  themeIcon: {fileID: 0}
   skyboxMaterial: {fileID: 0}
-  lighting: {fileID: 0}
+  fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  fogDensity: 0.01
+  environmentPrefabs: []
   obstaclePrefabs: []
-  coinModelPrefab: {fileID: 0}
+  coinPrefab: {fileID: 0}
   enemyChaserPrefab: {fileID: 0}
+  powerUpPrefabs: []
+  backgroundMusic: {fileID: 0}
+  coinSound: {fileID: 0}
+  powerUpSound: {fileID: 0}
   uiAccentColor: {r: 1, g: 1, b: 1, a: 1}
-  music: {fileID: 0}
+  panelSprite: {fileID: 0}
