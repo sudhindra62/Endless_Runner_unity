@@ -1,11 +1,22 @@
 using UnityEngine;
 
+public enum ThemeUnlockType
+{
+    Free,
+    GemUnlock,
+    PremiumSubscription
+}
+
 [CreateAssetMenu(fileName = "Theme", menuName = "Theme/New Theme")]
 public class ThemeSO : ScriptableObject
 {
     [Header("Theme Info")]
     public string themeName;
     public Sprite themeIcon;
+
+    [Header("Unlock Conditions")]
+    public ThemeUnlockType unlockType;
+    public int gemPrice;
 
     [Header("Environment Settings")]
     public Material skyboxMaterial;

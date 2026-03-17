@@ -1,13 +1,6 @@
 using UnityEngine;
 
-public class ThemeManager : MonoBehaviour
+public class ThemeManager_CyberNeonCity : MonoBehaviour
 {
-    // environment prefabs
-    // skybox
-    // lighting
-    // obstacles
-    // coin models
-    // enemy chasers
-    // UI accents
-    // music
+    // This class will manage the theme for CyberNeonCity
 }

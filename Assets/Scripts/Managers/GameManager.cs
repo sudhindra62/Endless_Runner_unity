@@ -1,13 +1,15 @@
 
+using EndlessRunner.UI;
+using EndlessRunner.Themes;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using EndlessRunner.Themes;
 
 namespace EndlessRunner.Managers
 {
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance;
+        public ExtraCoinsUI extraCoinsUI;
 
         public enum GameState { MainMenu, Playing, Paused, GameOver }
         private GameState currentState;
@@ -25,12 +27,9 @@ namespace EndlessRunner.Managers
             }
         }
 
-        private void Start()
+        public void StartGame()
         {
-            if (ThemeManager.Instance != null)
-            {
-                ThemeManager.Instance.SetTheme(0); // Set a default theme
-            }
+            SceneManager.LoadScene("GameScene"); // Or your main game scene name
             SetState(GameState.Playing);
         }
 
@@ -40,7 +39,8 @@ namespace EndlessRunner.Managers
             switch (currentState)
             {
                 case GameState.MainMenu:
-                    // Handle main menu logic
+                    Time.timeScale = 1f;
+                    SceneManager.LoadScene("MainMenu");
                     break;
                 case GameState.Playing:
                     Time.timeScale = 1f;
@@ -50,7 +50,7 @@ namespace EndlessRunner.Managers
                     break;
                 case GameState.GameOver:
                     Time.timeScale = 0f;
-                    // Handle game over logic (e.g., show game over screen)
+                    if (extraCoinsUI != null) extraCoinsUI.ShowExtraCoinsScreen();
                     break;
             }
         }

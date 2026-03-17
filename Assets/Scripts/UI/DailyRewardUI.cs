@@ -1,11 +1,32 @@
 
+using EndlessRunner.Managers;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace EndlessRunner.UI
 {
     public class DailyRewardUI : MonoBehaviour
     {
-        public void ShowPanel() { gameObject.SetActive(true); }
-        public void HidePanel() { gameObject.SetActive(false); }
+        public GameObject rewardAvailableIcon;
+        public Button claimRewardButton;
+
+        private void Start()
+        {
+            claimRewardButton.onClick.AddListener(ClaimReward);
+            UpdateUI();
+        }
+
+        private void UpdateUI()
+        {
+            bool isRewardAvailable = DailyRewardManager.Instance.IsRewardAvailable();
+            rewardAvailableIcon.SetActive(isRewardAvailable);
+            claimRewardButton.interactable = isRewardAvailable;
+        }
+
+        private void ClaimReward()
+        {
+            DailyRewardManager.Instance.ClaimReward();
+            UpdateUI();
+        }
     }
 }

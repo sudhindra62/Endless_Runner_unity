@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 112233445566778899aabbccddeeff06
+ScriptableObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CyberNeonCityThemeConfig
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: <GUID>, type: 3}
