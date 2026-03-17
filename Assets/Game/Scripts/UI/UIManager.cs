@@ -1,15 +1,47 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class UIManager : MonoBehaviour
 {
-    public Text scoreText;
+    public static UIManager Instance { get; private set; }
 
-    void Update()
+    public TMP_Text scoreText;
+    public GameObject gameOverPanel;
+
+    private void Awake()
     {
-        if (GameManager.Instance != null)
+        if (Instance == null)
         {
-            scoreText.text = "Score: " + GameManager.Instance.score;
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    public void UpdateScore(int score)
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = "Score: " + score;
+        }
+    }
+
+    public void ShowGameOverPanel()
+    {
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+        }
+    }
+
+    public void HideGameOverPanel()
+    {
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(false);
         }
     }
 }

@@ -8,7 +8,7 @@ namespace EndlessRunner.Level
         {
             if (other.CompareTag("Player"))
             {
-                // End the game
+                GameManager.Instance.GameOver();
             }
         }
     }

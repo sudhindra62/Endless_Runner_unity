@@ -17,7 +17,7 @@ public class ObstacleSpawner : MonoBehaviour
         }
     }
 
-    public void SpawnObstacle()
+    public void SpawnObstacle(Transform spawnPoint)
     {
         if (_obstaclePools.Count == 0)
         {
@@ -26,6 +26,8 @@ public class ObstacleSpawner : MonoBehaviour
 
         var pool = _obstaclePools[Random.Range(0, _obstaclePools.Count)];
         var obstacle = pool.Get();
+        obstacle.transform.position = spawnPoint.position;
+        obstacle.transform.rotation = spawnPoint.rotation;
         var obstacleComponent = obstacle.GetComponent<IObstacle>();
         obstacleComponent.SetPool(pool);
         obstacleComponent.Spawn();
