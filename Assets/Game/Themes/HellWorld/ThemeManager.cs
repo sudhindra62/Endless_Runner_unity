@@ -1,7 +1,13 @@
-
 using UnityEngine;
 
-public class HellWorldThemeManager : MonoBehaviour
+public class ThemeManager : MonoBehaviour
 {
-    // Theme-specific logic for HellWorld
+    // environment prefabs
+    // skybox
+    // lighting
+    // obstacles
+    // coin models
+    // enemy chasers
+    // UI accents
+    // music
 }

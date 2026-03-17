@@ -1,7 +1,13 @@
-
 using UnityEngine;
 
-public class JungleRunThemeManager : MonoBehaviour
+public class ThemeManager : MonoBehaviour
 {
-    // Theme-specific logic for JungleRun
+    // environment prefabs
+    // skybox
+    // lighting
+    // obstacles
+    // coin models
+    // enemy chasers
+    // UI accents
+    // music
 }

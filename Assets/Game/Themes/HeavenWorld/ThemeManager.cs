@@ -1,7 +1,13 @@
-
 using UnityEngine;
 
-public class HeavenWorldThemeManager : MonoBehaviour
+public class ThemeManager : MonoBehaviour
 {
-    // Theme-specific logic for HeavenWorld
+    // environment prefabs
+    // skybox
+    // lighting
+    // obstacles
+    // coin models
+    // enemy chasers
+    // UI accents
+    // music
 }

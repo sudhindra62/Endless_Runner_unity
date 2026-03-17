@@ -1,9 +1,13 @@
 using UnityEngine;
 
-namespace EndlessRunner.Themes
+public class ThemeManager : MonoBehaviour
 {
-    public class ThemeManager : MonoBehaviour
-    {
-        // This class will manage the visual elements of the FuturisticCity theme.
-    }
+    // environment prefabs
+    // skybox
+    // lighting
+    // obstacles
+    // coin models
+    // enemy chasers
+    // UI accents
+    // music
 }
