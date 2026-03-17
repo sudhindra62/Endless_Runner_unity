@@ -1,7 +1,9 @@
-
 using UnityEngine;
 
-public class BaseCityThemeManager : MonoBehaviour
+namespace EndlessRunner.Themes
 {
-    // Theme-specific logic for BaseCity
+    public class ThemeManager : MonoBehaviour
+    {
+        // This class will manage the visual elements of the BaseCity theme.
+    }
 }
