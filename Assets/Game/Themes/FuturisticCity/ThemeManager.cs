@@ -1,7 +1,9 @@
-
 using UnityEngine;
 
-public class FuturisticCityThemeManager : MonoBehaviour
+namespace EndlessRunner.Themes
 {
-    // Theme-specific logic for FuturisticCity
+    public class ThemeManager : MonoBehaviour
+    {
+        // This class will manage the visual elements of the FuturisticCity theme.
+    }
 }
