@@ -1,6 +1,6 @@
-
 using UnityEngine;
 using System.Collections.Generic;
+using EndlessRunner.Environment;
 
 public class ThemeManager : MonoBehaviour
 {
@@ -8,6 +8,7 @@ public class ThemeManager : MonoBehaviour
 
     public List<ThemeConfig> themes;
     public ThemeConfig currentTheme;
+    public Lighting lighting;
 
     void Awake()
     {
@@ -29,6 +30,7 @@ public class ThemeManager : MonoBehaviour
         if (themes.Count > 0)
         {
             currentTheme = themes[0];
+            ApplyTheme();
         }
     }
 
@@ -42,9 +44,10 @@ public class ThemeManager : MonoBehaviour
     {
         if (currentTheme != null)
         {
-            RenderSettings.skybox = currentTheme.skyboxMaterial;
-            RenderSettings.fogColor = currentTheme.fogColor;
-            RenderSettings.fogDensity = currentTheme.fogDensity;
+            if (lighting != null)
+            {
+                lighting.ApplyTheme(currentTheme);
+            }
             DynamicGI.UpdateEnvironment();
         }
     }

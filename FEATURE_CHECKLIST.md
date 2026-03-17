@@ -6,4 +6,5 @@
 - [x] Build a leaderboard system to foster competition among players.
 - [x] Add a settings menu with options for audio control and graphics quality.
 - [x] Create a character customization system for unlocking and equipping different skins.
+- [x] Implement a premium, animated home screen with full UI functionality and direct-to-run transition.
 - A-to-Z_CONNECTIVITY: Every feature must operate from Trigger to Result (Input -> Movement -> UI -> Backend) without any 'dead' or missing logic.

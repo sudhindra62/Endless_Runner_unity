@@ -1,13 +1,14 @@
 
 using UnityEngine;
+using EndlessRunner.Chasers;
 
 namespace EndlessRunner.Themes
 {
     public enum ThemeUnlockType
     {
         Free,
-        Gems,
-        Premium
+        GemUnlock,
+        PremiumSubscription
     }
 
     [CreateAssetMenu(fileName = "ThemeSO", menuName = "EndlessRunner/ThemeSO", order = 0)]
@@ -19,7 +20,7 @@ namespace EndlessRunner.Themes
 
         [Header("Unlock Conditions")]
         public ThemeUnlockType unlockType;
-        public int gemCost;
+        public int gemPrice;
 
         [Header("Visuals")]
         public Material skybox;
@@ -31,7 +32,7 @@ namespace EndlessRunner.Themes
         [Header("Game Element Prefabs")]
         public GameObject[] environmentModules;
         public GameObject coinPrefab;
-        public GameObject enemyChaserPrefab;
+        public Chaser chaser;
 
         [Header("Materials")]
         public Material groundMaterial;

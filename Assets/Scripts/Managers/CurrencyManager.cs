@@ -7,7 +7,8 @@ namespace EndlessRunner.Managers
     {
         public static CurrencyManager Instance;
 
-        public int CurrentCoins { get; private set; }
+        public int Coins { get; private set; }
+        public int Gems { get; private set; }
 
         private void Awake()
         {
@@ -21,21 +22,46 @@ namespace EndlessRunner.Managers
                 Destroy(gameObject);
             }
 
-            CurrentCoins = PlayerPrefs.GetInt("Coins", 0);
+            Coins = PlayerPrefs.GetInt("Coins", 0);
+            Gems = PlayerPrefs.GetInt("Gems", 0);
         }
 
         public void AddCoins(int amount)
         {
-            CurrentCoins += amount;
-            PlayerPrefs.SetInt("Coins", CurrentCoins);
+            Coins += amount;
+            PlayerPrefs.SetInt("Coins", Coins);
             PlayerPrefs.Save();
         }
 
-        public void RemoveCoins(int amount)
+        public bool SpendCoins(int amount)
         {
-            CurrentCoins -= amount;
-            PlayerPrefs.SetInt("Coins", CurrentCoins);
+            if (Coins >= amount)
+            {
+                Coins -= amount;
+                PlayerPrefs.SetInt("Coins", Coins);
+                PlayerPrefs.Save();
+                return true;
+            }
+            return false;
+        }
+        
+        public void AddGems(int amount)
+        {
+            Gems += amount;
+            PlayerPrefs.SetInt("Gems", Gems);
             PlayerPrefs.Save();
+        }
+
+        public bool SpendGems(int amount)
+        {
+            if (Gems >= amount)
+            {
+                Gems -= amount;
+                PlayerPrefs.SetInt("Gems", Gems);
+                PlayerPrefs.Save();
+                return true;
+            }
+            return false;
         }
     }
 }

@@ -14,6 +14,7 @@ public class ThemeConfig : ScriptableObject
     public GameObject[] environmentPrefabs;
 
     [Header("Gameplay Elements")]
+    public GameObject[] segmentPrefabs;
     public GameObject[] obstaclePrefabs;
     public GameObject coinPrefab;
     public GameObject enemyChaserPrefab;
