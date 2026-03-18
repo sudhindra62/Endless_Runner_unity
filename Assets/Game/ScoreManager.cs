@@ -5,6 +5,8 @@ public class ScoreManager : MonoBehaviour
 {
     public static ScoreManager Instance { get; private set; }
 
+    private int score;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -17,6 +19,16 @@ public class ScoreManager : MonoBehaviour
 
     public void AddScore(int amount)
     {
-        // Add score logic here
+        if (PowerupManager.Instance != null && PowerupManager.Instance.IsDoubleCoinsActive())
+        {
+            amount *= 2;
+        }
+        score += amount;
+        // Update UI or other game elements with the new score
+    }
+
+    public int GetScore()
+    {
+        return score;
     }
 }

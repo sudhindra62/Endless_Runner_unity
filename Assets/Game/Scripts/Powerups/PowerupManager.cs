@@ -8,9 +8,9 @@ public class PowerupManager : MonoBehaviour
     [Header("Player Components")]
     public PlayerController playerController;
     public GameObject shieldEffect; // Visual for shield
+    public CoinMagnet coinMagnet; // Reference to the CoinMagnet component
 
     private bool isShieldActive = false;
-    private bool isCoinMagnetActive = false;
     private bool isDoubleCoinsActive = false;
     private bool isSlowMotionActive = false;
 
@@ -41,12 +41,10 @@ public class PowerupManager : MonoBehaviour
                 if (shieldEffect != null) shieldEffect.SetActive(isActive);
                 break;
             case PowerupType.CoinMagnet:
-                isCoinMagnetActive = isActive;
-                // TODO: Implement coin magnet logic
+                if (coinMagnet != null) coinMagnet.SetActive(isActive);
                 break;
             case PowerupType.DoubleCoins:
                 isDoubleCoinsActive = isActive;
-                // TODO: Implement double coins logic
                 break;
             case PowerupType.SlowMotion:
                 isSlowMotionActive = isActive;
@@ -57,6 +55,5 @@ public class PowerupManager : MonoBehaviour
 
     // Public getters for powerup states
     public bool IsShieldActive() => isShieldActive;
-    public bool IsCoinMagnetActive() => isCoinMagnetActive;
     public bool IsDoubleCoinsActive() => isDoubleCoinsActive;
 }

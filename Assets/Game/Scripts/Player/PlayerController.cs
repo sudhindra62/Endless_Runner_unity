@@ -79,6 +79,18 @@ public class PlayerController : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
+        if (collision.gameObject.CompareTag("Obstacle"))
+        {
+            if (PowerupManager.Instance != null && PowerupManager.Instance.IsShieldActive())
+            {
+                // Shield is active, ignore collision with obstacle
+                Destroy(collision.gameObject); // Optional: Destroy the obstacle
+                return;
+            }
+            
+            // Game Over logic or penalty here
+        }
+
         if (collision.gameObject.CompareTag("Track"))
         {
             isGrounded = true;

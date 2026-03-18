@@ -25,6 +25,13 @@ public class MainSceneSetup : MonoBehaviour
         EnsureManager<RemoteConfigManager>();
         EnsureManager<IntegrityManager>();
 
+        // --- VISUAL ENGINE MANAGERS ---
+        EnsureManager<LightingManager>();
+        EnsureManager<SkyboxManager>();
+        EnsureManager<PostProcessingManager>();
+        EnsureManager<EnvironmentAnimationManager>();
+        EnsureManager<PerformanceManager>();
+
         // --- CORE GAMEPLAY MANAGERS ---
         EnsureManager<LevelGenerator>();
         EnsureManager<ScoreManager>();
