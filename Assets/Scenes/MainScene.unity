@@ -1801,4 +1801,49 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7a5a3c0e1f2a3b4c5d6e7f8a9b0c1d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-
+--- !u!1 &100000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {instanceID: 0}
+  m_PrefabInstance: {instanceID: 0}
+  m_PrefabAsset: {instanceID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {instanceID: 100001}
+  - component: {instanceID: 100002}
+  m_Layer: 0
+  m_Name: ProceduralSceneArchitect
+  m_TagString: Untagged
+  m_IsActive: 1
+  m_StaticEditorFlags: 0
+  m_IsActiveCheckEnabled: 0
+--- !u!4 &100001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {instanceID: 0}
+  m_PrefabInstance: {instanceID: 0}
+  m_PrefabAsset: {instanceID: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {instanceID: 0}
+  m_RootOrder: 19
+--- !u!114 &100002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {instanceID: 0}
+  m_PrefabInstance: {instanceID: 0}
+  m_PrefabAsset: {instanceID: 0}
+  m_GameObject: {instanceID: 100000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e02506e7855474c83a54d5b7c1265b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  useProceduralPlaceholders: 1
+  futuristicPlayerPrefab: {instanceID: 0}
+  robotDogPrefab: {instanceID: 0}
+  scoreText: {instanceID: 0}
+  comboText: {instanceID: 0}
+  comboProgressBar: {instanceID: 0}

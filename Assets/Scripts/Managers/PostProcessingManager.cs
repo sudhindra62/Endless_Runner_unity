@@ -36,9 +36,13 @@ public class PostProcessingManager : MonoBehaviour
         }
     }
 
-    public void SetBloom(bool enabled)
+    public void SetBloom(bool enabled, float intensity = 1.0f)
     {
-        if (bloom != null) bloom.active = enabled;
+        if (bloom != null) 
+        {
+            bloom.active = enabled;
+            bloom.intensity.value = intensity;
+        }
     }
 
     public void SetMotionBlur(bool enabled)
@@ -46,13 +50,24 @@ public class PostProcessingManager : MonoBehaviour
         if (motionBlur != null) motionBlur.active = enabled;
     }
 
-    public void SetColorGrading(bool enabled)
+    public void SetColorGrading(bool enabled, float postExposure = 0, float contrast = 0, float saturation = 0)
     {
-        if (colorGrading != null) colorGrading.active = enabled;
+        if (colorGrading != null) 
+        {
+            colorGrading.active = enabled;
+            colorGrading.postExposure.value = postExposure;
+            colorGrading.contrast.value = contrast;
+            colorGrading.saturation.value = saturation;
+        }
     }
 
-    public void SetDepthOfField(bool enabled)
+    public void SetDepthOfField(bool enabled, float focusDistance = 10f, float aperture = 5.6f)
     {
-        if (depthOfField != null) depthOfField.active = enabled;
+        if (depthOfField != null) 
+        {
+            depthOfField.active = enabled;
+            depthOfField.focusDistance.value = focusDistance;
+            depthOfField.aperture.value = aperture;
+        }
     }
 }

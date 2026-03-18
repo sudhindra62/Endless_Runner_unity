@@ -1,3 +1,4 @@
+
 - [x] Implement the visual UI sequence for the TutorialManager
 - [x] Create a robust Save/Load system using PlayerPrefs or a file-based approach.
 - [x] Develop a dynamic Shop system for purchasing cosmetic items and power-ups.
@@ -7,4 +8,11 @@
 - [x] Add a settings menu with options for audio control and graphics quality.
 - [x] Create a character customization system for unlocking and equipping different skins.
 - [x] Implement a premium, animated home screen with full UI functionality and direct-to-run transition.
+- [x] Implement the VISUAL ENGINE SYSTEM to match the futuristic city theme.
+    - [x] **Lighting System**: Dynamic lighting, day/night cycle, neon glow, and environment reflections.
+    - [x] **Particle System**: Running trails, coin collection sparkles, jump effects, and environment effects.
+    - [x] **Skybox System**: Custom skybox for the futuristic city theme.
+    - [x] **Post Processing**: Bloom, motion blur, color grading, and depth of field.
+    - [x] **Environment Animation**: Animated trees, water, lights, floating objects, and city movement.
+    - [x] **Performance Optimization**: Mobile optimization, LOD system, and efficient shaders.
 - A-to-Z_CONNECTIVITY: Every feature must operate from Trigger to Result (Input -> Movement -> UI -> Backend) without any 'dead' or missing logic.

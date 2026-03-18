@@ -5,6 +5,13 @@ public class EnvironmentAnimationManager : MonoBehaviour
 {
     public static EnvironmentAnimationManager Instance { get; private set; }
 
+    [Header("Animatable Environment Elements")]
+    [SerializeField] private Animator[] treeAnimators;
+    [SerializeField] private Animator[] waterAnimators;
+    [SerializeField] private Animator[] lightAnimators;
+    [SerializeField] private Animator[] floatingObjectAnimators;
+    [SerializeField] private Animator[] cityMovementAnimators;
+
     void Awake()
     {
         if (Instance == null)
@@ -20,26 +27,41 @@ public class EnvironmentAnimationManager : MonoBehaviour
 
     public void AnimateTrees()
     {
-        // Add logic to animate trees
+        foreach (var animator in treeAnimators)
+        {
+            if(animator.gameObject.activeInHierarchy) animator.SetTrigger("startAnimation");
+        }
     }
 
     public void AnimateWater()
     {
-        // Add logic to animate water
+        foreach (var animator in waterAnimators)
+        {
+            if(animator.gameObject.activeInHierarchy) animator.SetTrigger("startAnimation");
+        }
     }
 
     public void AnimateLights()
     {
-        // Add logic to animate lights
+        foreach (var animator in lightAnimators)
+        {
+            if(animator.gameObject.activeInHierarchy) animator.SetTrigger("startAnimation");
+        }
     }
 
     public void AnimateFloatingObjects()
     {
-        // Add logic to animate floating objects
+        foreach (var animator in floatingObjectAnimators)
+        {
+            if(animator.gameObject.activeInHierarchy) animator.SetTrigger("startAnimation");
+        }
     }
 
     public void AnimateCityMovement()
     {
-        // Add logic to animate city movement
+        foreach (var animator in cityMovementAnimators)
+        {
+            if(animator.gameObject.activeInHierarchy) animator.SetTrigger("startAnimation");
+        }
     }
 }
