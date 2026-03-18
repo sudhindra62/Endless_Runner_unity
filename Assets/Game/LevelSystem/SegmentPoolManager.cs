@@ -1,44 +1,50 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace EndlessRunner.Level
+public class SegmentPoolManager : MonoBehaviour
 {
-    public class SegmentPoolManager : MonoBehaviour
+    public static SegmentPoolManager Instance { get; private set; }
+
+    public LevelGenerator levelGenerator;
+    private Dictionary<int, Queue<TrackSegment>> segmentPools = new Dictionary<int, Queue<TrackSegment>>();
+
+    void Awake()
     {
-        public static SegmentPoolManager Instance { get; private set; }
+        Instance = this;
+    }
 
-        private Dictionary<GameObject, Queue<GameObject>> _pool = new Dictionary<GameObject, Queue<GameObject>>();
+    void Start()
+    {
+        CreatePools();
+    }
 
-        private void Awake()
+    void CreatePools()
+    {
+        for (int i = 0; i < levelGenerator.segmentPrefabs.Length; i++)
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
+            segmentPools.Add(i, new Queue<TrackSegment>());
         }
+    }
 
-        public GameObject GetSegment(GameObject prefab)
+    public TrackSegment GetSegment(int type)
+    {
+        if (segmentPools[type].Count > 0)
         {
-            if (!_pool.ContainsKey(prefab) || _pool[prefab].Count == 0)
-            {
-                return Instantiate(prefab);
-            }
-
-            GameObject segment = _pool[prefab].Dequeue();
-            segment.SetActive(true);
+            TrackSegment segment = segmentPools[type].Dequeue();
+            segment.gameObject.SetActive(true);
             return segment;
         }
-
-        public void ReturnSegment(GameObject segment)
+        else
         {
-            segment.SetActive(false);
-            if (!_pool.ContainsKey(segment.GetComponent<TrackSegment>().prefab))
-            {
-                _pool[segment.GetComponent<TrackSegment>().prefab] = new Queue<GameObject>();
-            }
-            _pool[segment.GetComponent<TrackSegment>().prefab].Enqueue(segment);
+            TrackSegment newSegment = Instantiate(levelGenerator.segmentPrefabs[type]);
+            newSegment.segmentType = type;
+            return newSegment;
         }
+    }
+
+    public void ReturnSegment(TrackSegment segment)
+    {
+        segment.gameObject.SetActive(false);
+        segmentPools[segment.segmentType].Enqueue(segment);
     }
 }
