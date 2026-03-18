@@ -1,17 +1,23 @@
 using UnityEngine;
 
-namespace EndlessRunner.Level
+public class Coin : MonoBehaviour
 {
-    public class Coin : MonoBehaviour
+    private bool isMoving = false;
+    private Transform target;
+    private float moveSpeed;
+
+    void Update()
     {
-        private void OnTriggerEnter(Collider other)
+        if (isMoving && target != null)
         {
-            if (other.CompareTag("Player"))
-            {
-                // Add coin to player's inventory
-                // Play coin collection sound
-                CoinPool.Instance.ReturnCoin(gameObject);
-            }
+            transform.position = Vector3.MoveTowards(transform.position, target.position, moveSpeed * Time.deltaTime);
         }
+    }
+
+    public void MoveTowards(Transform target, float speed)
+    {
+        this.target = target;
+        this.moveSpeed = speed;
+        this.isMoving = true;
     }
 }

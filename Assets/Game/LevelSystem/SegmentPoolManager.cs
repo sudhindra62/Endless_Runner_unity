@@ -5,46 +5,45 @@ public class SegmentPoolManager : MonoBehaviour
 {
     public static SegmentPoolManager Instance { get; private set; }
 
-    public LevelGenerator levelGenerator;
-    private Dictionary<int, Queue<TrackSegment>> segmentPools = new Dictionary<int, Queue<TrackSegment>>();
+    private Dictionary<GameObject, List<TrackSegment>> segmentPools = new Dictionary<GameObject, List<TrackSegment>>();
 
     void Awake()
     {
-        Instance = this;
-    }
-
-    void Start()
-    {
-        CreatePools();
-    }
-
-    void CreatePools()
-    {
-        for (int i = 0; i < levelGenerator.segmentPrefabs.Length; i++)
+        if (Instance == null)
         {
-            segmentPools.Add(i, new Queue<TrackSegment>());
-        }
-    }
-
-    public TrackSegment GetSegment(int type)
-    {
-        if (segmentPools[type].Count > 0)
-        {
-            TrackSegment segment = segmentPools[type].Dequeue();
-            segment.gameObject.SetActive(true);
-            return segment;
+            Instance = this;
         }
         else
         {
-            TrackSegment newSegment = Instantiate(levelGenerator.segmentPrefabs[type]);
-            newSegment.segmentType = type;
-            return newSegment;
+            Destroy(gameObject);
         }
+    }
+
+    public TrackSegment GetSegment(GameObject segmentPrefab)
+    {
+        if (!segmentPools.ContainsKey(segmentPrefab) || segmentPools[segmentPrefab].Count == 0)
+        {
+            // Instantiate a new segment if the pool is empty
+            return Instantiate(segmentPrefab).GetComponent<TrackSegment>();
+        }
+
+        // Get a segment from the pool
+        TrackSegment segment = segmentPools[segmentPrefab][0];
+        segmentPools[segmentPrefab].RemoveAt(0);
+        segment.gameObject.SetActive(true);
+        return segment;
     }
 
     public void ReturnSegment(TrackSegment segment)
     {
         segment.gameObject.SetActive(false);
-        segmentPools[segment.segmentType].Enqueue(segment);
+        GameObject prefab = segment.gameObject;
+
+        if (!segmentPools.ContainsKey(prefab))
+        {
+            segmentPools[prefab] = new List<TrackSegment>();
+        }
+
+        segmentPools[prefab].Add(segment);
     }
 }

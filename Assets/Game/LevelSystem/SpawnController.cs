@@ -1,77 +1,130 @@
 using UnityEngine;
-using System.Collections.Generic;
 
-namespace EndlessRunner.Level
+public class SpawnController : MonoBehaviour
 {
-    public class SpawnController : MonoBehaviour
+    public LevelGenerator levelGenerator;
+    private GameObject[] obstaclePrefabs;
+    private GameObject coinPrefab;
+    private GameObject[] powerUpPrefabs;
+
+    void OnEnable()
     {
-        [Header("Level Generation")]
-        [SerializeField] private Transform playerTransform;
-        [SerializeField] private TrackSegment[] segmentPrefabs;
-        [SerializeField] private int initialSegments = 5;
-        [SerializeField] private float spawnDistance = 50f;
-        [SerializeField] private float despawnDistance = 50f;
+        ThemeManager.OnThemeChanged += HandleThemeChange;
+        if (levelGenerator != null) levelGenerator.OnSegmentSpawned += OnSegmentSpawned;
+    }
 
-        private List<GameObject> _activeSegments = new List<GameObject>();
-        private Transform _currentSpawnPoint;
-        private float _timeAlive = 0f;
+    void OnDisable()
+    {
+        ThemeManager.OnThemeChanged -= HandleThemeChange;
+        if (levelGenerator != null) levelGenerator.OnSegmentSpawned -= OnSegmentSpawned;
+    }
 
-        private void Start()
+    void Start()
+    {
+        if (ThemeManager.Instance != null) HandleThemeChange(ThemeManager.Instance.CurrentConfig);
+    }
+
+    void OnSegmentSpawned(TrackSegment segment)
+    {
+        float difficulty = levelGenerator.GetDifficultyMultiplier();
+        SpawnObstacles(segment, difficulty);
+        SpawnCoins(segment, difficulty);
+        SpawnPowerups(segment, difficulty);
+    }
+
+    void SpawnObstacles(TrackSegment segment, float difficulty)
+    {
+        if (obstaclePrefabs == null || obstaclePrefabs.Length == 0) return;
+
+        foreach (Transform obstacleSlot in segment.obstacleSlots)
         {
-            _currentSpawnPoint = transform;
-            for (int i = 0; i < initialSegments; i++)
+            if (Random.Range(0f, 1f) < (0.5f * difficulty))
             {
-                SpawnSegment();
+                int randomIndex = Random.Range(0, obstaclePrefabs.Length);
+                GameObject obstacle = ObstaclePool.Instance.GetObstacle(obstaclePrefabs[randomIndex]);
+                obstacle.transform.position = obstacleSlot.position;
+                obstacle.transform.rotation = obstacleSlot.rotation;
+                obstacle.transform.SetParent(obstacleSlot);
             }
-        }
-
-        private void Update()
-        {
-            _timeAlive += Time.deltaTime;
-
-            if (Vector3.Distance(playerTransform.position, _currentSpawnPoint.position) < spawnDistance)
-            {
-                SpawnSegment();
-            }
-
-            if (_activeSegments.Count > 0 && Vector3.Distance(playerTransform.position, _activeSegments[0].transform.position) > despawnDistance)
-            {
-                DespawnSegment();
-            }
-        }
-
-        private void SpawnSegment()
-        {
-            ThemeConfig currentTheme = LevelGenerator.Instance.GetCurrentTheme();
-            TrackSegment selectedSegmentPrefab = SelectSegmentBasedOnDifficulty();
-
-            GameObject segmentObject = SegmentPoolManager.Instance.GetSegment(selectedSegmentPrefab.prefab);
-            TrackSegment trackSegment = segmentObject.GetComponent<TrackSegment>();
-
-            segmentObject.transform.position = _currentSpawnPoint.position;
-            segmentObject.transform.rotation = _currentSpawnPoint.rotation;
-
-            trackSegment.SpawnObstaclesAndCoins(currentTheme);
-
-            _currentSpawnPoint = trackSegment.GetNextSpawnPoint();
-            _activeSegments.Add(segmentObject);
-        }
-
-        private void DespawnSegment()
-        {
-            GameObject segmentToDespawn = _activeSegments[0];
-            _activeSegments.RemoveAt(0);
-            SegmentPoolManager.Instance.ReturnSegment(segmentToDespawn);
-        }
-
-        private TrackSegment SelectSegmentBasedOnDifficulty()
-        {
-            // Simple difficulty scaling: introduce more complex segments over time.
-            float difficulty = Mathf.Clamp01(_timeAlive / 120f); // Full difficulty at 2 minutes
-            int maxSegmentIndex = (int)(segmentPrefabs.Length * difficulty);
-            int randomIndex = Random.Range(0, Mathf.Max(1, maxSegmentIndex));
-
-            return segmentPrefabs[randomIndex];
         }
     }
+
+    void SpawnCoins(TrackSegment segment, float difficulty)
+    {
+        if (coinPrefab == null) return;
+
+        foreach (Transform coinPath in segment.coinPaths)
+        {
+            CoinPattern pattern = GetCoinPattern(difficulty);
+            switch (pattern)
+            {
+                case CoinPattern.Line:
+                    for (int i = 0; i < 5; i++) CreateCoin(coinPath, new Vector3(0, 0, i * 2f));
+                    break;
+                case CoinPattern.Curve:
+                    for (int i = 0; i < 7; i++) CreateCoin(coinPath, new Vector3(Mathf.Sin(i * 0.5f) * 1.5f, 0, i * 2f));
+                    break;
+                case CoinPattern.ZigZag:
+                    for (int i = 0; i < 8; i++) CreateCoin(coinPath, new Vector3((i % 2 == 0 ? -1 : 1) * 1.5f, 0, i * 1.5f));
+                    break;
+                case CoinPattern.Jump:
+                     for (int i = 0; i < 3; i++) CreateCoin(coinPath, new Vector3(0, i * 0.75f, i * 2f));
+                    break;
+            }
+        }
+    }
+    
+    void SpawnPowerups(TrackSegment segment, float difficulty)
+    {
+        if (powerUpPrefabs == null || powerUpPrefabs.Length == 0) return;
+
+        // Reuse obstacle slots for powerups, but with a lower probability
+        foreach (Transform powerupSlot in segment.obstacleSlots)
+        {
+            // Ensure the slot is empty before placing a powerup
+            if (powerupSlot.childCount == 0 && Random.Range(0f, 1f) < (0.1f * difficulty)) // Lower spawn chance for powerups
+            {
+                int randomIndex = Random.Range(0, powerUpPrefabs.Length);
+                GameObject powerup = Instantiate(powerUpPrefabs[randomIndex], powerupSlot.position, powerupSlot.rotation);
+                powerup.transform.SetParent(powerupSlot);
+            }
+        }
+    }
+
+    private CoinPattern GetCoinPattern(float difficulty)
+    {
+        float chance = Random.Range(0f, 1f);
+        if (chance < 0.4f) return CoinPattern.Line; // Common
+        if (difficulty > 1.2f && chance < 0.7f) return CoinPattern.Curve; // Medium
+        if (difficulty > 1.5f && chance < 0.9f) return CoinPattern.ZigZag; // Hard
+        if (difficulty > 1.8f) return CoinPattern.Jump; // Very Hard
+        return CoinPattern.Line;
+    }
+
+    private void CreateCoin(Transform parent, Vector3 localPosition)
+    {
+        // Instantiate the theme-specific coin prefab
+        GameObject coin = Instantiate(coinPrefab);
+        coin.transform.SetParent(parent);
+        coin.transform.localPosition = localPosition;
+        coin.transform.localRotation = Quaternion.identity;
+    }
+
+    void HandleThemeChange(ThemeConfig newConfig)
+    {
+        if (newConfig != null)
+        {
+            obstaclePrefabs = newConfig.obstaclePrefabs;
+            coinPrefab = newConfig.coinPrefab;
+            powerUpPrefabs = newConfig.powerUpPrefabs;
+        }
+    }
+}
+
+public enum CoinPattern
+{
+    Line,
+    Curve,
+    ZigZag,
+    Jump
 }

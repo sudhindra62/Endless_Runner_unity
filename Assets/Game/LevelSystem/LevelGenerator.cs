@@ -1,28 +1,44 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 public class LevelGenerator : MonoBehaviour
 {
     [Header("Level Generation Settings")]
-    public TrackSegment[] segmentPrefabs; // An array of different segment prefabs
-    public Transform playerTransform; // Reference to the player's transform
-    public float spawnAheadDistance = 50f; // How far ahead of the player to spawn new segments
-    public float recycleBehindDistance = 50f; // How far behind the player to recycle segments
-    public int initialSegments = 5; // Number of segments to spawn at the start
+    public Transform playerTransform;
+    public float spawnAheadDistance = 50f;
+    public float recycleBehindDistance = 50f;
+    public int initialSegments = 5;
 
+    [Header("Difficulty Scaling") guesswork]
+    public PlayerController playerController; 
+
+    private GameObject[] segmentPrefabs;
     private List<TrackSegment> activeSegments = new List<TrackSegment>();
     private Vector3 nextSpawnPoint;
 
     // Difficulty Scaling
     private float timeAlive = 0f;
     private float difficultyMultiplier = 1f;
+    
+    public Action<TrackSegment> OnSegmentSpawned;
+
+    void OnEnable()
+    {
+        ThemeManager.OnThemeChanged += HandleThemeChange;
+    }
+
+    void OnDisable()
+    {
+        ThemeManager.OnThemeChanged -= HandleThemeChange;
+    }
 
     void Start()
     {
         nextSpawnPoint = playerTransform.position;
-        for (int i = 0; i < initialSegments; i++)
+        if (ThemeManager.Instance != null)
         {
-            SpawnSegment();
+            HandleThemeChange(ThemeManager.Instance.CurrentConfig);
         }
     }
 
@@ -43,14 +59,18 @@ public class LevelGenerator : MonoBehaviour
 
     void SpawnSegment()
     {
-        int randomSegmentIndex = Random.Range(0, segmentPrefabs.Length);
-        TrackSegment newSegment = SegmentPoolManager.Instance.GetSegment(randomSegmentIndex);
+        if (segmentPrefabs == null || segmentPrefabs.Length == 0) return;
+
+        int randomSegmentIndex = UnityEngine.Random.Range(0, segmentPrefabs.Length);
+        TrackSegment newSegment = SegmentPoolManager.Instance.GetSegment(segmentPrefabs[randomSegmentIndex]);
         
         newSegment.transform.position = nextSpawnPoint;
         newSegment.transform.rotation = Quaternion.identity;
-
+        
         nextSpawnPoint = newSegment.connectionPoint.position;
         activeSegments.Add(newSegment);
+        
+        OnSegmentSpawned?.Invoke(newSegment);
     }
 
     void RecycleSegment()
@@ -63,11 +83,32 @@ public class LevelGenerator : MonoBehaviour
     void UpdateDifficulty()
     {
         timeAlive += Time.deltaTime;
-        difficultyMultiplier = 1 + (timeAlive / 60f); // Example: difficulty increases every 60 seconds
+        difficultyMultiplier = 1 + (timeAlive / 60f); // Example: Difficulty increases every 60 seconds
+
+        if (playerController != null)
+        {
+            playerController.SetSpeed(playerController.baseMoveSpeed * difficultyMultiplier);
+        }
     }
 
     public float GetDifficultyMultiplier()
     {
         return difficultyMultiplier;
+    }
+
+    void HandleThemeChange(ThemeConfig newConfig)
+    {
+        if (newConfig != null)
+        {
+            segmentPrefabs = newConfig.segmentPrefabs;
+
+            if (activeSegments.Count == 0)
+            {
+                for (int i = 0; i < initialSegments; i++)
+                {
+                    SpawnSegment();
+                }
+            }
+        }
     }
 }

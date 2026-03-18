@@ -1,54 +1,44 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace EndlessRunner.Level
+public class CoinPool : MonoBehaviour
 {
-    public class CoinPool : MonoBehaviour
+    public static CoinPool Instance { get; private set; }
+
+    private Queue<GameObject> coinPool = new Queue<GameObject>();
+
+    public GameObject coinPrefab;
+
+    private void Awake()
     {
-        public static CoinPool Instance { get; private set; }
-
-        public GameObject coinPrefab;
-        public int poolSize = 100;
-
-        private Queue<GameObject> pool = new Queue<GameObject>();
-
-        private void Awake()
+        if (Instance == null)
         {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
+            Instance = this;
         }
-
-        private void Start()
+        else
         {
-            for (int i = 0; i < poolSize; i++)
-            {
-                var coin = Instantiate(coinPrefab);
-                coin.SetActive(false);
-                pool.Enqueue(coin);
-            }
+            Destroy(gameObject);
         }
+    }
 
-        public GameObject GetCoin()
+    public GameObject GetCoin()
+    {
+        if (coinPool.Count > 0)
         {
-            if (pool.Count > 0)
-            {
-                var coin = pool.Dequeue();
-                coin.SetActive(true);
-                return coin;
-            }
-            return Instantiate(coinPrefab);
+            GameObject coin = coinPool.Dequeue();
+            coin.SetActive(true);
+            return coin;
         }
+        else
+        {
+            GameObject newCoin = Instantiate(coinPrefab);
+            return newCoin;
+        }
+    }
 
-        public void ReturnCoin(GameObject coin)
-        {
-            coin.SetActive(false);
-            pool.Enqueue(coin);
-        }
+    public void ReturnCoin(GameObject coin)
+    {
+        coin.SetActive(false);
+        coinPool.Enqueue(coin);
     }
 }

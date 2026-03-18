@@ -12,6 +12,7 @@ public class ThemeConfig : ScriptableObject
     public Material skybox;
     public GameObject[] environmentPrefabs;
     public GameObject[] obstaclePrefabs;
+    public GameObject[] segmentPrefabs; // Added for procedural level generation
     public GameObject coinPrefab;
     public GameObject enemyChaserPrefab;
     public AudioClip music;

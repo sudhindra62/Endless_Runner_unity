@@ -1,15 +1,6 @@
 using UnityEngine;
 
-namespace EndlessRunner.Level
+public class Obstacle : MonoBehaviour
 {
-    public class Obstacle : MonoBehaviour
-    {
-        private void OnTriggerEnter(Collider other)
-        {
-            if (other.CompareTag("Player"))
-            {
-                GameManager.Instance.GameOver();
-            }
-        }
-    }
+    // This script will handle obstacle-specific logic, such as collision with the player.
 }
