@@ -1,103 +1,77 @@
 using UnityEngine;
 using System.Collections.Generic;
-using EndlessRunner.Level;
 
-namespace EndlessRunner.LevelSystem
+namespace EndlessRunner.Level
 {
     public class SpawnController : MonoBehaviour
     {
-        [Header("Configuration")]
-        [SerializeField] private float _spawnDistance = 50f;
-        [SerializeField] private float _despawnDistance = 100f;
-        [SerializeField] private int _initialPoolSize = 5;
+        [Header("Level Generation")]
+        [SerializeField] private Transform playerTransform;
+        [SerializeField] private TrackSegment[] segmentPrefabs;
+        [SerializeField] private int initialSegments = 5;
+        [SerializeField] private float spawnDistance = 50f;
+        [SerializeField] private float despawnDistance = 50f;
 
-        [Header("Segment Prefabs")]
-        [SerializeField] private List<GameObject> _initialSegments;
-        [SerializeField] private List<GameObject> _segmentPrefabs;
-
-        private Transform _playerTransform;
-        private Transform _nextSpawnPoint;
-        private List<TrackSegment> _activeSegments = new List<TrackSegment>();
+        private List<GameObject> _activeSegments = new List<GameObject>();
+        private Transform _currentSpawnPoint;
+        private float _timeAlive = 0f;
 
         private void Start()
         {
-            _playerTransform = GameObject.FindGameObjectWithTag("Player").transform; // Assumes player has "Player" tag
-            InitializeSegmentPools();
-            InitializeLevel();
+            _currentSpawnPoint = transform;
+            for (int i = 0; i < initialSegments; i++)
+            {
+                SpawnSegment();
+            }
         }
 
         private void Update()
         {
-            ManageSegmentSpawning();
-            ManageSegmentDespawning();
-        }
+            _timeAlive += Time.deltaTime;
 
-        private void InitializeSegmentPools()
-        {
-            foreach (var prefab in _segmentPrefabs)
+            if (Vector3.Distance(playerTransform.position, _currentSpawnPoint.position) < spawnDistance)
             {
-                SegmentPoolManager.Instance.CreatePool(prefab, _initialPoolSize);
+                SpawnSegment();
+            }
+
+            if (_activeSegments.Count > 0 && Vector3.Distance(playerTransform.position, _activeSegments[0].transform.position) > despawnDistance)
+            {
+                DespawnSegment();
             }
         }
 
-        private void InitializeLevel()
+        private void SpawnSegment()
         {
-            _nextSpawnPoint = transform; // Start at the controller's position
-            foreach (var segmentPrefab in _initialSegments)
-            {
-                SpawnSegment(segmentPrefab, false); // Don't spawn obstacles/coins on initial segments
-            }
+            ThemeConfig currentTheme = LevelGenerator.Instance.GetCurrentTheme();
+            TrackSegment selectedSegmentPrefab = SelectSegmentBasedOnDifficulty();
+
+            GameObject segmentObject = SegmentPoolManager.Instance.GetSegment(selectedSegmentPrefab.prefab);
+            TrackSegment trackSegment = segmentObject.GetComponent<TrackSegment>();
+
+            segmentObject.transform.position = _currentSpawnPoint.position;
+            segmentObject.transform.rotation = _currentSpawnPoint.rotation;
+
+            trackSegment.SpawnObstaclesAndCoins(currentTheme);
+
+            _currentSpawnPoint = trackSegment.GetNextSpawnPoint();
+            _activeSegments.Add(segmentObject);
         }
 
-        private void ManageSegmentSpawning()
+        private void DespawnSegment()
         {
-            if (_playerTransform == null) return;
-
-            if (Vector3.Distance(_playerTransform.position, _nextSpawnPoint.position) < _spawnDistance)
-            {
-                SpawnRandomSegment();
-            }
+            GameObject segmentToDespawn = _activeSegments[0];
+            _activeSegments.RemoveAt(0);
+            SegmentPoolManager.Instance.ReturnSegment(segmentToDespawn);
         }
 
-        private void ManageSegmentDespawning()
+        private TrackSegment SelectSegmentBasedOnDifficulty()
         {
-            for (int i = _activeSegments.Count - 1; i >= 0; i--)
-            {
-                TrackSegment segment = _activeSegments[i];
-                if (_playerTransform.position.z - segment.endPoint.position.z > _despawnDistance)
-                {
-                    SegmentPoolManager.Instance.ReturnSegment(segment);
-                    _activeSegments.RemoveAt(i);
-                }
-            }
-        }
+            // Simple difficulty scaling: introduce more complex segments over time.
+            float difficulty = Mathf.Clamp01(_timeAlive / 120f); // Full difficulty at 2 minutes
+            int maxSegmentIndex = (int)(segmentPrefabs.Length * difficulty);
+            int randomIndex = Random.Range(0, Mathf.Max(1, maxSegmentIndex));
 
-        private void SpawnRandomSegment()
-        {
-            int randIndex = Random.Range(0, _segmentPrefabs.Count);
-            GameObject prefab = _segmentPrefabs[randIndex];
-            SpawnSegment(prefab, true);
-        }
-
-        private void SpawnSegment(GameObject prefab, bool spawnContent)
-        {
-            TrackSegment segment = SegmentPoolManager.Instance.GetSegment(prefab);
-            segment.transform.position = _nextSpawnPoint.position - segment.startPoint.localPosition;
-            segment.transform.rotation = _nextSpawnPoint.rotation;
-
-            _nextSpawnPoint = segment.GetNextSpawnPoint();
-            _activeSegments.Add(segment);
-
-            if (spawnContent)
-            {
-                // Get theme from LevelGenerator/ThemeManager
-                // This assumes the LevelGenerator holds a reference to the ThemeManager
-                var currentTheme = LevelGenerator.Instance.GetCurrentTheme();
-                if (currentTheme != null)
-                {
-                    segment.SpawnObstaclesAndCoins(currentTheme);
-                }
-            }
+            return segmentPrefabs[randomIndex];
         }
     }
 }

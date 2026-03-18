@@ -1,14 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
-using EndlessRunner.Level;
 
-namespace EndlessRunner.LevelSystem
+namespace EndlessRunner.Level
 {
     public class SegmentPoolManager : MonoBehaviour
     {
         public static SegmentPoolManager Instance { get; private set; }
 
-        private Dictionary<string, Queue<TrackSegment>> _segmentPool = new Dictionary<string, Queue<TrackSegment>>();
+        private Dictionary<GameObject, Queue<GameObject>> _pool = new Dictionary<GameObject, Queue<GameObject>>();
 
         private void Awake()
         {
@@ -18,55 +17,28 @@ namespace EndlessRunner.LevelSystem
                 return;
             }
             Instance = this;
-            DontDestroyOnLoad(gameObject);
         }
 
-        public void CreatePool(GameObject prefab, int initialSize)
+        public GameObject GetSegment(GameObject prefab)
         {
-            if (!_segmentPool.ContainsKey(prefab.name))
+            if (!_pool.ContainsKey(prefab) || _pool[prefab].Count == 0)
             {
-                _segmentPool[prefab.name] = new Queue<TrackSegment>();
-                for (int i = 0; i < initialSize; i++)
-                {
-                    var segment = Instantiate(prefab).GetComponent<TrackSegment>();
-                    segment.gameObject.SetActive(false);
-                    _segmentPool[prefab.name].Enqueue(segment);
-                }
+                return Instantiate(prefab);
             }
+
+            GameObject segment = _pool[prefab].Dequeue();
+            segment.SetActive(true);
+            return segment;
         }
 
-        public TrackSegment GetSegment(GameObject prefab)
+        public void ReturnSegment(GameObject segment)
         {
-            if (_segmentPool.ContainsKey(prefab.name) && _segmentPool[prefab.name].Count > 0)
+            segment.SetActive(false);
+            if (!_pool.ContainsKey(segment.GetComponent<TrackSegment>().prefab))
             {
-                var segment = _segmentPool[prefab.name].Dequeue();
-                segment.gameObject.SetActive(true);
-                return segment;
+                _pool[segment.GetComponent<TrackSegment>().prefab] = new Queue<GameObject>();
             }
-            else
-            {
-                var segment = Instantiate(prefab).GetComponent<TrackSegment>();
-                segment.prefab = prefab;
-                return segment;
-            }
-        }
-
-        public void ReturnSegment(TrackSegment segment)
-        {
-            segment.gameObject.SetActive(false);
-             if (segment.prefab != null) // Check if the prefab info is attached
-            {
-                if (!_segmentPool.ContainsKey(segment.prefab.name))
-                {
-                    _segmentPool[segment.prefab.name] = new Queue<TrackSegment>();
-                }
-                _segmentPool[segment.prefab.name].Enqueue(segment);
-            }
-            else
-            {
-                Debug.LogWarning("Attempted to return a segment to the pool, but its prefab type is unknown. The segment will be destroyed instead.");
-                Destroy(segment.gameObject);
-            }
+            _pool[segment.GetComponent<TrackSegment>().prefab].Enqueue(segment);
         }
     }
 }
