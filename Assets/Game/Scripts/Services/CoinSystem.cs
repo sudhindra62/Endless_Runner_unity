@@ -2,27 +2,26 @@ using UnityEngine;
 
 public class CoinSystem : MonoBehaviour
 {
-    private GameObject _coinPrefab;
-    private GameObjectPool _coinPool;
+    public static CoinSystem Instance { get; private set; }
 
-    public void SetCoinPrefab(GameObject prefab)
+    private void Awake()
     {
-        _coinPrefab = prefab;
-        _coinPool = new GameObjectPool(_coinPrefab);
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
     }
 
-    public void SpawnCoins(Transform path, GameObject coinPrefab)
+    public void SpawnCoinsForPattern(int[] coinLayout, Transform[] coinPaths, GameObject coinPrefab)
     {
-        if (_coinPool == null || _coinPrefab != coinPrefab)
+        for (int i = 0; i < coinLayout.Length; i++)
         {
-            SetCoinPrefab(coinPrefab);
-        }
-
-        for (int i = 0; i < 10; i++)
-        {
-            var coin = _coinPool.Get();
-            coin.transform.position = path.position + Vector3.forward * i;
-            coin.SetActive(true);
+            if (coinLayout[i] != 0)
+            {
+                Instantiate(coinPrefab, coinPaths[i].position, coinPaths[i].rotation);
+            }
         }
     }
 }
