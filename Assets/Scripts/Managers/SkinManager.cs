@@ -11,13 +11,8 @@ public class SkinManager : MonoBehaviour
     [Header("Skin Database")]
     [SerializeField] private List<SkinData> allSkins = new List<SkinData>();
 
-    private List<string> unlockedSkinIDs = new List<string>();
-    private string equippedSkinID;
-
-    private const string UNLOCKED_SKINS_KEY = "UnlockedSkins";
-    private const string EQUIPPED_SKIN_KEY = "EquippedSkin";
-
     public static event Action<SkinData> OnSkinEquipped;
+    public static event Action<string> OnSkinChanged;
 
     private void Awake()
     {
@@ -30,7 +25,6 @@ public class SkinManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        LoadState();
     }
 
     private void Start()
@@ -45,20 +39,24 @@ public class SkinManager : MonoBehaviour
 
     public void UnlockSkin(string skinID)
     {
-        if (!unlockedSkinIDs.Contains(skinID))
+        if (SaveManager.Instance == null) return;
+        
+        if (!SaveManager.Instance.Data.unlockedSkins.Contains(skinID))
         {
-            unlockedSkinIDs.Add(skinID);
-            SaveState();
+            SaveManager.Instance.Data.unlockedSkins.Add(skinID);
+            SaveManager.Instance.SaveGame();
             Debug.Log($"Unlocked skin: {skinID}");
         }
     }
 
     public void EquipSkin(string skinID)
     {
-        if (unlockedSkinIDs.Contains(skinID))
+        if (SaveManager.Instance == null) return;
+
+        if (IsSkinUnlocked(skinID))
         {
-            equippedSkinID = skinID;
-            SaveState();
+            SaveManager.Instance.Data.activeTheme = skinID; // Using activeTheme as skin ID carrier
+            SaveManager.Instance.SaveGame();
             Debug.Log($"Equipped skin: {skinID}");
             
             SkinData skinToApply = GetSkinData(skinID);
@@ -66,43 +64,62 @@ public class SkinManager : MonoBehaviour
             {
                 OnSkinEquipped?.Invoke(skinToApply);
             }
+            OnSkinChanged?.Invoke(skinID);
         }
     }
 
-    public bool IsSkinUnlocked(string skinID) => unlockedSkinIDs.Contains(skinID);
-    public string GetEquippedSkinID() => equippedSkinID;
-    public SkinData GetEquippedSkinData() => GetSkinData(equippedSkinID);
+    public bool IsSkinUnlocked(string skinID) => SaveManager.Instance != null && SaveManager.Instance.Data.unlockedSkins.Contains(skinID);
+    public string GetEquippedSkinID() => SaveManager.Instance != null ? SaveManager.Instance.Data.activeTheme : "";
+    public SkinData GetEquippedSkinData() => GetSkinData(GetEquippedSkinID());
     public List<SkinData> GetAllSkins() => allSkins;
     public SkinData GetSkinData(string skinID) => allSkins.FirstOrDefault(s => s.skinID == skinID);
 
-    private void SaveState()
+    public void SetActiveSkin(SkinData skin)
     {
-        PlayerPrefs.SetString(UNLOCKED_SKINS_KEY, string.Join(",", unlockedSkinIDs));
-        PlayerPrefs.SetString(EQUIPPED_SKIN_KEY, equippedSkinID);
-        PlayerPrefs.Save();
+        if (skin != null) EquipSkin(skin.skinID);
     }
 
-    private void LoadState()
+    public SkinData GetActiveSkin() => GetEquippedSkinData();
+
+    public int GetSkinPrice(SkinData skin)
     {
-        string unlocked = PlayerPrefs.GetString(UNLOCKED_SKINS_KEY, "");
-        if (!string.IsNullOrEmpty(unlocked))
-        {
-            unlockedSkinIDs = unlocked.Split(',').ToList();
-        }
-
-        // Ensure default skins are always unlocked
-        foreach (var skin in allSkins.Where(s => s.isDefault && !unlockedSkinIDs.Contains(s.skinID)))
-        {
-            unlockedSkinIDs.Add(skin.skinID);
-        }
-
-        equippedSkinID = PlayerPrefs.GetString(EQUIPPED_SKIN_KEY, allSkins.FirstOrDefault(s => s.isDefault)?.skinID ?? "");
-
-        // Equip the skin at startup
-        SkinData skinToApply = GetSkinData(equippedSkinID);
-        if (skinToApply != null)
-        {
-            OnSkinEquipped?.Invoke(skinToApply);
-        }
+        return skin != null ? skin.price : 0;
     }
+
+    public void SelectSkin(string skinID)
+    {
+        if (IsSkinUnlocked(skinID)) EquipSkin(skinID);
+    }
+
+    // --- Type Conversion Overloads (Phase 2A: Type Consistency) ---
+
+    public void UnlockSkin(SkinData skin)
+    {
+        if (skin != null) UnlockSkin(skin.skinID);
+    }
+
+    public void EquipSkin(SkinData skin)
+    {
+        if (skin != null) EquipSkin(skin.skinID);
+    }
+
+    public bool IsSkinUnlocked(SkinData skin)
+    {
+        return skin != null && IsSkinUnlocked(skin.skinID);
+    }
+
+    public int GetSkinPrice(string skinID)
+    {
+        var skin = GetSkinData(skinID);
+        return GetSkinPrice(skin);
+    }
+
+    public string GetSkinName(SkinData skin)
+    {
+        return skin != null ? skin.skinID : "";
+    }
+
+    public string GetSelectedSkinID() => GetEquippedSkinID();
+
+    // Note: State is managed by SaveManager. LoadState/SaveState removed to enforce Single Source of Truth [R32].
 }

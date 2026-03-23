@@ -10,11 +10,6 @@ public enum ProductCategory
     Subscriptions
 }
 
-public enum CurrencyType
-{
-    Coins,
-    Gems
-}
 
 [CreateAssetMenu(fileName = "New Product", menuName = "Shop/Product Data")]
 public class ProductData : ScriptableObject

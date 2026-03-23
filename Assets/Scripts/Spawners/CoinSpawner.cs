@@ -1,9 +1,7 @@
 
 using UnityEngine;
-using Core;
 
-namespace Spawners
-{
+
     public class CoinSpawner : MonoBehaviour
     {
         public int coinsToSpawn = 10;
@@ -19,7 +17,7 @@ namespace Spawners
 
         void SpawnCoin()
         {
-            ThemeConfig currentTheme = ThemeManager.Instance.CurrentTheme;
+            ThemeSO currentTheme = ThemeManager.Instance != null ? ThemeManager.Instance.CurrentTheme : null;
             if (currentTheme == null || currentTheme.coinPrefab == null)
             {
                 Debug.LogWarning("Current theme does not have a coin prefab defined.");
@@ -29,7 +27,7 @@ namespace Spawners
             Vector3 randomPosition = transform.position + Random.insideUnitSphere * spawnRadius;
             randomPosition.y = transform.position.y; // Keep coins at the same height
 
-            ObjectPooler.Instance.SpawnFromPool(currentTheme.coinPrefab.name, randomPosition, Quaternion.identity);
+            ObjectPool.Instance.GetObject(currentTheme.coinPrefab, randomPosition, Quaternion.identity);
         }
     }
-}
+

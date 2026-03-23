@@ -49,9 +49,10 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
 
         if (currentDate > lastLoginDate)
         {
-            int streak = PlayerPrefs.GetInt(LoginStreakKey, 0);
+            if (SaveManager.Instance == null) return;
+            int streak = SaveManager.Instance.Data.loginStreak;
 
-            if ((currentDate - lastLoginDate).TotalDays == 1.0)
+            if (lastLoginDate != DateTime.MinValue && (currentDate - lastLoginDate).TotalDays == 1.0)
             {
                 streak++;
             }
@@ -61,7 +62,6 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
             }
 
             OnLoginStreakChanged?.Invoke(streak);
-
             GrantStreakReward(streak);
 
             if (SpinWheelManager.Instance != null)
@@ -69,10 +69,10 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
                 SpinWheelManager.Instance.ResetDailySpins();
             }
 
-            PlayerPrefs.SetString(LastLoginKey, currentDate.ToString("o"));
-            PlayerPrefs.SetInt(LoginStreakKey, streak);
+            SaveManager.Instance.Data.lastLoginTimestamp = currentDate.ToBinary();
+            SaveManager.Instance.Data.loginStreak = streak;
             MarkRewardAsClaimedForDate(currentDate);
-            PlayerPrefs.Save();
+            SaveManager.Instance.SaveGame();
         }
     }
 
@@ -104,29 +104,39 @@ public class DailyLoginManager : Singleton<DailyLoginManager>
 
     private DateTime GetLastLoginDate()
     {
-        string dateString = PlayerPrefs.GetString(LastLoginKey, null);
-        if (string.IsNullOrEmpty(dateString))
+        if (SaveManager.Instance == null || SaveManager.Instance.Data.lastLoginTimestamp == 0)
         {
             return DateTime.MinValue;
         }
-        return DateTime.Parse(dateString).Date;
+        return DateTime.FromBinary(SaveManager.Instance.Data.lastLoginTimestamp).Date;
     }
     
     private bool IsRewardClaimedForDate(DateTime date)
     {
-        return PlayerPrefs.GetInt(LastRewardClaimedKeyPrefix + date.ToString("yyyy-MM-dd"), 0) == 1;
+        string dateKey = date.ToString("yyyy-MM-dd");
+        return SaveManager.Instance != null && SaveManager.Instance.Data.claimedDailyRewards.ContainsKey(dateKey);
     }
 
     private void MarkRewardAsClaimedForDate(DateTime date)
     {
-        PlayerPrefs.SetInt(LastRewardClaimedKeyPrefix + date.ToString("yyyy-MM-dd"), 1);
+        if (SaveManager.Instance == null) return;
+        string dateKey = date.ToString("yyyy-MM-dd");
+        if (!SaveManager.Instance.Data.claimedDailyRewards.ContainsKey(dateKey))
+        {
+            SaveManager.Instance.Data.claimedDailyRewards.Add(dateKey, true);
+        }
     }
     
     [ContextMenu("Reset Daily Login")]
     public void ResetDailyLogin()
     {
-        PlayerPrefs.DeleteKey(LastLoginKey);
-        PlayerPrefs.DeleteKey(LoginStreakKey);
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.lastLoginTimestamp = 0;
+            SaveManager.Instance.Data.loginStreak = 0;
+            SaveManager.Instance.Data.claimedDailyRewards.Clear();
+            SaveManager.Instance.SaveGame();
+        }
         Debug.Log("Daily login data has been reset.");
     }
 }

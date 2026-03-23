@@ -1,8 +1,6 @@
 
 using UnityEngine;
 
-namespace EndlessRunner.Generation.Patterns
-{
     // Enum to define what can be placed in the pattern grid
     public enum PatternItemType { Empty, Obstacle, Coin, Wall }
 
@@ -63,4 +61,3 @@ namespace EndlessRunner.Generation.Patterns
             }
         }
     }
-}

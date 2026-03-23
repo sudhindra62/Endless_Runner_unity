@@ -2,12 +2,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using EndlessRunner.Data;
-using EndlessRunner.AI;
-using EndlessRunner.Security;
 
-namespace EndlessRunner.Economy
-{
+
+
     /// <summary>
     /// A static engine responsible for calculating and awarding shard drops from enemies.
     /// Integrates with PityCounterManager and DropIntegrityValidator.
@@ -78,8 +75,9 @@ namespace EndlessRunner.Economy
         {
             // --- INTEGRITY VALIDATION STEP ---
             string salt = DateTime.UtcNow.Ticks.ToString();
-            string serverHash = DropIntegrityValidator.GenerateDropHash(type, salt);
-            bool isDropValid = DropIntegrityValidator.ValidateDrop(type, salt, serverHash);
+            string shardKey = type.ToString();
+            string serverHash = DropIntegrityValidator.GenerateDropHash(shardKey, salt);
+            bool isDropValid = DropIntegrityValidator.ValidateDrop(shardKey, salt, serverHash);
 
             if (!isDropValid)
             {
@@ -91,17 +89,17 @@ namespace EndlessRunner.Economy
 
             var inventory = DataManager.Instance.GameData.GetShardInventory();
             
-            if (inventory.ContainsKey(type))
+            if (inventory.ContainsKey(shardKey))
             {
-                inventory[type] += quantity;
+                inventory[shardKey] += quantity;
             }
             else
             {
-                inventory[type] = quantity;
+                inventory[shardKey] = quantity;
             }
             
             DataManager.Instance.GameData.SetShardInventory(inventory);
-            DataManager.Instance.SaveData();
+            DataManager.Instance.SaveGameData();
 
             Debug.Log($"SHARD_DROP_ENGINE: Player awarded {quantity}x {type} Shard!");
 
@@ -116,8 +114,10 @@ namespace EndlessRunner.Economy
 
             if(UIManager.Instance != null)
             {
-                UIManager.Instance.UpdateShardCountUI();
+                int totalShards = inventory.ContainsKey(shardKey) ? inventory[shardKey] : 0;
+                UIManager.Instance.UpdateShardCountUI(totalShards);
             }
         }
     }
-}
+
+

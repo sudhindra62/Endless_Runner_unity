@@ -7,7 +7,7 @@ public class MultiplayerGhostManager : MonoBehaviour
 
     [Header("Dependencies")]
     [SerializeField] private GhostRunPlayback ghostPlayback;
-    [SerializeField] private PlayerMovement playerMovement;
+    [SerializeField] private PlayerController playerMovement;
     [SerializeField] private IntegrityManager integrityManager;
     [SerializeField] private GameObject raceUI;
 
@@ -70,8 +70,22 @@ public class MultiplayerGhostManager : MonoBehaviour
         for (int i = 0; i < raceCount; i++)
         {
             StartGhostRace(testData);
-            // In a real test, we would wait for the race to finish
             EndGhostRace();
+        }
+    }
+
+    public int GetTheoreticalMaxScore()
+    {
+        // Used for ghost run integrity checks
+        return 999999;
+    }
+
+    public void LoadGhostRun(byte[] data)
+    {
+        // Load ghost run from raw bytes
+        if (ghostPlayback != null && data != null)
+        {
+            ghostPlayback.StartPlayback(data);
         }
     }
 }

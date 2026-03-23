@@ -1,9 +1,7 @@
-
+﻿
 using System.Collections;
 using UnityEngine;
 
-namespace EndlessRunner.Player
-{
     /// <summary>
     /// Handles all physical movement of the player character, including running, jumping, and lane switching.
     /// It receives commands from the PlayerController and translates them into motion.
@@ -12,6 +10,11 @@ namespace EndlessRunner.Player
     [RequireComponent(typeof(CapsuleCollider))]
     public class CharacterMotor : MonoBehaviour
     {
+        public event System.Action OnJump;
+        public event System.Action OnSlideStart;
+        public event System.Action OnSlideEnd;
+        public event System.Action<int> OnLaneChange;
+
         #region Serialized Fields
         [Header("Movement Settings")]
         [SerializeField] private float forwardSpeed = 10f;
@@ -84,6 +87,7 @@ namespace EndlessRunner.Player
             if (isSliding) return; // Prevent lane changing while sliding
             int newLane = currentLane + direction;
             currentLane = Mathf.Clamp(newLane, -1, 1);
+            OnLaneChange?.Invoke(currentLane);
         }
 
         /// <summary>
@@ -95,6 +99,7 @@ namespace EndlessRunner.Player
             {
                 _rigidbody.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
                 isGrounded = false;
+                OnJump?.Invoke();
             }
         }
         
@@ -120,7 +125,7 @@ namespace EndlessRunner.Player
             // Reset movement state
             currentLane = 0;
             transform.position = new Vector3(0, transform.position.y, 0);
-            _rigidbody.velocity = Vector3.zero;
+            _rigidbody.linearVelocity = Vector3.zero;
             isGrounded = true;
             isSliding = false;
 
@@ -137,6 +142,7 @@ namespace EndlessRunner.Player
         private IEnumerator SlideCoroutine()
         {
             isSliding = true;
+            OnSlideStart?.Invoke();
 
             // Shrink collider
             _collider.height = slideColliderHeight;
@@ -149,6 +155,7 @@ namespace EndlessRunner.Player
             _collider.center = originalColliderCenter;
 
             isSliding = false;
+            OnSlideEnd?.Invoke();
         }
 
         /// <summary>
@@ -162,4 +169,4 @@ namespace EndlessRunner.Player
         }
         #endregion
     }
-}
+

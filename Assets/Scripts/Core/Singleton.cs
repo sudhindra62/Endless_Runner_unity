@@ -1,8 +1,8 @@
 
 using UnityEngine;
 
-namespace EndlessRunner.Core
-{
+
+// Removed namespace EndlessRunner.Core
     /// <summary>
     /// A generic, thread-safe Singleton base class for any MonoBehaviour.
     /// Ensures that only one instance of the Singleton exists in the scene.
@@ -23,7 +23,7 @@ namespace EndlessRunner.Core
                     if (_instance == null)
                     {
                         // Check if an instance already exists in the scene
-                        _instance = FindObjectOfType<T>();
+                        _instance = FindFirstObjectByType<T>();
 
                         if (_instance == null)
                         {
@@ -51,4 +51,3 @@ namespace EndlessRunner.Core
             }
         }
     }
-}

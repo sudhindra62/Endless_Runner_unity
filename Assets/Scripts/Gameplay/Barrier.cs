@@ -1,10 +1,8 @@
 
 using System.Collections;
 using UnityEngine;
-using Core;
 
-namespace Gameplay
-{
+
     /// <summary>
     /// Manages the lifecycle of a barrier obstacle.
     /// It automatically returns itself to an object pool after a specified duration.
@@ -41,4 +39,3 @@ namespace Gameplay
             }
         }
     }
-}

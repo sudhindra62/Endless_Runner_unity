@@ -48,17 +48,22 @@ public class RewardedBoostManager : Singleton<RewardedBoostManager>
 
     private void LoadAdWatchCount()
     {
-        DateTime now = DateTime.Now;
-        DateTime lastReset = DateTime.Parse(PlayerPrefs.GetString(LAST_AD_RESET_KEY, now.ToString()));
+        if (SaveManager.Instance == null) return;
+        
+        DateTime now = DateTime.UtcNow;
+        long lastResetTicks = SaveManager.Instance.Data.lastAdResetTimestamp;
+        DateTime lastReset = lastResetTicks == 0 ? now : new DateTime(lastResetTicks);
+
         if (now.Date > lastReset.Date)
         {
             adsWatchedToday = 0;
-            PlayerPrefs.SetString(LAST_AD_RESET_KEY, now.ToString());
-            PlayerPrefs.SetInt(ADS_WATCHED_KEY, 0);
+            SaveManager.Instance.Data.lastAdResetTimestamp = now.Ticks;
+            SaveManager.Instance.Data.adsWatchedToday = 0;
+            SaveManager.Instance.SaveGame();
         }
         else
         {
-            adsWatchedToday = PlayerPrefs.GetInt(ADS_WATCHED_KEY, 0);
+            adsWatchedToday = SaveManager.Instance.Data.adsWatchedToday;
         }
     }
 
@@ -78,7 +83,11 @@ public class RewardedBoostManager : Singleton<RewardedBoostManager>
     private void HandleRewardedAdSuccess(BoostRewardData boostData) // This would be the callback from the ad manager
     {
         adsWatchedToday++;
-        PlayerPrefs.SetInt(ADS_WATCHED_KEY, adsWatchedToday);
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.adsWatchedToday = adsWatchedToday;
+            SaveManager.Instance.SaveGame();
+        }
 
         ActivateBoost(boostData);
     }
@@ -110,7 +119,7 @@ public class RewardedBoostManager : Singleton<RewardedBoostManager>
             case BoostType.BonusChest:
                 if (RewardManager.Instance != null && boostData.immediateRewardPrefab != null)
                 {
-                    RewardManager.Instance.GrantReward(boostData.immediateRewardPrefab);
+                    RewardManager.Instance.GrantReward(boostData.immediateRewardPrefab.name, 1);
                 }
                 break;
             case BoostType.ExtraBonusRun:

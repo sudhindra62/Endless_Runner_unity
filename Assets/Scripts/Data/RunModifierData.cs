@@ -39,5 +39,28 @@ public enum ModifierType
     PowerUpDurationMultiplier,
 
     // Visual Modifiers
-    VisionFog
+    VisionFog,
+
+    // Skill Tree and LiveOps Merged
+    None,
+    MagnetRadiusBoost,
+    ShieldDurationBoost,
+    CoinDoublerDurationBoost,
+    CoinValueBoost,
+    StyleBonusBoost,
+    ComboTimeoutBoost,
+    FeverDurationBoost,
+    FusionDurationBoost,
+    ReviveCostReduction,
+    SpeedCapIncrease,
+    DifficultyReduction,
+    BaseSpeedIncrease,
+    Difficulty,
+    PowerUpDuration,
+    DropRate,
+    AdFrequency,
+    ReviveCost,
+    BossInterval,
+    LeagueThreshold,
+    RiskReward
 }

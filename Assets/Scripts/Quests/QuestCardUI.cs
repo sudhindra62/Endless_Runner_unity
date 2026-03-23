@@ -26,16 +26,35 @@ public class QuestCardUI : MonoBehaviour
     {
         this.questTracker = tracker;
         this.ownerPanel = panel;
-        
-        // Remove any previous listeners to prevent stacking
         claimButton.onClick.RemoveAllListeners();
         rerollButton.onClick.RemoveAllListeners();
-
-        // Add fresh listeners
         claimButton.onClick.AddListener(OnClaim);
         rerollButton.onClick.AddListener(OnReroll);
-        
         UpdateUI();
+    }
+
+    // Overload for plain Quest (used by QuestPanelUI with basic Quest objects)
+    public void SetQuestData(Quest quest)
+    {
+        if (descriptionText != null) descriptionText.text = quest?.description ?? "";
+        if (claimButton != null)
+        {
+            claimButton.onClick.RemoveAllListeners();
+            claimButton.onClick.AddListener(() =>
+            {
+                if (QuestManager.Instance != null) QuestManager.Instance.ClaimReward(quest);
+            });
+        }
+        if (rerollButton != null)
+        {
+            rerollButton.onClick.RemoveAllListeners();
+            rerollButton.onClick.AddListener(() =>
+            {
+                if (QuestManager.Instance != null) QuestManager.Instance.RerollQuest(quest);
+            });
+        }
+        if (progressBar != null) progressBar.value = quest != null && quest.isCompleted ? 1 : 0;
+        if (claimButton != null) claimButton.gameObject.SetActive(quest != null && quest.isCompleted);
     }
 
     private void UpdateUI()

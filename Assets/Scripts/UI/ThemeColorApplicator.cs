@@ -1,27 +1,22 @@
 
-using EndlessRunner.Themes;
+
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace EndlessRunner.UI
-{
     public class ThemeColorApplicator : MonoBehaviour
     {
         private void Start()
         {
-            ThemeManager.Instance.OnThemeChanged += ApplyThemeColors;
-            ApplyThemeColors(ThemeManager.Instance.GetCurrentTheme());
+            ThemeManager.OnThemeChanged += ApplyThemeColors;
+            ApplyThemeColors(ThemeManager.Instance != null ? ThemeManager.Instance.GetCurrentTheme() : null);
         }
 
         private void OnDestroy()
         {
-            if (ThemeManager.Instance != null)
-            {
-                ThemeManager.Instance.OnThemeChanged -= ApplyThemeColors;
-            }
+            ThemeManager.OnThemeChanged -= ApplyThemeColors;
         }
 
-        private void ApplyThemeColors(ThemeData theme)
+        private void ApplyThemeColors(ThemeSO theme)
         {
             if (theme == null) return;
 
@@ -40,4 +35,4 @@ namespace EndlessRunner.UI
             }
         }
     }
-}
+

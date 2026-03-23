@@ -40,14 +40,14 @@ public class RiskLaneManager : MonoBehaviour
     {
         // --- PRESERVED: Original event subscriptions ---
         EnvironmentEventManager.OnWorldEvent += HandleWorldEvent;
-        GameStateManager.OnGameStateChanged += HandleGameStateChanged;
+        if (GameStateManager.Instance != null) GameStateManager.Instance.OnGameStateChanged += HandleGameStateChanged;
         RemoteConfig.OnConfigUpdated += HandleConfigUpdated;
 
         // --- INTEGRATION: Subscribe to DecisionPathManager events for compatibility ---
         DecisionPathManager.OnPathSplit += HandlePathSplit;
         DecisionPathManager.OnPathMerge += HandlePathMerge;
 
-        if (GameStateManager.Instance.CurrentState == GameState.Playing)
+        if (GameStateManager.Instance.CurrentState == GameStateManager.GameState.Playing)
         {
             StartRiskCycle();
         }
@@ -57,7 +57,7 @@ public class RiskLaneManager : MonoBehaviour
     {
         // --- PRESERVED: Original event unsubscriptions ---
         EnvironmentEventManager.OnWorldEvent -= HandleWorldEvent;
-        GameStateManager.OnGameStateChanged -= HandleGameStateChanged;
+        if (GameStateManager.Instance != null) GameStateManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
         RemoteConfig.OnConfigUpdated -= HandleConfigUpdated;
         
         // --- INTEGRATION: Unsubscribe from DecisionPathManager events ---
@@ -100,9 +100,9 @@ public class RiskLaneManager : MonoBehaviour
     }
 
     // --- PRESERVED & ADAPTED: Now checks for the new compatibility flag ---
-    private void HandleGameStateChanged(GameState newState)
+    private void HandleGameStateChanged(GameStateManager.GameState newState)
     {
-        if (newState == GameState.Playing && !isDecisionPathActive)
+        if (newState == GameStateManager.GameState.Playing && !isDecisionPathActive)
         {
             StartRiskCycle();
         }

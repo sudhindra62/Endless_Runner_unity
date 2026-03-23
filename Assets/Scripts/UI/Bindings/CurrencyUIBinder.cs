@@ -1,8 +1,6 @@
 using UnityEngine;
 using TMPro;
 
-namespace EndlessRunner.UI.Bindings
-{
     /// <summary>
     /// Display-only binder for coins & gems UI.
     /// Reacts to DataManager static events.
@@ -36,7 +34,7 @@ namespace EndlessRunner.UI.Bindings
         {
             // ADDED: Prevent overwriting in-run score UI
             if (GameStateManager.Instance != null &&
-                GameStateManager.Instance.CurrentState == GameState.Playing)
+                GameStateManager.Instance.CurrentState == GameStateManager.GameState.Playing)
             {
                 return;
             }
@@ -51,4 +49,3 @@ namespace EndlessRunner.UI.Bindings
                 gemsText.text = value.ToString();
         }
     }
-}

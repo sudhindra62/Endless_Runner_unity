@@ -1,13 +1,11 @@
 
-using EndlessRunner.Themes;
+
 using UnityEngine;
 
-namespace EndlessRunner.UI
-{
     public class ThemeSwitcher : MonoBehaviour
     {
         [SerializeField]
-        private ThemeData[] themes;
+        private ThemeSO[] themes;
         private int currentThemeIndex = 0;
 
         private void Start()
@@ -26,4 +24,4 @@ namespace EndlessRunner.UI
             ThemeManager.Instance.SetTheme(themes[currentThemeIndex]);
         }
     }
-}
+

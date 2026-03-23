@@ -19,4 +19,11 @@ public class BattlePassTier : ScriptableObject
 
     [Tooltip("The list of rewards for the premium track.")]
     public List<RewardItem> premiumRewards;
+
+    // --- Single-item compatibility aliases for BattlePassManager.GetSeasonRewards() ---
+    public RewardItem freeReward    => (freeRewards    != null && freeRewards.Count    > 0) ? freeRewards[0]    : default;
+    public RewardItem premiumReward => (premiumRewards != null && premiumRewards.Count > 0) ? premiumRewards[0] : default;
+
+    public bool HasFreeReward(int index = 0) => freeRewards != null && index < freeRewards.Count;
+    public bool HasPremiumReward(int index = 0) => premiumRewards != null && index < premiumRewards.Count;
 }

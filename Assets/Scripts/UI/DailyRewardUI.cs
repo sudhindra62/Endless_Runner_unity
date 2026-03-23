@@ -1,11 +1,8 @@
 
-using EndlessRunner.Managers;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-namespace EndlessRunner.UI
-{
     public class DailyRewardUI : MonoBehaviour
     {
         public GameObject rewardScreen;
@@ -14,7 +11,7 @@ namespace EndlessRunner.UI
         public Button closeButton;
         public TextMeshProUGUI rewardText;
 
-        private Reward dailyReward;
+        private DailyRewardItem dailyReward;
 
         private void Start()
         {
@@ -69,4 +66,3 @@ namespace EndlessRunner.UI
             rewardScreen.SetActive(false);
         }
     }
-}

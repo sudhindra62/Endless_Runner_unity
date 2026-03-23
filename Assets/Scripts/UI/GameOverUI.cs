@@ -1,12 +1,9 @@
 
-using EndlessRunner.Managers;
-using EndlessRunner.Monetization;
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace EndlessRunner.UI
-{
     public class GameOverUI : MonoBehaviour
     {
         public GameObject gameOverScreen;
@@ -38,10 +35,10 @@ namespace EndlessRunner.UI
             {
                 if (rewardType == RewardType.Revive)
                 {
-                    GameManager.Instance.SetState(GameManager.GameState.Playing);
+                    GameManager.Instance.SetState(GameState.Playing);
                     gameOverScreen.SetActive(false);
                 }
             });
         }
     }
-}
+

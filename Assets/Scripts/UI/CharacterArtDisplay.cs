@@ -47,4 +47,9 @@ public class CharacterArtDisplay : MonoBehaviour
             characterImage.enabled = false;
         }
     }
+
+    private void UpdateCharacterArt(string skinId)
+    {
+        UpdateCharacterArt();
+    }
 }

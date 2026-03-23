@@ -16,4 +16,11 @@ public class CosmeticEffectData
 
     [Tooltip("The prefab to instantiate when this effect is equipped.")]
     public GameObject EffectPrefab;
+    public GameObject effectPrefab => EffectPrefab;
+
+    public string effectID => EffectID;
+    public CosmeticRarity rarity;
+    public string unlockMethod;
+    public CosmeticEffectType effectType;
+    public string effectIDAlias => EffectID;
 }

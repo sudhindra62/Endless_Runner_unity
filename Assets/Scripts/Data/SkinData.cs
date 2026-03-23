@@ -22,6 +22,21 @@ public class SkinData : ScriptableObject
     [Tooltip("The cost of the skin in gems.")]
     public int gemCost;
 
+    [Tooltip("The rarity of the skin.")]
+    public CosmeticRarity rarity;
+
+    [Tooltip("The method used to unlock this skin.")]
+    public SkinUnlockType unlockType;
+
     [Tooltip("Is this the default skin? There should only be one.")]
     public bool isDefault = false;
+    
+    [Tooltip("Sprite for UI display and preview.")]
+    public Sprite sprite; // ADDED: Missing sheet/icon
+    
+    [Tooltip("Character art for full-body preview.")]
+    public Sprite characterArt; // ADDED: Missing character visual
+    
+    [Tooltip("Price value (alias for gemCost).")]
+    public int price; // ADDED: Price alias field
 }

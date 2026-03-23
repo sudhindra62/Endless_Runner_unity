@@ -16,13 +16,13 @@ public class CreateThemeConfigs : EditorWindow
 
             if (!File.Exists(assetPath))
             {
-                ThemeConfig newConfig = ScriptableObject.CreateInstance<ThemeConfig>();
+                ThemeSO newConfig = ScriptableObject.CreateInstance<ThemeSO>();
                 AssetDatabase.CreateAsset(newConfig, assetPath);
-                Debug.Log($"Created ThemeConfig asset for {Path.GetFileName(themeFolderPath)} at: {assetPath}");
+                Debug.Log($"Created ThemeSO asset for {Path.GetFileName(themeFolderPath)} at: {assetPath}");
             }
             else
             {
-                Debug.Log($"ThemeConfig asset already exists for {Path.GetFileName(themeFolderPath)}.");
+                Debug.Log($"ThemeSO asset already exists for {Path.GetFileName(themeFolderPath)}.");
             }
         }
 

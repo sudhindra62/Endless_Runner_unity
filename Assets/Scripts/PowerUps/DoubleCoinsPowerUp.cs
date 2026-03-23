@@ -1,9 +1,7 @@
 
 using UnityEngine;
-using Managers;
 
-namespace PowerUps
-{
+
     public class DoubleCoinsPowerUp : PowerUp
     {
         public override void ApplyEffect()
@@ -12,10 +10,10 @@ namespace PowerUps
             Invoke(nameof(RemoveEffect), duration);
         }
 
-        private void RemoveEffect()
+        public override void RemoveEffect()
         {
             ScoreManager.Instance.CoinMultiplier = 1;
             Destroy(gameObject);
         }
     }
-}
+

@@ -13,34 +13,30 @@ public class CollectionInventoryManager : Singleton<CollectionInventoryManager>
 
     public void AddFragments(CollectionItemData itemData, int amount)
     {
+        if (SaveManager.Instance == null) return;
+        
         string key = itemData.itemName;
-        if (!fragmentCounts.ContainsKey(key))
+        if (!SaveManager.Instance.Data.fragmentInventory.ContainsKey(key))
         {
-            fragmentCounts[key] = 0;
+            SaveManager.Instance.Data.fragmentInventory[key] = 0;
         }
-        fragmentCounts[key] += amount;
-        SaveFragmentCount(key, fragmentCounts[key]);
+        SaveManager.Instance.Data.fragmentInventory[key] += amount;
+        SaveManager.Instance.SaveGame();
+        
         OnInventoryChanged?.Invoke(itemData);
     }
 
     public int GetFragmentCount(CollectionItemData itemData)
     {
+        if (SaveManager.Instance == null) return 0;
+        
         string key = itemData.itemName;
-        if (!fragmentCounts.ContainsKey(key))
+        if (SaveManager.Instance.Data.fragmentInventory.TryGetValue(key, out int count))
         {
-            fragmentCounts[key] = LoadFragmentCount(key);
+            return count;
         }
-        return fragmentCounts[key];
+        return 0;
     }
 
-    private void SaveFragmentCount(string key, int count)
-    {
-        PlayerPrefs.SetInt(FRAGMENT_COUNT_KEY_PREFIX + key, count);
-        PlayerPrefs.Save();
-    }
-
-    private int LoadFragmentCount(string key)
-    {
-        return PlayerPrefs.GetInt(FRAGMENT_COUNT_KEY_PREFIX + key, 0);
-    }
+    // Legacy methods removed in favor of direct GameData access
 }

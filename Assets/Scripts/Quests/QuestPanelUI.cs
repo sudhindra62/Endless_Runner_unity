@@ -35,18 +35,18 @@ public class QuestPanelUI : MonoBehaviour
 
         ClearTabs();
 
-        List<QuestProgressTracker> activeQuests = QuestManager.Instance.activeQuests;
-
-        foreach (var questTracker in activeQuests)
+        // Use Quest directly since QuestManager stores Quest objects
+        foreach (var quest in QuestManager.Instance.activeQuests)
         {
-            Transform parentTab = GetParentTab(questTracker.questData.questType);
+            // Simple placement — all in daily tab by default if no questType
+            Transform parentTab = dailyTabContent;
             if (parentTab != null)
             {
                 GameObject cardGO = Instantiate(cardPrefab, parentTab);
                 QuestCardUI cardUI = cardGO.GetComponent<QuestCardUI>();
                 if (cardUI != null)
                 {
-                    cardUI.SetQuestData(questTracker, this);
+                    cardUI.SetQuestData(quest);
                 }
             }
         }

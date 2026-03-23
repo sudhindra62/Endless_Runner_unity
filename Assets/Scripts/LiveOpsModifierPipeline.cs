@@ -2,12 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace EndlessRunner.LiveOps
-{
-    public enum ModifierType
-    {
-        Difficulty, PowerUpDuration, DropRate, AdFrequency, ReviveCost, BossInterval, LeagueThreshold, RiskReward
-    }
 
     /// <summary>
     /// A single, stateless modifier to be applied at runtime.
@@ -73,4 +67,4 @@ namespace EndlessRunner.LiveOps
             return _modifiers[type].Last().Value;
         }
     }
-}
+

@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "NewChestData", menuName = "Endless Runner/Chest Data")]
@@ -14,6 +15,9 @@ public class ChestData : ScriptableObject
         public int maxAmount;
         [Range(0f, 1f)] public float dropChance; // 0 to 1 chance
     }
+
+    public string chestId;
+    public float cooldownHours;
 
     public string chestName;
     public Sprite chestIcon;

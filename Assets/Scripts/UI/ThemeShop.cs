@@ -1,10 +1,8 @@
+﻿
 
-using EndlessRunner.Themes;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace EndlessRunner.UI
-{
     public class ThemeShop : MonoBehaviour
     {
         public GameObject themeShopItemPrefab;
@@ -22,4 +20,4 @@ namespace EndlessRunner.UI
         }
     }
 
-}
+

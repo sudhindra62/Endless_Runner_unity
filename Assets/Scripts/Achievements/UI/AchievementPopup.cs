@@ -2,10 +2,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
-using Achievements;
 
-namespace Achievements.UI
-{
+
     /// <summary>
     /// Displays a notification popup when an achievement is unlocked.
     /// </summary>
@@ -78,4 +76,4 @@ namespace Achievements.UI
             _canvasGroup.alpha = endAlpha;
         }
     }
-}
+

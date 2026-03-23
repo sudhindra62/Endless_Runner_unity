@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// This script is dedicated to detecting and analyzing "perfect" dodges.
-/// It works closely with the PlayerMovement script to provide more granular data
+/// It works closely with the PlayerController script to provide more granular data
 /// on player performance, which is then fed into the analytics system.
 /// </summary>
 public class PerfectDodgeDetector : MonoBehaviour
@@ -11,11 +11,11 @@ public class PerfectDodgeDetector : MonoBehaviour
     [Tooltip("The time window (in seconds) for a dodge to be considered 'perfect'.")]
     [SerializeField] private float perfectDodgeTimeWindow = 0.2f;
 
-    private PlayerMovement playerMovement;
+    private PlayerController playerMovement;
 
     private void Awake()
     {
-        playerMovement = GetComponent<PlayerMovement>();
+        playerMovement = GetComponent<PlayerController>();
     }
 
     /// <summary>

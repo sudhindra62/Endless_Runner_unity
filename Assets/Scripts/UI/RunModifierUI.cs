@@ -28,7 +28,7 @@ public class RunModifierUI : MonoBehaviour
     private void OnGameStateChanged(GameState newState)
     {
         // Hide the panel when the run ends or we go back to the menu
-        if (newState == GameState.EndOfRun || newState == GameState.Menu)
+        if (newState == GameState.EndOfRun || newState == GameState.MainMenu)
         {
             ClearModifierDisplay();
             modifierPanel.SetActive(false);

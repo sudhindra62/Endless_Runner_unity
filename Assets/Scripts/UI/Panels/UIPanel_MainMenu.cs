@@ -8,6 +8,8 @@ using UnityEngine.UI;
 /// </summary>
 public class UIPanel_MainMenu : UIPanel
 {
+    public override UIPanelType PanelType => UIPanelType.MainMenu;
+
     [SerializeField] private Button playButton;
     [SerializeField] private Button quitButton;
 

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 /// Defines the rewards for a specific league tier for both weekly and seasonal cadences.
 /// </summary>
 [Serializable]
-public class LeagueRewardData
+public class LeagueTierRewardConfig
 {
     public string TierName;
     public int TierLevel;

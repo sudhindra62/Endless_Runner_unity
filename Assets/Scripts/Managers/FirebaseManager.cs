@@ -1,9 +1,6 @@
-
-using EndlessRunner.Core;
+﻿
 using UnityEngine;
 
-namespace EndlessRunner.Managers
-{
     public class FirebaseManager : Singleton<FirebaseManager>
     {
         protected override void Awake()
@@ -18,4 +15,4 @@ namespace EndlessRunner.Managers
             Debug.Log("FIREBASE_MANAGER: Firebase SDK initialized.");
         }
     }
-}
+

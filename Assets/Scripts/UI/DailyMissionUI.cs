@@ -35,6 +35,26 @@ public class DailyMissionUI : MonoBehaviour
         UpdateMissionDisplay(mission);
     }
 
+    public void Setup(Mission mission)
+    {
+        if (mission == null) return;
+
+        currentMission = new MissionState
+        {
+            missionId = mission.missionId,
+            progress = mission.currentProgress,
+            target = mission.TargetValue,
+            isClaimed = false,
+            data = ScriptableObject.CreateInstance<MissionData>()
+        };
+        currentMission.data.missionId = mission.missionId;
+        currentMission.data.missionDescription = mission.Description;
+        currentMission.data.goal = Mathf.RoundToInt(mission.TargetValue);
+        currentMission.data.rewardAmount = mission.coinReward;
+
+        UpdateMissionDisplay(currentMission);
+    }
+
     private void UpdateMissionDisplay(MissionState mission)
     {
         if (mission.data.missionId != currentMission.data.missionId) return;
@@ -56,6 +76,17 @@ public class DailyMissionUI : MonoBehaviour
             claimButton.gameObject.SetActive(true);
             completedOverlay.SetActive(false);
         }
+    }
+
+    private void UpdateMissionDisplay(Mission mission, float progress)
+    {
+        if (currentMission == null || mission == null) return;
+        if (currentMission.missionId != mission.missionId) return;
+
+        currentMission.progress = progress;
+        currentMission.target = mission.TargetValue;
+        currentMission.data.description = mission.Description;
+        UpdateMissionDisplay(currentMission);
     }
 
     private void OnClaimButtonPressed()

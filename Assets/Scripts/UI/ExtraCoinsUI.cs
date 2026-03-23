@@ -1,11 +1,8 @@
+﻿
 
-using EndlessRunner.Managers;
-using EndlessRunner.Monetization;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace EndlessRunner.UI
-{
     public class ExtraCoinsUI : MonoBehaviour
     {
         public GameObject extraCoinsScreen;
@@ -40,4 +37,4 @@ namespace EndlessRunner.UI
             extraCoinsScreen.SetActive(false);
         }
     }
-}
+

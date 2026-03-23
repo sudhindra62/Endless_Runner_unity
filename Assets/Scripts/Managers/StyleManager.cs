@@ -6,7 +6,12 @@ using UnityEngine;
 /// </summary>
 public class StyleManager : MonoBehaviour
 {
+    public static StyleManager Instance { get; private set; }
     public int StylePoints { get; private set; }
+    public float BonusMultiplier { get; private set; } = 1f;
+    public float currentStyle => StylePoints;
+    public float maxStyle => 100f;
+    public float CurrentMultiplier => BonusMultiplier;
 
     [Header("Style Point Configuration")]
     [SerializeField] private int pointsForNearMiss = 10;
@@ -14,6 +19,7 @@ public class StyleManager : MonoBehaviour
 
     private void Start()
     {
+        if (Instance == null) Instance = this;
         // Reset style points at the start of a run
         ResetStylePoints();
     }
@@ -42,5 +48,9 @@ public class StyleManager : MonoBehaviour
     public void ResetStylePoints()
     {
         StylePoints = 0;
+        BonusMultiplier = 1f;
     }
+
+    public void SetBonusMultiplier(float multiplier) => BonusMultiplier = multiplier;
+    public float GetBonusMultiplier() => BonusMultiplier;
 }

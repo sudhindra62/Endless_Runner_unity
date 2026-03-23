@@ -35,11 +35,8 @@ public class SwipeInput : MonoBehaviour
     private void Start()
     {
         playerController = ServiceLocator.Get<PlayerController>();
-        if (playerController != null)
-        {
-            OnSwipe += playerController.OnSwipe;
-            OnTap += playerController.OnTap;
-        }
+        OnSwipe += HandleSwipe;
+        OnTap += HandleTap;
     }
 
     private void OnEnable()
@@ -118,6 +115,22 @@ public class SwipeInput : MonoBehaviour
         else if (Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             OnTap?.Invoke();
+        }
+    }
+
+    private void HandleSwipe(Vector2 direction)
+    {
+        if (playerController != null)
+        {
+            playerController.HandleSwipe(direction);
+        }
+    }
+
+    private void HandleTap()
+    {
+        if (playerController != null)
+        {
+            playerController.HandleTap();
         }
     }
 }

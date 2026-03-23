@@ -66,6 +66,6 @@ public class PerformanceManager : MonoBehaviour
     public void SetTargetFrameRate(int rate)
     {
         targetFrameRate = rate;
-        Application.targetFramerate = targetFrameRate;
+        Application.targetFrameRate = targetFrameRate;
     }
 }

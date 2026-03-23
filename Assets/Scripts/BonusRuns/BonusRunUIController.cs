@@ -24,7 +24,7 @@ public class BonusRunUIController : MonoBehaviour
         // Initialize with current bonus runs
         if (BonusRunManager.Instance != null)
         {
-            UpdateBonusRunsText(PlayerPrefs.GetInt("BonusRunsRemaining", BonusRunManager.Instance.bonusRunData.bonusRunsPerDay));
+            UpdateBonusRunsText(BonusRunManager.Instance.GetBonusRunsRemaining());
         }
 
         if (purchaseBonusRunsButton != null)

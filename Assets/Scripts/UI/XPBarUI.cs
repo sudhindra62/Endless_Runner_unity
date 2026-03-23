@@ -51,14 +51,14 @@ public class XPBarUI : MonoBehaviour
     /// <summary>
     /// Callback method that responds to the OnXPChanged event from PlayerProgression.
     /// </summary>
-    private void HandleXPChanged(int currentXP, int xpForThisLevel, int xpForNextLevel)
+    private void HandleXPChanged(long currentXP, long xpForNextLevel)
     {
-        float targetFillAmount = (float)(currentXP - xpForThisLevel) / (xpForNextLevel - xpForThisLevel);
+        float targetFillAmount = xpForNextLevel > 0 ? (float)currentXP / xpForNextLevel : 0f;
 
         // Update the text immediately
         if (xpText != null)
         {
-            xpText.text = $"{currentXP - xpForThisLevel} / {xpForNextLevel - xpForThisLevel}";
+            xpText.text = $"{currentXP} / {xpForNextLevel}";
         }
 
         // Animate the fill amount smoothly

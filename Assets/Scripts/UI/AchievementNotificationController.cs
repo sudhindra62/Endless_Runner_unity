@@ -1,10 +1,7 @@
+﻿
 
-using EndlessRunner.Achievements;
-using EndlessRunner.Core;
 using UnityEngine;
 
-namespace EndlessRunner.UI
-{
     public class AchievementNotificationController : MonoBehaviour
     {
         [SerializeField] private AchievementItemUI notificationPrefab;
@@ -21,11 +18,16 @@ namespace EndlessRunner.UI
             GameEvents.OnAchievementUnlocked -= ShowNotification;
         }
 
-        private void ShowNotification(Achievement achievement)
+        private void ShowNotification(string achievementId)
         {
+            Achievement achievement = AchievementManager.Instance != null
+                ? AchievementManager.Instance.GetAchievementByID(achievementId)
+                : null;
+            if (achievement == null) return;
+
             var notification = Instantiate(notificationPrefab, notificationContainer);
             notification.Setup(achievement);
             Destroy(notification.gameObject, notificationDisplayTime);
         }
     }
-}
+

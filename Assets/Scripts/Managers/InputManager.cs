@@ -1,81 +1,109 @@
-
 using System;
 using UnityEngine;
-using EndlessRunner.Core;
 using UnityEngine.InputSystem;
 
-namespace EndlessRunner.Managers
+/// <summary>
+/// A centralized manager for handling all player input using the New Input System.
+/// Supports Keyboard (PC) and Swipes (Mobile).
+/// Global scope Singleton for project-wide accessibility.
+/// </summary>
+public enum SwipeDirection { None, Up, Down, Left, Right }
+
+public class InputManager : Singleton<InputManager>
 {
-    public enum SwipeDirection
+    // --- Events ---
+    public event Action<SwipeDirection> OnSwipe;
+    public event Action<int> OnLaneChange; // -1 for left, 1 for right
+    public event Action OnJump;
+
+    [Header("Swipe Configuration")]
+    [SerializeField] private float minSwipeDistance = 50f;
+    [SerializeField] private float maxSwipeTime = 1f;
+
+    private Vector2 _touchStartPos;
+    private float _touchStartTime;
+
+    private void Update()
     {
-        None, Up, Down, Left, Right
+        HandleKeyboardInput();
+        HandleTouchInput();
     }
 
-    public class InputManager : Singleton<InputManager>
+    private void HandleKeyboardInput()
     {
-        public event Action<SwipeDirection> OnSwipe;
+        if (Keyboard.current == null) return;
 
-        [Header("Swipe Configuration")]
-        [SerializeField] private float minSwipeDistance = 50f;
-        [SerializeField] private float maxSwipeTime = 1f;
-
-        private Vector2 _touchStartPos;
-        private float _touchStartTime;
-
-        private void Update()
+        if (Keyboard.current.upArrowKey.wasPressedThisFrame || Keyboard.current.wKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame)
         {
-            // --- Keyboard Input for Editor/PC ---
-            if (Keyboard.current.upArrowKey.wasPressedThisFrame)
-            {
-                OnSwipe?.Invoke(SwipeDirection.Up);
-            }
-            else if (Keyboard.current.downArrowKey.wasPressedThisFrame)
-            {
-                OnSwipe?.Invoke(SwipeDirection.Down);
-            }
-            else if (Keyboard.current.leftArrowKey.wasPressedThisFrame)
-            {
-                OnSwipe?.Invoke(SwipeDirection.Left);
-            }
-            else if (Keyboard.current.rightArrowKey.wasPressedThisFrame)
-            {
-                OnSwipe?.Invoke(SwipeDirection.Right);
-            }
+            OnSwipe?.Invoke(SwipeDirection.Up);
+            OnJump?.Invoke();
+        }
+        else if (Keyboard.current.downArrowKey.wasPressedThisFrame || Keyboard.current.sKey.wasPressedThisFrame)
+        {
+            OnSwipe?.Invoke(SwipeDirection.Down);
+        }
+        else if (Keyboard.current.leftArrowKey.wasPressedThisFrame || Keyboard.current.aKey.wasPressedThisFrame)
+        {
+            OnSwipe?.Invoke(SwipeDirection.Left);
+            OnLaneChange?.Invoke(-1);
+        }
+        else if (Keyboard.current.rightArrowKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
+        {
+            OnSwipe?.Invoke(SwipeDirection.Right);
+            OnLaneChange?.Invoke(1);
+        }
+    }
 
-            // --- Touch Input for Mobile ---
-            if (Touchscreen.current == null) return; // No touchscreen present
+    private void HandleTouchInput()
+    {
+        if (Touchscreen.current == null) return;
 
-            if (Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
-            {
-                _touchStartPos = Touchscreen.current.primaryTouch.position.ReadValue();
-                _touchStartTime = Time.time;
-            }
-
-            if (Touchscreen.current.primaryTouch.press.wasReleasedThisFrame)
-            {
-                if (Time.time - _touchStartTime > maxSwipeTime) return; // Swipe was too slow
-
-                Vector2 touchEndPos = Touchscreen.current.primaryTouch.position.ReadValue();
-                Vector2 delta = touchEndPos - _touchStartPos;
-
-                if (delta.magnitude < minSwipeDistance) return; // Swipe was too short
-
-                DetectSwipe(delta);
-            }
+        if (Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
+        {
+            _touchStartPos = Touchscreen.current.primaryTouch.position.ReadValue();
+            _touchStartTime = Time.time;
         }
 
-        private void DetectSwipe(Vector2 delta)
+        if (Touchscreen.current.primaryTouch.press.wasReleasedThisFrame)
         {
-            // Use the larger axis of movement to determine swipe direction
-            if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
+            if (Time.time - _touchStartTime > maxSwipeTime) return;
+
+            Vector2 touchEndPos = Touchscreen.current.primaryTouch.position.ReadValue();
+            Vector2 delta = touchEndPos - _touchStartPos;
+
+            if (delta.magnitude < minSwipeDistance) return;
+
+            DetectSwipe(delta);
+        }
+    }
+
+    private void DetectSwipe(Vector2 delta)
+    {
+        if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
+        {
+            // Horizontal Swipe
+            if (delta.x > 0)
             {
-                // Horizontal Swipe
-                OnSwipe?.Invoke(delta.x > 0 ? SwipeDirection.Right : SwipeDirection.Left);
+                OnSwipe?.Invoke(SwipeDirection.Right);
+                OnLaneChange?.Invoke(1);
             }
             else
             {
-                // Vertical Swipe
-                OnSwipe?.Invoke(delta.y > 0 ? SwipeDirection.Up : SwipeDirection.Down);
+                OnSwipe?.Invoke(SwipeDirection.Left);
+                OnLaneChange?.Invoke(-1);
+            }
+        }
+        else
+        {
+            // Vertical Swipe
+            if (delta.y > 0)
+            {
+                OnSwipe?.Invoke(SwipeDirection.Up);
+                OnJump?.Invoke();
+            }
+            else
+            {
+                OnSwipe?.Invoke(SwipeDirection.Down);
             }
         }
     }

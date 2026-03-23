@@ -37,22 +37,38 @@ public class HighScoreManager : Singleton<HighScoreManager>
         SaveManager.OnBeforeSave -= HandleBeforeSave;
     }
 
+    private void HandleLoad()
+    {
+        if (SaveManager.Instance != null && SaveManager.Instance.Data != null)
+        {
+            HandleLoad(SaveManager.Instance.Data);
+        }
+    }
+
     /// <summary>
     /// Populates the HighScoreManager's state from the master save data.
     /// </summary>
-    private void HandleLoad(SaveData data)
+    private void HandleLoad(GameData data)
     {
-        HighScore = data.HighScore;
+        HighScore = data.highScore;
         Debug.Log($"Guardian Architect: High Score loaded: {HighScore}");
         OnHighScoreChanged?.Invoke(HighScore);
+    }
+
+    private void HandleBeforeSave()
+    {
+        if (SaveManager.Instance != null && SaveManager.Instance.Data != null)
+        {
+            HandleBeforeSave(SaveManager.Instance.Data);
+        }
     }
 
     /// <summary>
     /// Populates the master save data with the HighScoreManager's current state before saving.
     /// </summary>
-    private void HandleBeforeSave(SaveData data)
+    private void HandleBeforeSave(GameData data)
     {
-        data.HighScore = HighScore;
+        data.highScore = HighScore;
     }
 
     // --- PUBLIC API ---
@@ -72,5 +88,10 @@ public class HighScoreManager : Singleton<HighScoreManager>
             return true;
         }
         return false;
+    }
+
+    public static int GetHighScore()
+    {
+        return Instance != null ? Instance.HighScore : 0;
     }
 }

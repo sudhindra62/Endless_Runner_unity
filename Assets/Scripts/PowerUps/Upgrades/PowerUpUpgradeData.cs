@@ -2,14 +2,6 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public enum PowerUpType
-{
-    Magnet,
-    Shield,
-    CoinDoubler,
-    ScoreMultiplier,
-    FeverMode
-}
 
 [System.Serializable]
 public class PowerUpUpgradeTier

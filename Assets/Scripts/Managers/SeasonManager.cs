@@ -1,8 +1,6 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 
-namespace CompetitiveGaming
-{
     public class SeasonManager : MonoBehaviour
     {
         public static SeasonManager Instance { get; private set; }
@@ -60,4 +58,4 @@ namespace CompetitiveGaming
             Debug.Log($"Next Season Reset: {nextSeasonReset}");
         }
     }
-}
+

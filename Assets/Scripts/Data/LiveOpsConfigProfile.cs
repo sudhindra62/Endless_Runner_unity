@@ -1,13 +1,13 @@
-
 using UnityEngine;
 
 /// <summary>
-/// A ScriptableObject that holds the configuration for LiveOps events.
+/// Defines the structure for a set of LiveOps configurations.
+/// Global scope.
 /// </summary>
-[CreateAssetMenu(fileName = "LiveOpsConfigProfile", menuName = "Configuration/LiveOps Config Profile", order = 1)]
+[CreateAssetMenu(fileName = "LiveOpsConfigProfile", menuName = "Endless Runner/LiveOps/Config Profile")]
 public class LiveOpsConfigProfile : ScriptableObject
 {
-    [Header("Game Balance Multipliers")]
+    [Header("Core Gameplay Modifiers")]
     public float difficultyMultiplier = 1.0f;
     public float powerUpDurationMultiplier = 1.0f;
     public float dropRateMultiplier = 1.0f;
@@ -15,8 +15,11 @@ public class LiveOpsConfigProfile : ScriptableObject
 
     [Header("Economy & Monetization")]
     public int reviveGemCost = 10;
-    public float adFrequencyMultiplier = 1.0f; // ◈ ARCHITECT_OMEGA INTEGRATION: For runtime ad tuning.
+    public float adFrequencyModifier = 1.0f;
+    public float adFrequencyMultiplier => adFrequencyModifier;
 
-    [Header("Live Events")]
+    [Header("Content & Event Control")]
     public bool isEventActive = false;
+    public float bossSpawnIntervalMinutes = 15f;
+    public float leagueThresholdAdjustment = 0f;
 }

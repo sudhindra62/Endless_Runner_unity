@@ -1,0 +1,9 @@
+TrackSegment.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\LevelSystem\TrackSegment.cs
+SubscriptionManager.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\Scripts\Core\SubscriptionManager.cs
+EnvironmentVariationManager.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\Scripts\Core\Environment\EnvironmentVariationManager.cs
+ThemeUnlockManager.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\Scripts\Core\Theme\ThemeUnlockManager.cs
+PowerUpType.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\Scripts\Enums\PowerUpType.cs
+Powerup.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\Scripts\Powerups\Powerup.cs
+PowerupManager.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\Scripts\Powerups\PowerupManager.cs
+ThemeShop.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\Scripts\UI\ThemeShop.cs
+UIManager.cs|C:\EndlessFinal\EndlessRunnerProject\Assets\Game\Scripts\UI\UIManager.cs

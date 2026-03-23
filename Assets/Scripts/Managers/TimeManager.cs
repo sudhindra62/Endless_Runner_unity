@@ -1,9 +1,6 @@
-
-using EndlessRunner.Core;
+﻿
 using UnityEngine;
 
-namespace EndlessRunner.Managers
-{
     /// <summary>
     /// Manages the game's concept of time, including pausing, resuming, and time scale effects.
     /// </summary>
@@ -54,4 +51,4 @@ namespace EndlessRunner.Managers
             Debug.Log($"TimeManager: Time scale set to {newTimeScale}.");
         }
     }
-}
+

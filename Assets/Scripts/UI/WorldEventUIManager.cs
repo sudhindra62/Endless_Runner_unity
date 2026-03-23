@@ -57,7 +57,7 @@ public class WorldEventUIManager : MonoBehaviour
         eventHudIcon.SetActive(true);
     }
 
-    private void HandleEventDeactivation()
+    private void HandleEventDeactivation(WorldEventData eventData)
     {
         Debug.Log("UI received event deactivation. Hiding banner.");
         isEventCurrentlyActive = false;

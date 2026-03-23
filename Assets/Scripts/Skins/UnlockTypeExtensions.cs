@@ -1,7 +1,5 @@
-using Systems;
 
-namespace Skins
-{
+
     public static class UnlockTypeExtensions
     {
         public static string GetFormattedName(this UnlockType unlockType)
@@ -23,4 +21,4 @@ namespace Skins
             }
         }
     }
-}
+

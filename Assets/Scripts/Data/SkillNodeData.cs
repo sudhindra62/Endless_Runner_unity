@@ -4,6 +4,7 @@ using UnityEngine;
 public class SkillNodeData : ScriptableObject
 {
     public string nodeId;
+    public string skillID => nodeId;
     public string displayName;
     public int maxLevel;
     
@@ -21,34 +22,3 @@ public class SkillNodeData : ScriptableObject
     }
 }
 
-public enum ModifierType
-{
-    None,
-    // PowerUpManager
-    MagnetRadiusBoost,
-    ShieldDurationBoost,
-    CoinDoublerDurationBoost, // Example for another power-up
-    
-    // ScoreManager
-    CoinValueBoost, // Stacks with character passive
-    StyleBonusBoost, // For a potential Style system
-
-    // FlowComboManager
-    ComboTimeoutBoost,
-
-    // FeverModeManager
-    FeverDurationBoost,
-
-    // PowerUpFusionManager
-    FusionDurationBoost,
-
-    // ReviveManager
-    ReviveCostReduction,
-
-    // GameDifficultyManager
-    SpeedCapIncrease,
-    DifficultyReduction, // Stacks with character passive
-
-    // PlayerMovement
-    BaseSpeedIncrease
-}

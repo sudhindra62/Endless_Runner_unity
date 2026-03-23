@@ -1,6 +1,4 @@
-
-namespace Data
-{
+﻿
     /// <summary>
     /// The type of obstacle.
     /// </summary>
@@ -10,4 +8,4 @@ namespace Data
         Moving,
         Laser
     }
-}
+

@@ -2,8 +2,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace EndlessRunner.UI
-{
     public class AnimatedBackground : MonoBehaviour
     {
         public Sprite[] frames;
@@ -31,4 +29,3 @@ namespace EndlessRunner.UI
             }
         }
     }
-}

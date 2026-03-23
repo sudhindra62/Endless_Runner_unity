@@ -1,11 +1,8 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using EndlessRunner.Managers;
 using System.Collections.Generic;
 
-namespace EndlessRunner.UI
-{
     public class ShopUIManager : MonoBehaviour
     {
         public GameObject ShopItemPrefab;
@@ -27,4 +24,3 @@ namespace EndlessRunner.UI
             }
         }
     }
-}

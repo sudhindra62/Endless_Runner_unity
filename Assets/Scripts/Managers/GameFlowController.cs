@@ -1,60 +1,70 @@
-
-using EndlessRunner.Environment;
-using EndlessRunner.Managers;
-using EndlessRunner.Themes;
 using UnityEngine;
+using System;
 
-public class GameFlowController : MonoBehaviour
+/// <summary>
+/// Orchestrates the high-level game state transitions and logical flow.
+/// Global scope.
+/// </summary>
+public class GameFlowController : Singleton<GameFlowController>
 {
-    public static GameFlowController Instance { get; private set; }
+    public event Action OnGameRestarted;
+    public event Action OnRunStarted;
+    public event Action OnRunEnded;
+    public GameState currentState;
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        base.Awake();
+        DontDestroyOnLoad(gameObject);
     }
 
-    private void OnEnable()
+    private void Start()
     {
-        PlayerHealth.OnPlayerDied += HandlePlayerDeath;
+        GameManager.OnGameStateChanged += HandleGameStateChanged;
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
-        PlayerHealth.OnPlayerDied -= HandlePlayerDeath;
+        GameManager.OnGameStateChanged -= HandleGameStateChanged;
     }
 
-    private void HandlePlayerDeath()
+    private void HandleGameStateChanged(GameState newState)
     {
-        if (ReviveManager.Instance != null && ReviveManager.Instance.CanRevive())
+        currentState = newState;
+        switch (newState)
         {
-            ReviveManager.Instance.PromptRevive();
+            case GameState.Playing:
+                Time.timeScale = 1f;
+                OnRunStarted?.Invoke();
+                break;
+            case GameState.Paused:
+                Time.timeScale = 0f;
+                break;
+            case GameState.GameOver:
+                Time.timeScale = 0f;
+                OnRunEnded?.Invoke();
+                break;
         }
-        else
-        {
-            GameStateManager.Instance.SetState(GameStateManager.GameState.GameOver);
-        }
-    }
-
-    public void ReviveAccepted()
-    {
-        GameStateManager.Instance.SetState(GameStateManager.GameState.Playing);
     }
 
     public void StartGame()
     {
-        GameStateManager.Instance.SetState(GameStateManager.GameState.Playing);
-        ThemeSO currentTheme = ThemeManager.Instance.GetCurrentTheme();
-        if (currentTheme != null)
-        {
-            EnvironmentVariationManager.Instance.SpawnInitialEnvironment(currentTheme);
-        }
+        if (GameManager.Instance != null) GameManager.Instance.ChangeState(GameState.Playing);
+    }
+
+    public void PauseGame()
+    {
+        if (GameManager.Instance != null) GameManager.Instance.ChangeState(GameState.Paused);
+    }
+
+    public void RestartGame()
+    {
+        OnGameRestarted?.Invoke();
+        if (SceneLoader.Instance != null) SceneLoader.Instance.ReloadCurrentScene();
+    }
+
+    public void ReturnToMenu()
+    {
+        if (SceneLoader.Instance != null) SceneLoader.Instance.LoadScene("MainMenu");
     }
 }

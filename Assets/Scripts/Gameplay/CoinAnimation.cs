@@ -1,9 +1,7 @@
-
+﻿
 using System.Collections;
 using UnityEngine;
 
-namespace Gameplay
-{
     /// <summary>
     /// Handles the continuous rotation animation for a coin.
     /// </summary>
@@ -29,4 +27,4 @@ namespace Gameplay
             }
         }
     }
-}
+

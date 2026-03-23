@@ -16,6 +16,7 @@ public class LiveOpsManager : Singleton<LiveOpsManager>
 
     private LiveOpsConfigProfile _activeProfile;
     private LiveOpsConfigProfile _cachedProfile;
+    [SerializeField] private LiveOpsSafetyBounds _safetyBounds;
 
     // Public properties that other managers read from.
     public float PowerUpDurationMultiplier { get; private set; } = 1.0f;
@@ -24,7 +25,8 @@ public class LiveOpsManager : Singleton<LiveOpsManager>
     public float RiskLaneRewardMultiplier { get; private set; } = 1.0f;
     public int ReviveGemCost { get; private set; } = 10;
     public float AdFrequencyMultiplier { get; private set; } = 1.0f; // ◈ ARCHITECT_OMEGA INTEGRATION
-    public bool IsEventActive { get; private set; } = false;
+    public bool IsEventActiveMode { get; private set; } = false;
+    public bool IsEventActive(string eventName) => IsEventActiveMode;
 
     public static event System.Action OnLiveOpsConfigUpdated;
 
@@ -53,8 +55,8 @@ public class LiveOpsManager : Singleton<LiveOpsManager>
 
         if (fetchedProfile != null)
         {
-            _activeProfile = LiveOpsSafetyValidator.ValidateAndClamp(fetchedProfile, _safeDefaultProfile);
-            _cachedProfile = _active_profile;
+            _activeProfile = LiveOpsSafetyValidator.ValidateAndClamp(fetchedProfile, _safetyBounds, _safeDefaultProfile);
+            _cachedProfile = _activeProfile;
             Debug.Log("<color=green>Applied fresh LiveOps config from remote source.</color>");
         }
         else if (_cachedProfile != null)
@@ -84,7 +86,7 @@ public class LiveOpsManager : Singleton<LiveOpsManager>
         RiskLaneRewardMultiplier = profile.riskLaneRewardMultiplier;
         ReviveGemCost = profile.reviveGemCost;
         AdFrequencyMultiplier = profile.adFrequencyMultiplier; // ◈ ARCHITECT_OMEGA INTEGRATION
-        IsEventActive = profile.isEventActive;
+        IsEventActiveMode = profile.isEventActive;
 
         OnLiveOpsConfigUpdated?.Invoke();
     }

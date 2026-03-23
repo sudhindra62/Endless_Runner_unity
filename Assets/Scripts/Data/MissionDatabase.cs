@@ -1,8 +1,17 @@
-
 using UnityEngine;
+using System.Collections.Generic;
 
-[CreateAssetMenu(fileName = "MissionDatabase", menuName = "Missions/Mission Database")]
+/// <summary>
+/// A centralized database of all available missions in the game.
+/// Global scope.
+/// </summary>
+[CreateAssetMenu(fileName = "MissionDatabase", menuName = "Endless Runner/Data/Mission Database")]
 public class MissionDatabase : ScriptableObject
 {
-    public System.Collections.Generic.List<MissionData> allMissions;
+    public List<Mission> missions;
+
+    public Mission GetMissionByID(string id)
+    {
+        return missions.Find(m => m.missionId == id);
+    }
 }

@@ -23,14 +23,20 @@ public class ReplayRecorder : MonoBehaviour
         // These would be linked on instantiation
         // playerController = GetComponent<PlayerController>(); 
         
-        GameFlowController.OnRunStarted += StartRecording;
-        GameFlowController.OnRunEnded += StopRecording;
+        GameFlowController.Instance.OnRunStarted += StartRecording;
+        GameFlowController.Instance.OnRunEnded += StopRecording;
     }
 
     private void OnDestroy()
     {
-        GameFlowController.OnRunStarted -= StartRecording;
-        GameFlowController.OnRunEnded -= StopRecording;
+        GameFlowController.Instance.OnRunStarted -= StartRecording;
+        GameFlowController.Instance.OnRunEnded -= StopRecording;
+    }
+
+    private void OnDisable()
+    {
+        GameFlowController.Instance.OnRunStarted -= StartRecording;
+        GameFlowController.Instance.OnRunEnded -= StopRecording;
     }
 
     private void Update()

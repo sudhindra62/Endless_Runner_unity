@@ -7,9 +7,11 @@ using System.Collections.Generic;
 [Serializable]
 public class EventRewardTier
 {
-    public string tierID;
+    public string RewardID;
+    public string Description;
     public long scoreThreshold;
     public List<string> rewardIDs; // List of reward IDs managed by RewardManager
     public string exclusiveBadgeID;
     public string leaderboardBorderID;
+    public bool IsClaimed;
 }

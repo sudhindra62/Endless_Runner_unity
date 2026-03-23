@@ -15,8 +15,7 @@ public class ChallengeAttemptTracker : Singleton<ChallengeAttemptTracker>
 
     private void Start()
     {
-        // In a real game, this would be loaded from a persistent save file.
-        // LoadState();
+        LoadState();
     }
 
     /// <summary>
@@ -31,7 +30,7 @@ public class ChallengeAttemptTracker : Singleton<ChallengeAttemptTracker>
             // The day has changed, so reset the attempts.
             attemptsMade = 0;
             lastAttemptDateId = DailyChallengeSeedGenerator.GetCurrentDayChallengeId();
-            // SaveState(); // Persist the reset.
+            SaveState(); // Persist the reset.
         }
 
         return attemptsMade < MAX_ATTEMPTS;
@@ -45,7 +44,7 @@ public class ChallengeAttemptTracker : Singleton<ChallengeAttemptTracker>
         if (!HasAttemptsRemaining()) return; // Should not happen if checked before run starts
 
         attemptsMade++;
-        // SaveState(); // Persist the change
+        SaveState(); // Persist the change
         Debug.Log($"Daily Challenge attempt {attemptsMade}/{MAX_ATTEMPTS} recorded for {lastAttemptDateId}.");
     }
 
@@ -58,7 +57,7 @@ public class ChallengeAttemptTracker : Singleton<ChallengeAttemptTracker>
         if (attemptsMade > 0) // Cannot get an extra attempt if you haven't used one yet.
         {
             attemptsMade--;
-            // SaveState();
+            SaveState();
             Debug.Log("Extra attempt granted.");
         }
     }
@@ -75,16 +74,18 @@ public class ChallengeAttemptTracker : Singleton<ChallengeAttemptTracker>
         return MAX_ATTEMPTS;
     }
 
-    // --- Persistence (Example) ---
-    // private void SaveState()
-    // {
-    //     PlayerPrefs.SetInt("DailyChallenge_Attempts", attemptsMade);
-    //     PlayerPrefs.SetString("DailyChallenge_DateId", lastAttemptDateId);
-    // }
+    private void SaveState()
+    {
+        if (SaveManager.Instance == null) return;
+        SaveManager.Instance.Data.challengeAttemptsMade = attemptsMade;
+        SaveManager.Instance.Data.lastChallengeAttemptDateId = lastAttemptDateId;
+        SaveManager.Instance.SaveGame();
+    }
 
-    // private void LoadState()
-    // {
-    //     attemptsMade = PlayerPrefs.GetInt("DailyChallenge_Attempts", 0);
-    //     lastAttemptDateId = PlayerPrefs.GetString("DailyChallenge_DateId", string.Empty);
-    // }
+    private void LoadState()
+    {
+        if (SaveManager.Instance == null) return;
+        attemptsMade = SaveManager.Instance.Data.challengeAttemptsMade;
+        lastAttemptDateId = SaveManager.Instance.Data.lastChallengeAttemptDateId;
+    }
 }

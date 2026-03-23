@@ -38,7 +38,7 @@ public class RankUI : MonoBehaviour
         UpdateAllUI();
     }
 
-    private void HandleRankPromotion(RankData newRank, RankData oldRank)
+    private void HandleRankPromotion(LeagueTier newRank)
     {
         // A promotion happened, update everything
         UpdateAllUI();

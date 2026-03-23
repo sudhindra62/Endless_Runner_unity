@@ -8,7 +8,7 @@ public class EffectsManager : MonoBehaviour
 
     [Header("Dependencies")]
     [SerializeField] private Animator nearMissUIAnimator; // Assign the "NEAR MISS!" UI Animator here
-    [SerializeField] private CameraShake cameraShake; // Assign a CameraShake script here
+    [SerializeField] private CameraShakeController cameraShake; // Assign a CameraShakeController script here
     [SerializeField] private TimeControlManager timeControlManager; // Assign a TimeControlManager here
     [SerializeField] private GameObject pathIndicatorPrefab; // NEW: Assign the visual indicator prefab here
 
@@ -41,7 +41,13 @@ public class EffectsManager : MonoBehaviour
         }
     }
 
-    private void PlayNearMissEffects()
+    public void ConvertAllObstaclesToCoins()
+    {
+        // Integration hook for Power-Up effects (e.g. Shield blast or special pickup)
+        Debug.Log("EffectsManager: Converting all visible obstacles to coins!");
+    }
+
+    private void PlayNearMissEffects(NearMissData nearMissData)
     {
         // --- INTEGRATION: Notify Live Event system ---
         OnNearMiss?.Invoke();
@@ -56,7 +62,7 @@ public class EffectsManager : MonoBehaviour
         // 2. Subtle camera shake
         if (cameraShake != null)
         {
-            cameraShake.Shake();
+            cameraShake.Shake(slowMotionDuration, slowMotionScale);
         }
 
         // 3. Optional slow-motion effect

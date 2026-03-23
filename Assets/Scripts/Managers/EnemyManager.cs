@@ -1,8 +1,6 @@
 
 using UnityEngine;
 
-namespace EndlessRunner.Managers
-{
     public class EnemyManager : MonoBehaviour
     {
         public static EnemyManager Instance;
@@ -28,14 +26,14 @@ namespace EndlessRunner.Managers
 
         private void Start()
         {
-            playerTransform = FindObjectOfType<PlayerController>()?.transform;
+            playerTransform = PlayerController.Instance?.transform;
             GameObject chaserPrefab = ThemeManager.Instance.GetEnemyChaserPrefab();
 
             if (playerTransform != null && chaserPrefab != null)
             {
                 Vector3 initialPosition = playerTransform.position - new Vector3(0, 0, initialChaseDistance);
                 chaser = Instantiate(chaserPrefab, initialPosition, Quaternion.identity, transform);
-                currentSpeed = FindObjectOfType<PlayerController>().forwardSpeed * 0.8f;
+                currentSpeed = PlayerController.Instance.forwardSpeed * 0.8f;
             }
         }
 
@@ -57,4 +55,4 @@ namespace EndlessRunner.Managers
             }
         }
     }
-}
+

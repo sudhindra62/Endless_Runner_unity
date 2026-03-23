@@ -14,12 +14,12 @@ public class ThemeDatabaseEditor : Editor
 
         if (GUILayout.Button("Populate Themes"))
         {
-            string[] guids = AssetDatabase.FindAssets("t:ThemeConfig");
-            themeDatabase.themes = new ThemeConfig[guids.Length];
+            string[] guids = AssetDatabase.FindAssets("t:ThemeSO");
+            themeDatabase.themes = new ThemeSO[guids.Length];
             for (int i = 0; i < guids.Length; i++)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-                themeDatabase.themes[i] = AssetDatabase.LoadAssetAtPath<ThemeConfig>(path);
+                themeDatabase.themes[i] = AssetDatabase.LoadAssetAtPath<ThemeSO>(path);
             }
             EditorUtility.SetDirty(themeDatabase);
         }

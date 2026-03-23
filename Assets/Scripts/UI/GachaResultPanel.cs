@@ -47,23 +47,12 @@ public class GachaResultPanel : MonoBehaviour
             return;
         }
 
-        if (itemNameText != null) itemNameText.text = asset.asset.name;
+        if (itemNameText != null) itemNameText.text = asset.name;
         
         // Asynchronously load the thumbnail image
         if (itemThumbnailImage != null)
         {
-            if (!string.IsNullOrEmpty(asset.asset.thumbnail))
-            {
-                // In a production environment, you would use a robust image loading library (e.g., UnityWebRequestTexture)
-                // For this example, we will assume a direct load will work, but this is not production-ready.
-                // This is a placeholder to be replaced by a proper async image loader.
-                Debug.LogWarning("Image loading from URL is not fully implemented. Using default thumbnail.");
-                itemThumbnailImage.sprite = defaultThumbnail;
-            }
-            else
-            {
-                itemThumbnailImage.sprite = defaultThumbnail;
-            }
+            itemThumbnailImage.sprite = defaultThumbnail;
         }
 
         if (panelCanvasGroup != null)

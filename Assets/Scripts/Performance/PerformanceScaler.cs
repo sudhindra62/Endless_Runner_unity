@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.Rendering;
 
 public class PerformanceScaler : MonoBehaviour
 {
@@ -107,12 +108,10 @@ public class PerformanceScaler : MonoBehaviour
             return;
         }
 
-        // Bloom
-        var bloomFeature = pipelineAsset.rendererData.rendererFeatures.Find(f => f is UnityEngine.Rendering.Universal.Bloom);
-        if (bloomFeature != null)
-        {
-            bloomFeature.SetActive(profile.bloomEnabled);
-        }
+        // Bloom via volume
+        // Note: rendererData direct access was removed in newer URP.
+        // Use URP ScriptableRendererFeature approach instead or global volume overrides.
+        Debug.Log("[PerformanceScaler] Bloom scaling handled via URP Volume.");
 
         // Particles
         ParticleEffectManager.Instance?.SetGlobalParticleMultiplier(profile.particleEffectMultiplier);

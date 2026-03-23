@@ -1,13 +1,10 @@
-
+﻿
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using EndlessRunner.Generation.Patterns;
-using EndlessRunner.Generation.Rules;
-using EndlessRunner.Core;
 
-namespace EndlessRunner.Generation
-{
+
+
     /// <summary>
     /// The core engine for procedural level generation.
     /// Manages a library of level patterns and selects the next pattern to be placed
@@ -106,4 +103,5 @@ namespace EndlessRunner.Generation
             }
         }
     }
-}
+
+

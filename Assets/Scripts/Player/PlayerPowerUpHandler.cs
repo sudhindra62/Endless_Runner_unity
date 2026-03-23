@@ -1,10 +1,7 @@
 
-using EndlessRunner.Core;
-using EndlessRunner.PowerUps;
+
 using UnityEngine;
 
-namespace EndlessRunner.Player
-{
     [RequireComponent(typeof(PlayerController))]
     public class PlayerPowerUpHandler : MonoBehaviour
     {
@@ -27,30 +24,29 @@ namespace EndlessRunner.Player
             GameEvents.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
         }
 
-        private void HandlePowerUpActivated(PowerUpDefinition powerUp)
+        private void HandlePowerUpActivated(string powerUpType)
         {
-            switch (powerUp.type)
+            if (powerUpType == "SpeedBoost")
             {
-                case PowerUpType.SpeedBoost:
-                    _playerController.SetSpeed(powerUp.value);
-                    break;
-                case PowerUpType.Invincibility:
-                    _playerController.SetInvincibility(true);
-                    break;
+                _playerController.SetSpeed(20f); // Default value
+            }
+            else if (powerUpType == "Invincibility")
+            {
+                _playerController.SetInvincibility(true);
             }
         }
 
-        private void HandlePowerUpDeactivated(PowerUpDefinition powerUp)
+        private void HandlePowerUpDeactivated(string powerUpType)
         {
-            switch (powerUp.type)
+            if (powerUpType == "SpeedBoost")
             {
-                case PowerUpType.SpeedBoost:
-                    _playerController.ResetSpeed();
-                    break;
-                case PowerUpType.Invincibility:
-                    _playerController.SetInvincibility(false);
-                    break;
+                _playerController.ResetSpeed();
+            }
+            else if (powerUpType == "Invincibility")
+            {
+                _playerController.SetInvincibility(false);
             }
         }
     }
-}
+
+

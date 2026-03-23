@@ -1,10 +1,8 @@
 
 using System;
 using UnityEngine;
-using Core;
 
-namespace Managers
-{
+
     /// <summary>
     /// The central authority for the player character's state, health, and interactions.
     /// It integrates with the GameManager for game state changes and the PowerUpManager for effects.
@@ -112,7 +110,7 @@ namespace Managers
             // Tell the GameManager that the game is over.
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.ChangeState(GameManager.GameState.GameOver);
+                GameManager.Instance.ChangeState(GameState.GameOver);
             }
         }
 
@@ -133,20 +131,14 @@ namespace Managers
 
         private void SubscribeToEvents()
         {
-            if (PowerUpManager.Instance != null)
-            {
-                PowerUpManager.Instance.OnPowerUpActivated += HandlePowerUpActivated;
-                PowerUpManager.Instance.OnPowerUpDeactivated += HandlePowerUpDeactivated;
-            }
+            PowerUpManager.OnPowerUpActivated += HandlePowerUpActivated;
+            PowerUpManager.OnPowerUpDeactivated += HandlePowerUpDeactivated;
         }
 
         private void UnsubscribeFromEvents()
         {
-            if (PowerUpManager.Instance != null)
-            {
-                PowerUpManager.Instance.OnPowerUpActivated -= HandlePowerUpActivated;
-                PowerUpManager.Instance.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
-            }
+            PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivated;
+            PowerUpManager.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
         }
 
         private void HandlePowerUpActivated(PowerUpDefinition powerUpDef)
@@ -157,12 +149,11 @@ namespace Managers
             }
         }
 
-        private void HandlePowerUpDeactivated(PowerUpType powerUpType)
+        private void HandlePowerUpDeactivated(PowerUpDefinition powerUpDef)
         {
-            if (powerUpType == PowerUpType.Invincibility)
+            if (powerUpDef != null && powerUpDef.type == PowerUpType.Invincibility)
             {
                 SetInvincibility(false);
             }
         }
     }
-}

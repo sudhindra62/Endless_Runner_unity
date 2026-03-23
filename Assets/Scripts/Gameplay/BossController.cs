@@ -1,10 +1,8 @@
 
 using System.Collections;
 using UnityEngine;
-using Core;
 
-namespace Gameplay
-{
+
     /// <summary>
     /// Manages the behavior of a boss character, including chasing the player and performing attacks.
     /// </summary>
@@ -29,7 +27,7 @@ namespace Gameplay
         {
             // Attempt to find the player in the scene.
             // A more robust solution would be to use a service locator or manager to get the player reference.
-            var player = FindObjectOfType<PlayerController>();
+            var player = PlayerController.Instance;
             if (player != null)
             {
                 _playerTransform = player.transform;
@@ -129,4 +127,4 @@ namespace Gameplay
             return Vector3.Distance(transform.position, _playerTransform.position);
         }
     }
-}
+

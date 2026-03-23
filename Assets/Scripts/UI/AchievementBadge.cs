@@ -22,4 +22,12 @@ public class AchievementBadge : MonoBehaviour
             notification.SetActive(show);
         }
     }
+
+    public void SetTier(string tier)
+    {
+        if (badgeName != null)
+        {
+            badgeName.text = tier;
+        }
+    }
 }

@@ -1,8 +1,6 @@
-
+﻿
 using UnityEngine;
 
-namespace Core
-{
     [CreateAssetMenu(fileName = "PatternDifficultyProfile", menuName = "EndlessRunner/Pattern Difficulty Profile", order = 1)]
     public class PatternDifficultyProfile : ScriptableObject
     {
@@ -91,4 +89,4 @@ namespace Core
             return riskLaneCoinChance;
         }
     }
-}
+

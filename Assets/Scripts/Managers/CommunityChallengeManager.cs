@@ -6,5 +6,16 @@ using UnityEngine;
 /// </summary>
 public class CommunityChallengeManager : MonoBehaviour
 {
-    // All logic has been removed to prevent authority conflicts with LiveEventManager.
+    public static event System.Action OnChallengeActivated;
+    public static event System.Action<float> OnProgressUpdated;
+
+    public void ActivateChallenge()
+    {
+        OnChallengeActivated?.Invoke();
+    }
+
+    public void UpdateChallengeProgress(float progress)
+    {
+        OnProgressUpdated?.Invoke(progress);
+    }
 }

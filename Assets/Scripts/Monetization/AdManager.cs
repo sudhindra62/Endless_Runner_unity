@@ -1,16 +1,7 @@
 
 using System;
-using EndlessRunner.Managers;
 using UnityEngine;
 
-namespace EndlessRunner.Monetization
-{
-    public enum RewardType
-    {
-        Revive,
-        ExtraCoins,
-        ThemeUnlockDiscount
-    }
 
     public class AdManager : MonoBehaviour
     {
@@ -68,4 +59,4 @@ namespace EndlessRunner.Monetization
             }
         }
     }
-}
+

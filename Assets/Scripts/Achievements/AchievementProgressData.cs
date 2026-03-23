@@ -1,6 +1,4 @@
-
-namespace Achievements
-{
+﻿
     /// <summary>
     /// Represents the dynamic progress data for a single achievement.
     /// </summary>
@@ -10,4 +8,4 @@ namespace Achievements
         public int Progress;
         public bool Unlocked;
     }
-}
+

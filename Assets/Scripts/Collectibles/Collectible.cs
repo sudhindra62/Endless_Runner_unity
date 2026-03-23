@@ -5,6 +5,9 @@ public abstract class Collectible : MonoBehaviour
 {
     [Header("Collectible")]
     [SerializeField] private int scoreValue = 10;
+    protected string poolTag;
+
+    protected virtual void Start() { }
 
     private void OnTriggerEnter(Collider other)
     {

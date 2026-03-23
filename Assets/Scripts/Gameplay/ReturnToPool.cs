@@ -1,9 +1,7 @@
 
 using UnityEngine;
-using Core;
 
-namespace Gameplay
-{
+
     /// <summary>
     /// Returns an object to the object pool when it is behind the player.
     /// </summary>
@@ -43,4 +41,4 @@ namespace Gameplay
             }
         }
     }
-}
+

@@ -6,7 +6,7 @@ public class GhostRunManager : Singleton<GhostRunManager>
     [SerializeField] public GhostRunRecorder recorder;
     [SerializeField] public GhostRunPlayback playback;
 
-    private byte[] bestRunData;
+    private GhostRunData bestRunData;
 
     private void Start()
     {
@@ -18,20 +18,31 @@ public class GhostRunManager : Singleton<GhostRunManager>
         SaveManager.OnLoad -= LoadBestGhostRun;
     }
 
-    private void LoadBestGhostRun(SaveData data)
+    private void LoadBestGhostRun()
     {
-        bestRunData = data.bestGhostRunData;
-        if (bestRunData != null && playback != null)
+        if (SaveManager.Instance != null && SaveManager.Instance.GameData != null)
         {
-            playback.StartPlayback(bestRunData);
+            bestRunData = SaveManager.Instance.GameData.bestGhostRunData;
+            if (bestRunData != null && playback != null)
+            {
+                playback.StartPlayback(bestRunData.ToBytes());
+            }
+        }
+    }
+
+    public void SaveNewBestRun(GhostRunData newRunData)
+    {
+        if (newRunData != null)
+        {
+            SaveNewBestRun(newRunData.ToBytes());
         }
     }
 
     public void SaveNewBestRun(byte[] newRunData)
     {
         // In a full implementation, you'd compare the score of the new run with the saved run.
-        bestRunData = newRunData;
-        SaveManager.Instance.GameData.bestGhostRunData = newRunData;
+        bestRunData = GhostRunData.FromBytes(newRunData);
+        SaveManager.Instance.GameData.bestGhostRunData = bestRunData;
         SaveManager.Instance.SaveGame();
     }
 }

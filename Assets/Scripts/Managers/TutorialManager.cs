@@ -1,13 +1,9 @@
 
 using System.Collections.Generic;
 using UnityEngine;
-using EndlessRunner.Core;
-using EndlessRunner.Data;
-using EndlessRunner.UI;
-using EndlessRunner.Input;
 
-namespace EndlessRunner.Managers
-{
+
+
     /// <summary>
     /// Manages the interactive tutorial sequence for the player's first run.
     /// </summary>
@@ -39,7 +35,7 @@ namespace EndlessRunner.Managers
             }
         }
 
-        private void StartTutorial()
+        public void StartTutorial()
         {
             if (tutorialUI == null || tutorialSteps.Count == 0) 
             {
@@ -58,7 +54,7 @@ namespace EndlessRunner.Managers
             if(currentStepIndex >= tutorialSteps.Count) return;
             
             TutorialStep currentStep = tutorialSteps[currentStepIndex];
-            tutorialUI.ShowStep(currentStep, OnContinueButtonPressed);
+            tutorialUI.ShowStep(currentStepIndex, OnContinueButtonPressed);
             SubscribeToInput(currentStep.trigger);
         }
 
@@ -125,4 +121,5 @@ namespace EndlessRunner.Managers
         private void HandleJump() { AdvanceStep(); }
         private void OnContinueButtonPressed() { AdvanceStep(); }
     }
-}
+
+

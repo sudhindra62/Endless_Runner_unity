@@ -1,9 +1,6 @@
 
-using EndlessRunner.Managers;
 using UnityEngine;
 
-namespace EndlessRunner.Environment
-{
     public class EnvironmentGenerator : MonoBehaviour
     {
         public static EnvironmentGenerator Instance { get; private set; }
@@ -28,4 +25,3 @@ namespace EndlessRunner.Environment
             // In a real implementation, you would use the theme's prefabs to build the level.
         }
     }
-}

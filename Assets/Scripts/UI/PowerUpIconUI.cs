@@ -3,17 +3,15 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-namespace EndlessRunner.UI
-{
     public class PowerUpIconUI : MonoBehaviour
     {
         [SerializeField] private Image iconImage;
         [SerializeField] private TextMeshProUGUI timerText;
 
-        private Core.PowerUpDefinition powerUpDefinition;
+        private PowerUpDefinition powerUpDefinition;
         private float timer;
 
-        public void SetPowerUp(Core.PowerUpDefinition definition)
+        public void SetPowerUp(PowerUpDefinition definition)
         {
             powerUpDefinition = definition;
             iconImage.sprite = definition.icon;
@@ -37,4 +35,3 @@ namespace EndlessRunner.UI
 
         public bool IsActive() => powerUpDefinition != null;
     }
-}

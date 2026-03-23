@@ -3,23 +3,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System;
 
-public enum ChallengeType
-{
-    Score,
-    Distance,
-    Combo
-}
 
-[Serializable]
-public class Challenge
-{
-    public string challengeID;
-    public string challengerID;
-    public string opponentID;
-    public ChallengeType type;
-    public float valueToBeat;
-    public bool isCompleted;
-}
 
 public class FriendChallengeManager : Singleton<FriendChallengeManager>
 {

@@ -1,9 +1,7 @@
-
+﻿
 using System;
 using UnityEngine;
 
-namespace Gameplay
-{
     /// <summary>
     /// Detects when the player is close to an obstacle and triggers a near-miss event.
     /// This component is designed to be lightweight and work with object pooling systems.
@@ -68,4 +66,4 @@ namespace Gameplay
             }
         }
     }
-}
+

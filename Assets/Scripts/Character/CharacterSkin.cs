@@ -1,10 +1,5 @@
 
 using UnityEngine;
-
-namespace EndlessRunner.Character
-{
-    public enum SkinUnlockType { Coins, Gems, Premium }
-
     [CreateAssetMenu(fileName = "NewCharacterSkin", menuName = "EndlessRunner/Character Skin")]
     public class CharacterSkin : ScriptableObject
     {
@@ -22,4 +17,4 @@ namespace EndlessRunner.Character
         public AnimationClip slideAnimation;
         public AnimationClip jumpAnimation;
     }
-}
+

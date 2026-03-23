@@ -9,7 +9,7 @@ public class DistanceTracker : MonoBehaviour
 
     public float Distance { get; private set; }
 
-    private PlayerMovement playerMovement;
+    private PlayerController playerMovement;
     private Vector3 lastPosition;
 
     private void Awake()
@@ -26,7 +26,7 @@ public class DistanceTracker : MonoBehaviour
 
     private void Start()
     {
-        playerMovement = FindObjectOfType<PlayerMovement>();
+        playerMovement = PlayerController.Instance;
         if (playerMovement != null)
         {
             lastPosition = playerMovement.transform.position;

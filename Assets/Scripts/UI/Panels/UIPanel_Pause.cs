@@ -9,6 +9,8 @@ using UnityEngine.UI;
 /// </summary>
 public class UIPanel_Pause : UIPanel
 {
+    public override UIPanelType PanelType => UIPanelType.Pause;
+
     [Header("UI References")]
     [SerializeField] private Button resumeButton;
     [SerializeField] private Button restartButton;

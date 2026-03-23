@@ -27,20 +27,19 @@ public class GlobalChallengeProgressBarUI : MonoBehaviour
         CommunityChallengeManager.OnProgressUpdated -= UpdateProgress;
     }
 
-    private void InitializeUI(CommunityChallengeData challengeData)
+    private void InitializeUI()
     {
         container.SetActive(true);
-        challengeNameText.text = challengeData.challengeName;
+        if (challengeNameText != null)
+        {
+            challengeNameText.text = "Global Challenge";
+        }
     }
 
-    private void UpdateProgress(double current, double target)
+    private void UpdateProgress(float progress)
     {
         if (!container.activeInHierarchy) container.SetActive(true);
-        
-        // ENHANCEMENT: Global progress bar.
-        float progress = (target > 0) ? (float)(current / target) : 0;
         progressBar.value = progress;
-
-        progressText.text = $"{current:N0} / {target:N0}m ({progress:P1})";
+        progressText.text = $"{progress:P1}";
     }
 }

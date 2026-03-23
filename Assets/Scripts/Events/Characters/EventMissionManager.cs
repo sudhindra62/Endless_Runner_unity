@@ -1,13 +1,6 @@
-
 using UnityEngine;
 using System.Collections.Generic;
 
-public enum MissionType
-{
-    CollectCurrency,
-    RunDistance,
-    UsePowerup
-}
 
 [System.Serializable]
 public class EventMission

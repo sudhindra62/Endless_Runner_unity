@@ -16,7 +16,7 @@ public class CharacterUIPanel : MonoBehaviour
     {
         // This would be triggered by a character selection event
         // For now, we'll just display the selected character
-        currentCharacter = CharacterUpgradeManager.Instance.GetSelectedCharacter();
+        currentCharacter = CharacterUpgradeManager.Instance.GetSelectedCharacterData();
         UpdateUI();
         upgradeButton.onClick.AddListener(OnUpgradeButtonClicked);
     }
@@ -28,6 +28,7 @@ public class CharacterUIPanel : MonoBehaviour
 
     private void UpdateUI()
     {
+        if (currentCharacter == null) return;
         characterNameText.text = currentCharacter.displayName;
         passiveDescriptionText.text = GetPassiveDescription(currentCharacter);
         upgradeLevelText.text = $"Level {currentCharacter.currentUpgradeLevel}/{currentCharacter.maxUpgradeLevel}";

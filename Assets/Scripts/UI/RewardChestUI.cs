@@ -26,8 +26,6 @@ public class RewardChestUI : MonoBehaviour
     [Tooltip("Cooldown time for the timed chest in hours.")]
     public float timedChestCooldownHours = 4;
 
-    // --- PlayerPrefs Keys ---
-    private const string LastTimedChestClaimKey = "RewardChest_LastClaimTime";
 
     private TimeSpan timedChestCooldown; 
     private bool isTimedChestReady = false;
@@ -67,16 +65,17 @@ public class RewardChestUI : MonoBehaviour
     /// </summary>
     private void CheckTimedChestStatus()
     {
-        string lastClaimStr = PlayerPrefs.GetString(LastTimedChestClaimKey, "");
+        if (SaveManager.Instance == null) return;
+        long lastClaimTicks = SaveManager.Instance.Data.lastTimedChestClaimTimestamp;
 
-        if (string.IsNullOrEmpty(lastClaimStr))
+        if (lastClaimTicks == 0)
         {
             // First time playing, the chest is ready.
             SetTimedChestAsReady();
         }
         else
         {
-            DateTime lastClaimTime = DateTime.Parse(lastClaimStr);
+            DateTime lastClaimTime = new DateTime(lastClaimTicks);
             if (DateTime.UtcNow - lastClaimTime >= timedChestCooldown)
             {
                 // Cooldown has passed.
@@ -101,15 +100,20 @@ public class RewardChestUI : MonoBehaviour
             return;
         }
 
-        // --- Grant Placeholder Reward ---
-        int coinReward = 100; // Example reward
-        int currentCoins = PlayerPrefs.GetInt("Coins", 0);
-        PlayerPrefs.SetInt("Coins", currentCoins + coinReward);
+        // --- Grant Actual Reward ---
+        int coinReward = 100;
+        if (PlayerDataManager.Instance != null)
+        {
+            PlayerDataManager.Instance.AddCoins(coinReward);
+        }
         Debug.Log($"Timed chest claimed! +{coinReward} coins.");
 
         // --- Save Claim Time & Update UI ---
-        PlayerPrefs.SetString(LastTimedChestClaimKey, DateTime.UtcNow.ToString());
-        PlayerPrefs.Save();
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.lastTimedChestClaimTimestamp = DateTime.UtcNow.Ticks;
+            SaveManager.Instance.SaveGame();
+        }
         SetTimedChestAsOnCooldown();
     }
 
@@ -118,10 +122,11 @@ public class RewardChestUI : MonoBehaviour
     /// </summary>
     private void UpdateCooldownTimer()
     {
-        string lastClaimStr = PlayerPrefs.GetString(LastTimedChestClaimKey, "");
-        if (string.IsNullOrEmpty(lastClaimStr)) return;
+        if (SaveManager.Instance == null) return;
+        long lastClaimTicks = SaveManager.Instance.Data.lastTimedChestClaimTimestamp;
+        if (lastClaimTicks == 0) return;
 
-        DateTime lastClaimTime = DateTime.Parse(lastClaimStr);
+        DateTime lastClaimTime = new DateTime(lastClaimTicks);
         TimeSpan remainingTime = (lastClaimTime + timedChestCooldown) - DateTime.UtcNow;
 
         if (remainingTime.TotalSeconds > 0)
@@ -163,11 +168,11 @@ public class RewardChestUI : MonoBehaviour
     private void ClaimFreeChest()
     {
         // In a real game, this would trigger an ad.
-        // Here, we just give a placeholder reward.
         int coinReward = 50;
-        int currentCoins = PlayerPrefs.GetInt("Coins", 0);
-        PlayerPrefs.SetInt("Coins", currentCoins + coinReward);
-        PlayerPrefs.Save();
+        if (PlayerDataManager.Instance != null)
+        {
+            PlayerDataManager.Instance.AddCoins(coinReward);
+        }
         Debug.Log($"Free chest claimed! +{coinReward} coins. (This would normally show an ad)");
     }
 

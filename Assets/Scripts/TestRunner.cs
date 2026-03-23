@@ -1,8 +1,7 @@
-
+﻿
 using UnityEngine;
-using EndlessRunner.Character;
-using EndlessRunner.Cinematics;
-using EndlessRunner.Managers;
+
+
 
 public class TestRunner : MonoBehaviour
 {
@@ -60,3 +59,4 @@ public class TestRunner : MonoBehaviour
         }
     }
 }
+

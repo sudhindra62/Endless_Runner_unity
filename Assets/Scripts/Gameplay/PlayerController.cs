@@ -1,12 +1,46 @@
 
 using UnityEngine;
 
-namespace EndlessRunner.Gameplay
-{
     public class PlayerController : MonoBehaviour
     {
+        public static PlayerController Instance { get; private set; }
+
+        public Vector3 movement => velocity;
+        public float speed => forwardSpeed;
+        public Vector3 Velocity => velocity;
+        public float CurrentMoveSpeed => forwardSpeed;
+        public float BaseMoveSpeed => forwardSpeed;
+        public float maxSpeed = 30f;
+        public float laneChangeSpeed { get => laneSwitchSpeed; set => laneSwitchSpeed = value; }
+        public int CurrentLane => currentLane;
+        public bool isSliding;
+
+        // --- Input and State events for external systems ---
+        public static event System.Action OnSwipe;
+        public static event System.Action OnTap;
+
+        // --- State query properties ---
+        public bool IsSliding() => isSliding;
+
+        public void dodge(int direction) => SwitchLane(direction);
+        public void SuccessfulDodge(float timeSinceDodgeInput = 0f) { }
+        public void FailedDodge() { }
+        public void SetMagnetActive(bool active, float radius = 0f) { }
+        public void HandleSwipe(Vector2 direction) => OnSwipe?.Invoke();
+        public void HandleTap() => OnTap?.Invoke();
+
+        public void SetState(Vector3 pos, Vector3 vel, int lane) 
+        {
+            transform.position = pos;
+            velocity = vel;
+            currentLane = lane;
+        }
+
+        public void SetSpeed(float newSpeed) { forwardSpeed = newSpeed; }
+        public void ResetSpeed() { forwardSpeed = BaseMoveSpeed; }
+        public void SetInvincibility(bool active) { }
         [Header("Movement")]
-        [SerializeField] private float forwardSpeed = 10f;
+        [SerializeField] public float forwardSpeed = 10f;
         [SerializeField] private float laneSwitchSpeed = 10f;
         [SerializeField] private float jumpForce = 10f;
         [SerializeField] private float gravity = -20f;
@@ -21,11 +55,25 @@ namespace EndlessRunner.Gameplay
 
         private void Awake()
         {
+            if (Instance == null) Instance = this;
             controller = GetComponent<CharacterController>();
         }
 
+        [Header("Game Over Settings")]
+        [SerializeField] private float fallThreshold = -5f;
+
         private void Update()
         {
+            // End the game if the player falls below the threshold
+            if (transform.position.y < fallThreshold)
+            {
+                if (GameManager.Instance != null && GameManager.Instance.CurrentGameState == GameState.Playing)
+                {
+                    GameManager.Instance.SetState(GameState.GameOver);
+                }
+                return;
+            }
+
             // Apply forward movement
             velocity.z = forwardSpeed;
 
@@ -89,4 +137,4 @@ namespace EndlessRunner.Gameplay
             }
         }
     }
-}
+

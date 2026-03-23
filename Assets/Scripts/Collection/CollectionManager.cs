@@ -39,4 +39,23 @@ public class CollectionManager : Singleton<CollectionManager>
     {
         return new HashSet<string>(collectedItemIDs);
     }
+
+    public List<CollectionItemData> allCollectionItems
+    {
+        get
+        {
+            CollectionItemData[] database = Resources.LoadAll<CollectionItemData>(string.Empty);
+            List<CollectionItemData> resolvedItems = new List<CollectionItemData>();
+
+            foreach (CollectionItemData item in database)
+            {
+                if (item != null && collectedItemIDs.Contains(item.itemName))
+                {
+                    resolvedItems.Add(item);
+                }
+            }
+
+            return resolvedItems;
+        }
+    }
 }

@@ -50,6 +50,16 @@ public class PostProcessingManager : MonoBehaviour
         if (motionBlur != null) motionBlur.active = enabled;
     }
 
+    public void SetBloom(bool enabled, float intensity, float threshold)
+    {
+        SetBloom(enabled, intensity);
+    }
+
+    public void SetMotionBlur(bool enabled, float intensity)
+    {
+        SetMotionBlur(enabled);
+    }
+
     public void SetColorGrading(bool enabled, float postExposure = 0, float contrast = 0, float saturation = 0)
     {
         if (colorGrading != null) 

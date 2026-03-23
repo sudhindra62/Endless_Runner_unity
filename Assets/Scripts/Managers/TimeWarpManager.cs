@@ -6,7 +6,7 @@ public class TimeWarpManager : MonoBehaviour
     public static TimeWarpManager Instance { get; private set; }
 
     [Header("Dependencies")]
-    [SerializeField] private PlayerMovement playerMovement;
+    [SerializeField] private PlayerController playerMovement;
     [SerializeField] private RunSessionData runSessionData;
     [SerializeField] private ReviveManager reviveManager;
     [SerializeField] private ScoreManager scoreManager;

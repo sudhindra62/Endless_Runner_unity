@@ -6,6 +6,8 @@ using System.Collections;
 public class RunModifierManager : MonoBehaviour
 {
     public static RunModifierManager Instance { get; private set; }
+    public static event System.Action<System.Collections.Generic.List<RunModifierData>> OnModifiersApplied;
+    private readonly System.Collections.Generic.List<RunModifierData> activeModifiers = new System.Collections.Generic.List<RunModifierData>();
 
     private const string RUN_MOD_SOURCE_ID = "RunModifier";
 
@@ -25,6 +27,7 @@ public class RunModifierManager : MonoBehaviour
     // Call this to simulate the player picking up a modifier during a run.
     public void ActivateTemporaryCoinBoost(float multiplier, float duration)
     {
+        OnModifiersApplied?.Invoke(activeModifiers);
         StartCoroutine(TemporaryBoostRoutine(multiplier, duration));
     }
 
@@ -37,5 +40,6 @@ public class RunModifierManager : MonoBehaviour
 
         Debug.Log("Temporary run modifier expired.");
         DataManager.Instance.RemoveCoinMultiplier(RUN_MOD_SOURCE_ID);
+        OnModifiersApplied?.Invoke(activeModifiers);
     }
 }

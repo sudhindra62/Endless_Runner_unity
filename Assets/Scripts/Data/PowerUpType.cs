@@ -1,6 +1,4 @@
 
-namespace Data
-{
     /// <summary>
     /// The type of power-up.
     /// </summary>
@@ -9,6 +7,16 @@ namespace Data
         None,
         Magnet,
         Shield,
-        DoubleJump
+        DoubleJump,
+        Invincibility,
+        DoubleScore,
+        CoinDoubler,
+        ScoreMultiplier,
+        SpeedBoost,
+        FlowCombo,
+        FeverMode,
+        CoinStorm,
+        InvincibleDash,
+        FeverFrenzy
     }
-}
+

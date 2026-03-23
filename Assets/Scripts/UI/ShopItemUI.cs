@@ -1,11 +1,8 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using EndlessRunner.Managers;
 using TMPro;
 
-namespace EndlessRunner.UI
-{
     public class ShopItemUI : MonoBehaviour
     {
         public TextMeshProUGUI ItemNameText;
@@ -32,13 +29,14 @@ namespace EndlessRunner.UI
 
             if (purchased)
             {
-                // TODO: Update the UI to reflect the purchase
+                ItemPriceText.text = "OWNED";
                 PurchaseButton.interactable = false;
+                Debug.Log($"ShopItemUI: Successfully purchased {_shopItem.Name}");
             }
             else
             {
-                // TODO: Show a message to the user that they don't have enough coins
+                ItemPriceText.text = "INSUFFICIENT FUNDS";
+                Debug.LogWarning($"ShopItemUI: Failed to purchase {_shopItem.Name} - insufficient currency.");
             }
         }
     }
-}

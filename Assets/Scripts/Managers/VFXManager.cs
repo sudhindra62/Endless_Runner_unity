@@ -33,9 +33,9 @@ public class VFXManager : MonoBehaviour
         // Pre-warm the pools for effects that are used frequently
         if (objectPooler != null)
         {
-            if(runningTrails != null) objectPooler.CreatePool(runningTrails, 10);
-            if(coinCollectionSparkles != null) objectPooler.CreatePool(coinCollectionSparkles, 20);
-            if(jumpEffect != null) objectPooler.CreatePool(jumpEffect, 5);
+            if(runningTrails != null) objectPooler.CreatePool(runningTrails.name, runningTrails, 10);
+            if(coinCollectionSparkles != null) objectPooler.CreatePool(coinCollectionSparkles.name, coinCollectionSparkles, 20);
+            if(jumpEffect != null) objectPooler.CreatePool(jumpEffect.name, jumpEffect, 5);
         }
     }
 
@@ -43,10 +43,9 @@ public class VFXManager : MonoBehaviour
     {
         if (effectPrefab == null || objectPooler == null) return;
 
-        GameObject effect = objectPooler.GetPooledObject(effectPrefab);
+        GameObject effect = objectPooler.GetPooledObject(effectPrefab.name, position);
         if (effect != null)
         {
-            effect.transform.position = position;
             effect.transform.rotation = Quaternion.identity;
             effect.SetActive(true);
             // A component on the particle system prefab should handle returning it to the pool

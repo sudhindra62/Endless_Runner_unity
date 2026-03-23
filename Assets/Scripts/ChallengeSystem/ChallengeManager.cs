@@ -28,7 +28,7 @@ public class ChallengeManager : Singleton<ChallengeManager>
     {
         // In a real system, this would come from a server or another player.
         string newID = Guid.NewGuid().ToString();
-        Challenge newChallenge = new Challenge(newID, challengerID, type, valueToBeat);
+        Challenge newChallenge = new Challenge(newID, challengerID, "", type, valueToBeat);
         _activeChallenges.Add(newChallenge);
         
         Debug.Log($"Guardian Architect: New challenge received from {challengerID}. Type: {type}, Value: {valueToBeat}");
@@ -45,10 +45,14 @@ public class ChallengeManager : Singleton<ChallengeManager>
         challenge.isAccepted = true;
         _currentTrackedChallenge = challenge;
 
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.currentTrackedChallengeID = challenge.challengeID;
+            SaveManager.Instance.SaveGame();
+        }
+
         Debug.Log($"<color=cyan>Guardian Architect: Challenge {challenge.challengeID} accepted!</color>");
         OnChallengeAccepted?.Invoke(challenge);
-        
-        // TODO: This would likely trigger a scene change or a specific gameplay mode.
     }
 
     /// <summary>
@@ -87,12 +91,18 @@ public class ChallengeManager : Singleton<ChallengeManager>
     private void CompleteChallenge(Challenge challenge)
     {
         challenge.isCompleted = true;
-        _currentTrackedChallenge = null; // Stop tracking
+        _currentTrackedChallenge = null;
+
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.currentTrackedChallengeID = "";
+            SaveManager.Instance.SaveGame();
+        }
 
         Debug.Log($"<color=green>Guardian Architect: Challenge {challenge.challengeID} COMPLETED!</color>");
         OnChallengeCompleted?.Invoke(challenge);
         
-        // TODO: Grant rewards for completing the challenge.
+        RewardManager.Instance.GrantReward(new Reward("Challenge Reward", challenge.reward.type, challenge.reward.amount, "")); 
     }
     
     #endregion

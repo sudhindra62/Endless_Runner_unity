@@ -1,47 +1,105 @@
-
 using UnityEngine;
+using Unity.Services.Core;
+using Unity.Services.Analytics;
 using System.Collections.Generic;
-using EndlessRunner.Themes;
+using System;
+using EndlessRunner.Events;
 
-public class AnalyticsManager : MonoBehaviour
+/// <summary>
+/// The reason for a run's conclusion.
+/// </summary>
+public enum RunEndReason
 {
-    public static AnalyticsManager Instance;
+    DeathByObstacle,
+    DeathByEnemy,
+    Quit,
+    BossDefeated,
+    FellOffTrack
+}
 
-    void Awake()
+/// <summary>
+/// Manages the dispatch of all analytics events.
+/// Global scope Singleton for project-wide accessibility.
+/// Integrated with Unity Services.
+/// </summary>
+public class AnalyticsManager : Singleton<AnalyticsManager>
+{
+    private bool _isAnalyticsServiceReady = false;
+
+    private async void Start()
     {
-        if (Instance == null)
+        try
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            await UnityServices.InitializeAsync();
+            _isAnalyticsServiceReady = true;
+            Debug.Log("[AnalyticsManager] Unity Analytics service initialized.");
         }
-        else
+        catch (Exception e)
         {
-            Destroy(gameObject);
+            Debug.LogError($"[AnalyticsManager] Failed to initialize Unity Analytics: {e.Message}");
         }
     }
 
-    public void TrackEvent(string eventName, Dictionary<string, object> eventData)
+    public void TrackEvent(string eventName, Dictionary<string, object> parameters)
     {
-        // In a real implementation, you would integrate with an analytics service like Unity Analytics, Firebase, or a custom backend.
-        Debug.Log($"Tracking event: {eventName} with data: {Newtonsoft.Json.JsonConvert.SerializeObject(eventData)}");
+        if (!_isAnalyticsServiceReady) return;
+        AnalyticsService.Instance.CustomData(eventName, parameters);
+        Debug.Log($"[AnalyticsManager] Logging event: {eventName}");
     }
 
-    public void TrackThemeSelectedEvent(ThemeSO theme)
+    public void LogRunFinishedEvent(int score, float runDuration, int currencyCollected, RunEndReason deathCause)
     {
-        Dictionary<string, object> eventData = new Dictionary<string, object>
+        Dictionary<string, object> parameters = new Dictionary<string, object>
         {
-            { "theme_name", theme.name }
+            { "finalScore", score },
+            { "runDurationSeconds", runDuration },
+            { "currencyCollected", currencyCollected },
+            { "deathCause", deathCause.ToString() }
         };
-        TrackEvent("theme_selected", eventData);
+        TrackEvent("runFinished", parameters);
+    }
+
+    public void LogPowerUpActivatedEvent(string powerUpType)
+    {
+        TrackEvent("powerUpActivated", new Dictionary<string, object> { { "powerUpType", powerUpType } });
+    }
+
+    public void LogAdStartedEvent(string adType, string placementName)
+    {
+        TrackEvent("adStarted", new Dictionary<string, object> { { "adType", adType }, { "adPlacement", placementName } });
+    }
+
+    public void TrackThemeSelectedEvent(string themeName)
+    {
+        TrackEvent("theme_selected", new Dictionary<string, object> { { "theme_name", themeName } });
     }
 
     public void TrackObstacleHitEvent(string obstacleType, float playerSpeed)
     {
-        Dictionary<string, object> eventData = new Dictionary<string, object>
-        {
-            { "obstacle_type", obstacleType },
-            { "player_speed", playerSpeed }
-        };
-        TrackEvent("obstacle_hit", eventData);
+        TrackEvent("obstacle_hit", new Dictionary<string, object> { { "obstacle_type", obstacleType }, { "player_speed", playerSpeed } });
+    }
+
+    public void LogEvent(string eventName, Dictionary<string, object> parameters) => TrackEvent(eventName, parameters);
+
+    public void LogPurchase(string itemID, int price)
+    {
+        TrackEvent("item_purchased", new Dictionary<string, object> { { "item_id", itemID }, { "price", price } });
+    }
+
+    public void LogLevelStart(int level)
+    {
+        TrackEvent("level_start", new Dictionary<string, object> { { "level", level } });
+    }
+
+    public void LogLevelEnd(int level, bool success)
+    {
+        TrackEvent("level_end", new Dictionary<string, object> { { "level", level }, { "success", success } });
+    }
+
+    public void SetUserProperty(string key, string value)
+    {
+        if (!_isAnalyticsServiceReady) return;
+        // Placeholder: would set user property via analytics service
+        Debug.Log($"[AnalyticsManager] Setting user property: {key} = {value}");
     }
 }

@@ -6,17 +6,11 @@ using System;
 [Serializable]
 public class EventMilestoneData
 {
-    public string milestoneID;
-    public string description;
+    public string MilestoneID;
+    public string Description;
     public MilestoneType type;
     public double targetValue;
+    public float CurrentGlobalValue;
+    public bool IsCompleted;
     public string globalRewardID; // e.g., XP Boost for all players for 24h
-}
-
-public enum MilestoneType
-{
-    TotalDistanceRun,
-    TotalBossDefeats,
-    TotalNearMisses,
-    TotalCoinsCollected
 }

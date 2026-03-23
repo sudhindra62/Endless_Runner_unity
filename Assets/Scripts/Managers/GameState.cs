@@ -1,11 +1,12 @@
 
-namespace EndlessRunner.Managers
+public enum GameState
 {
-    public enum GameState
-    {
-        MainMenu,
-        Starting,
-        Playing,
-        GameOver
-    }
+    MainMenu,
+    Starting,
+    Playing,
+    Paused,
+    GameOver,
+    EndOfRun,
+    Revive,
+    Reviving
 }

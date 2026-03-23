@@ -20,14 +20,19 @@ public class EnemyChaserSpawner : MonoBehaviour
 
     private void SpawnEnemyChaser()
     {
-        ThemeConfig currentTheme = ThemeManager.Instance.CurrentTheme;
-        if (currentTheme == null || currentTheme.enemyChaserPrefab == null)
+        ThemeSO currentTheme = ThemeManager.Instance != null ? ThemeManager.Instance.CurrentTheme : null;
+        GameObject enemyChaserPrefab = currentTheme != null
+            ? (currentTheme.enemyChaserPrefab != null ? currentTheme.enemyChaserPrefab : currentTheme.config != null ? currentTheme.config.enemyChaserPrefab : null)
+            : null;
+
+        if (enemyChaserPrefab == null)
         {
             Debug.LogWarning("Current theme does not have an enemy chaser prefab defined.");
             return;
         }
 
-        GameObject enemyChaser = Instantiate(currentTheme.enemyChaserPrefab, transform.position, Quaternion.identity);
-        enemyChaser.GetComponent<EnemyChaser>().playerTransform = FindObjectOfType<PlayerController>().transform;
+        GameObject enemyChaser = ObjectPool.Instance.GetObject(enemyChaserPrefab, transform.position, Quaternion.identity);
+        if (enemyChaser != null)
+            enemyChaser.GetComponent<EnemyChaser>().playerTransform = PlayerController.Instance.transform;
     }
 }

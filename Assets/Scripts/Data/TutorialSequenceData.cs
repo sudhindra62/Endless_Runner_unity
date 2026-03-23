@@ -1,9 +1,7 @@
-
+﻿
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace EndlessRunner.Data
-{
     /// <summary>
     /// A ScriptableObject that defines a sequence of tutorial steps.
     /// </summary>
@@ -13,4 +11,4 @@ namespace EndlessRunner.Data
         [Tooltip("The list of steps that make up this tutorial sequence.")]
         public List<TutorialStep> steps = new List<TutorialStep>();
     }
-}
+

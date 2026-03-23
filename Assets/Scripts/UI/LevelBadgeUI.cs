@@ -41,7 +41,7 @@ public class LevelBadgeUI : MonoBehaviour
         }
     }
 
-    private void UpdateXP(int currentXP, int xpForNextLevel)
+    private void UpdateXP(float currentXP, int xpForNextLevel)
     {
         if (xpFillImage != null)
         {

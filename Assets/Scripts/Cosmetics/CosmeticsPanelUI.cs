@@ -53,8 +53,11 @@ public class CosmeticsPanelUI : MonoBehaviour
 
     private List<CosmeticEffectData> GetAllCosmeticData()
     {
-        // This is where you would load all cosmetic data from your game's configuration.
-        // For this example, we return an empty list.
+        if (CosmeticEffectManager.Instance != null)
+        {
+            return CosmeticEffectManager.Instance.GetAllEffects();
+        }
+
         return new List<CosmeticEffectData>();
     }
 }

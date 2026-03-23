@@ -2,10 +2,10 @@
 using UnityEngine;
 using TMPro;
 
-namespace EndlessRunner.UI
-{
     public class UIPanel_Tutorial : UIPanel
     {
+        public override UIPanelType PanelType => UIPanelType.Tutorial;
+
         [SerializeField] private TextMeshProUGUI instructionText;
 
         public void Show(string message, float duration)
@@ -14,4 +14,3 @@ namespace EndlessRunner.UI
             base.Show();
         }
     }
-}

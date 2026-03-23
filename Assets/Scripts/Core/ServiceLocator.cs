@@ -1,34 +1,43 @@
-
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
-namespace EndlessRunner.Core
+/// <summary>
+/// A centralized Service Locator for registering and retrieving global services.
+/// Global scope for maximum project-wide accessibility.
+/// </summary>
+public static class ServiceLocator
 {
-    public static class ServiceLocator
+    private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
+
+    public static void Register<T>(T service)
     {
-        private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
-
-        public static void Register<T>(T service)
+        var type = typeof(T);
+        if (_services.ContainsKey(type))
         {
-            var type = typeof(T);
-            if (_services.ContainsKey(type))
-            {
-                Logger.LogWarning("SERVICE_LOCATOR", $"Service of type {type.Name} is already registered.");
-                return;
-            }
-            _services[type] = service;
-            Logger.Log("SERVICE_LOCATOR", $"Service registered: {type.Name}");
+            Debug.LogWarning($"[SERVICE_LOCATOR] Service of type {type.Name} is already registered.");
+            return;
         }
+        _services[type] = service;
+    }
 
-        public static T Get<T>()
+    public static void Unregister<T>()
+    {
+        var type = typeof(T);
+        if (_services.ContainsKey(type))
         {
-            var type = typeof(T);
-            if (!_services.TryGetValue(type, out var service))
-            {
-                Logger.LogError("SERVICE_LOCATOR", $"Service of type {type.Name} is not registered.");
-                return default;
-            }
-            return (T)service;
+            _services.Remove(type);
         }
+    }
+
+    public static T Get<T>()
+    {
+        var type = typeof(T);
+        if (!_services.TryGetValue(type, out var service))
+        {
+            Debug.LogError($"[SERVICE_LOCATOR] Service of type {type.Name} is not registered.");
+            return default;
+        }
+        return (T)service;
     }
 }

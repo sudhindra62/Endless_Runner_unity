@@ -80,14 +80,14 @@ public class FlowComboUI : MonoBehaviour
         }
     }
 
-    private void OnComboBroken()
+    private void OnComboBroken(int previousCombo)
     {
         comboCountText.gameObject.SetActive(false);
         multiplierText.gameObject.SetActive(false);
         comboDecaySlider.gameObject.SetActive(false);
     }
 
-    private void OnTierIncreased(float newMultiplier)
+    private void OnTierIncreased(int previousTier, int newTier)
     {
         if (tierPulseAnimator != null)
         {

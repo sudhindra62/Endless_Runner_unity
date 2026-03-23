@@ -1,30 +1,40 @@
-
 using UnityEngine;
 
 /// <summary>
-/// Validates and clamps LiveOps configuration profiles.
+/// Provides static methods for validating and clamping LiveOps configuration values.
+/// Global scope for maximum project-wide accessibility.
 /// </summary>
 public static class LiveOpsSafetyValidator
 {
-    /// <summary>
-    /// Validates and clamps a fetched LiveOps configuration profile against a safe default profile.
-    /// </summary>
-    /// <param name="fetchedProfile">The fetched profile to validate.</param>
-    /// <param name="safeDefaultProfile">The safe default profile to use for clamping.</param>
-    /// <returns>The validated and clamped profile.</returns>
-    public static LiveOpsConfigProfile ValidateAndClamp(LiveOpsConfigProfile fetchedProfile, LiveOpsConfigProfile safeDefaultProfile)
+    public static LiveOpsConfigProfile ValidateAndClamp(LiveOpsConfigProfile rawProfile, LiveOpsSafetyBounds safetyBounds, LiveOpsConfigProfile safeDefault)
     {
-        // In a real implementation, you would have more sophisticated validation rules.
-        // For this example, we'll just clamp the values to a safe range.
+        if (rawProfile == null) return safeDefault;
+        if (safetyBounds == null) return safeDefault;
+
         LiveOpsConfigProfile validatedProfile = ScriptableObject.CreateInstance<LiveOpsConfigProfile>();
 
-        validatedProfile.difficultyMultiplier = Mathf.Clamp(fetchedProfile.difficultyMultiplier, 0.5f, 2.0f);
-        validatedProfile.powerUpDurationMultiplier = Mathf.Clamp(fetchedProfile.powerUpDurationMultiplier, 0.5f, 2.0f);
-        validatedProfile.dropRateMultiplier = Mathf.Clamp(fetchedProfile.dropRateMultiplier, 0.5f, 2.0f);
-        validatedProfile.riskLaneRewardMultiplier = Mathf.Clamp(fetchedProfile.riskLaneRewardMultiplier, 0.5f, 2.0f);
-        validatedProfile.reviveGemCost = Mathf.Clamp(fetchedProfile.reviveGemCost, 5, 20);
-        validatedProfile.isEventActive = fetchedProfile.isEventActive;
+        validatedProfile.difficultyMultiplier = Clamp(rawProfile.difficultyMultiplier, safetyBounds.difficultyMultiplier, safeDefault.difficultyMultiplier);
+        validatedProfile.powerUpDurationMultiplier = Clamp(rawProfile.powerUpDurationMultiplier, safetyBounds.powerUpDurationMultiplier, safeDefault.powerUpDurationMultiplier);
+        validatedProfile.dropRateMultiplier = Clamp(rawProfile.dropRateMultiplier, safetyBounds.dropRateMultiplier, safeDefault.dropRateMultiplier);
+        validatedProfile.riskLaneRewardMultiplier = Clamp(rawProfile.riskLaneRewardMultiplier, safetyBounds.riskLaneRewardMultiplier, safeDefault.riskLaneRewardMultiplier);
+        validatedProfile.reviveGemCost = Clamp(rawProfile.reviveGemCost, safetyBounds.reviveGemCost, safeDefault.reviveGemCost);
+        validatedProfile.adFrequencyModifier = Clamp(rawProfile.adFrequencyModifier, safetyBounds.adFrequencyModifier, safeDefault.adFrequencyModifier);
+        validatedProfile.isEventActive = rawProfile.isEventActive;
+        validatedProfile.bossSpawnIntervalMinutes = Clamp(rawProfile.bossSpawnIntervalMinutes, safetyBounds.bossSpawnIntervalMinutes, safeDefault.bossSpawnIntervalMinutes);
+        validatedProfile.leagueThresholdAdjustment = Clamp(rawProfile.leagueThresholdAdjustment, safetyBounds.leagueThresholdAdjustment, safeDefault.leagueThresholdAdjustment);
 
         return validatedProfile;
+    }
+
+    private static float Clamp(float value, LiveOpsSafetyBounds.FloatRange bounds, float defaultValue)
+    {
+        if (value < bounds.min || value > bounds.max) return defaultValue;
+        return value;
+    }
+
+    private static int Clamp(int value, LiveOpsSafetyBounds.IntRange bounds, int defaultValue)
+    {
+        if (value < bounds.min || value > bounds.max) return defaultValue;
+        return value;
     }
 }

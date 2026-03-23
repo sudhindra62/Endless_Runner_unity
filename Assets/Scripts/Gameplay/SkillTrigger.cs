@@ -79,7 +79,7 @@ public class SkillTrigger : MonoBehaviour
 
             if (feverModeManager != null)
             {
-                feverModeManager.AddFeverPoints(feverGaugeValue);
+                feverModeManager.AddFeverPoints(Mathf.RoundToInt(feverGaugeValue));
             }
 
             // Mark as triggered and optionally disable the collider

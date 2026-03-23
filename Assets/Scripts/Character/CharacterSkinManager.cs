@@ -1,16 +1,15 @@
 
 using System.Collections.Generic;
 using UnityEngine;
-using EndlessRunner.Managers;
 
-namespace EndlessRunner.Character
-{
     public class CharacterSkinManager : MonoBehaviour
     {
         public static CharacterSkinManager Instance;
 
         public List<CharacterSkin> allSkins;
         private const string SelectedSkinKey = "SelectedCharacterSkin";
+
+        public static System.Action<CharacterSkin> OnSkinChanged;
 
         private void Awake()
         {
@@ -27,20 +26,34 @@ namespace EndlessRunner.Character
 
         public void SetSelectedSkin(CharacterSkin skin)
         {
-            PlayerPrefs.SetString(SelectedSkinKey, skin.characterName);
-            PlayerPrefs.Save();
+            if (SaveManager.Instance != null)
+            {
+                SaveManager.Instance.Data.activeTheme = skin.characterName;
+                SaveManager.Instance.SaveGame();
+            }
         }
 
         public CharacterSkin GetSelectedSkin()
         {
-            string skinName = PlayerPrefs.GetString(SelectedSkinKey, allSkins[0].characterName); // Default to the first skin
+            string skinName = (SaveManager.Instance != null && !string.IsNullOrEmpty(SaveManager.Instance.Data.activeTheme)) 
+                ? SaveManager.Instance.Data.activeTheme 
+                : allSkins[0].characterName;
             return allSkins.Find(s => s.characterName == skinName);
         }
 
-        public bool IsSkinUnlocked(CharacterSkin skin)
+        public bool IsSkinUnlocked(CharacterSkin skin) => IsSkinUnlocked(skin.characterName);
+        
+        public bool IsSkinUnlocked(string skinName)
         {
-            if (skin.unlockType == SkinUnlockType.Coins && skin.price == 0) return true; // Free skin
-            return PlayerPrefs.GetInt(skin.characterName + "_unlocked", 0) == 1;
+            var skin = allSkins.Find(s => s.characterName == skinName);
+            if (skin != null && skin.unlockType == SkinUnlockType.Coins && skin.price == 0) return true;
+            return SaveManager.Instance != null && SaveManager.Instance.Data.unlockedSkins.Contains(skinName);
+        }
+
+        public bool UnlockSkin(string skinName)
+        {
+            var skin = allSkins.Find(s => s.characterName == skinName);
+            return skin != null && UnlockSkin(skin);
         }
 
         public bool UnlockSkin(CharacterSkin skin)
@@ -50,7 +63,7 @@ namespace EndlessRunner.Character
             switch (skin.unlockType)
             {
                 case SkinUnlockType.Coins:
-                    if (CurrencyManager.Instance.SpendCoins(skin.price))
+                    if (PlayerDataManager.Instance.SpendCurrency(CurrencyType.Coins, skin.price))
                     {
                         MarkSkinAsUnlocked(skin);
                         return true;
@@ -58,7 +71,7 @@ namespace EndlessRunner.Character
                     return false;
 
                 case SkinUnlockType.Gems:
-                    if (CurrencyManager.Instance.SpendGems(skin.price))
+                    if (PlayerDataManager.Instance.SpendCurrency(CurrencyType.Gems, skin.price))
                     {
                         MarkSkinAsUnlocked(skin);
                         return true;
@@ -76,10 +89,23 @@ namespace EndlessRunner.Character
             return false;
         }
 
+        public void EquipSkin(string skinName)
+        {
+            var skin = allSkins.Find(s => s.characterName == skinName);
+            if (skin != null && IsSkinUnlocked(skin))
+            {
+                SetSelectedSkin(skin);
+                OnSkinChanged?.Invoke(skin);
+            }
+        }
+
         private void MarkSkinAsUnlocked(CharacterSkin skin)
         {
-            PlayerPrefs.SetInt(skin.characterName + "_unlocked", 1);
-            PlayerPrefs.Save();
+            if (SaveManager.Instance != null && !SaveManager.Instance.Data.unlockedSkins.Contains(skin.characterName))
+            {
+                SaveManager.Instance.Data.unlockedSkins.Add(skin.characterName);
+                SaveManager.Instance.SaveGame();
+            }
         }
     }
-}
+

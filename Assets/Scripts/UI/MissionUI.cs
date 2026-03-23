@@ -2,10 +2,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using EndlessRunner.Missions;
 
-namespace EndlessRunner.UI
-{
+
     /// <summary>
     /// Displays the status of a single mission.
     /// </summary>
@@ -14,12 +12,12 @@ namespace EndlessRunner.UI
         [SerializeField] private TextMeshProUGUI descriptionText;
         [SerializeField] private Slider progressBar;
 
-        public void UpdateMission(Mission mission)
+        public void UpdateMission(MissionData mission)
         {
             if (mission == null) return;
 
-            descriptionText.text = mission.description;
-            progressBar.value = mission.progress;
+            descriptionText.text = mission.missionDescription;
+            progressBar.value = (float)mission.currentProgress / mission.goal;
         }
     }
-}
+

@@ -45,6 +45,8 @@ public class ShardInventoryManager : Singleton<ShardInventoryManager>
         return _inventoryData;
     }
 
+    public void AddShards(string shardId, int amount) => AddShardsAndCheckForUnlock(shardId, amount);
+
     /// <summary>
     /// Adds shards to the player's inventory and immediately checks if an item can be unlocked.
     /// </summary>

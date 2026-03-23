@@ -12,21 +12,37 @@ public class PowerUpUI : MonoBehaviour
     [SerializeField] private GameObject powerUpIconPrefab; // A prefab with an Image and a Slider/TMP_Text for duration
     [SerializeField] private Transform iconContainer;
 
-    private Dictionary<PowerUp.PowerUpType, GameObject> activeIcons = new Dictionary<PowerUp.PowerUpType, GameObject>();
+    private Dictionary<PowerUpType, GameObject> activeIcons = new Dictionary<PowerUpType, GameObject>();
 
     private void OnEnable()
     {
-        PowerUpManager.OnPowerUpActivated += AddPowerUpIcon;
-        PowerUpManager.OnPowerUpDeactivated += RemovePowerUpIcon;
+        PowerUpManager.OnPowerUpActivated += HandlePowerUpActivated;
+        PowerUpManager.OnPowerUpDeactivated += HandlePowerUpDeactivated;
     }
 
     private void OnDisable()
     {
-        PowerUpManager.OnPowerUpActivated -= AddPowerUpIcon;
-        PowerUpManager.OnPowerUpDeactivated -= RemovePowerUpIcon;
+        PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivated;
+        PowerUpManager.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
     }
 
-    private void AddPowerUpIcon(PowerUp.PowerUpType type, float duration)
+    private void HandlePowerUpActivated(PowerUpDefinition definition)
+    {
+        if (definition != null)
+        {
+            AddPowerUpIcon(definition.type, definition.duration);
+        }
+    }
+
+    private void HandlePowerUpDeactivated(PowerUpDefinition definition)
+    {
+        if (definition != null)
+        {
+            RemovePowerUpIcon(definition.type);
+        }
+    }
+
+    private void AddPowerUpIcon(PowerUpType type, float duration)
     {
         if (activeIcons.ContainsKey(type))
         {
@@ -46,7 +62,7 @@ public class PowerUpUI : MonoBehaviour
         activeIcons[type] = iconGO;
     }
 
-    private void RemovePowerUpIcon(PowerUp.PowerUpType type)
+    private void RemovePowerUpIcon(PowerUpType type)
     {
         if (activeIcons.TryGetValue(type, out GameObject iconGO))
         {

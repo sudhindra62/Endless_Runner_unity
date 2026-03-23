@@ -16,17 +16,19 @@ public class SpeedBoostPowerUp : PowerUp
         powerUpType = PowerUpType.SpeedBoost;
     }
 
-    public override void TriggerActivation(PlayerController player)
+    public override void ApplyEffect()
     {
+        PlayerController player = PlayerController.Instance;
         if (player == null) return;
         Debug.Log("Guardian Architect Log: Speed Boost Activated!");
-        player.CurrentMoveSpeed = player.BaseMoveSpeed * speedMultiplier;
+        player.SetSpeed(player.BaseMoveSpeed * speedMultiplier);
     }
 
-    public override void TriggerDeactivation(PlayerController player)
+    public override void RemoveEffect()
     {
+        PlayerController player = PlayerController.Instance;
         if (player == null) return;
         Debug.Log("Guardian Architect Log: Speed Boost Deactivated.");
-        player.CurrentMoveSpeed = player.BaseMoveSpeed;
+        player.SetSpeed(player.BaseMoveSpeed);
     }
 }

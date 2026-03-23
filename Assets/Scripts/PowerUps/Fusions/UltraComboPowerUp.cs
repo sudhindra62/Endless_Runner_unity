@@ -34,7 +34,7 @@ public class UltraComboPowerUp : PowerUpEffect
         base.Activate();
         if (scoreManager != null)
         {
-            originalMultiplierCap = scoreManager.GetMultiplierCap();
+            originalMultiplierCap = Mathf.RoundToInt(scoreManager.GetMultiplierCap());
             scoreManager.SetMultiplierCap(originalMultiplierCap + multiplierCapIncrease);
         }
 

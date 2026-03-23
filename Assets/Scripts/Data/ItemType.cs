@@ -1,9 +1,10 @@
 
-namespace EndlessRunner.Data
-{
     public enum ItemType
     {
         Cosmetic,
-        PowerUp
+        PowerUp,
+        Character,
+        Consumable,
+        Currency
     }
-}
+

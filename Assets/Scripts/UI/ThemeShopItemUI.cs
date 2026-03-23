@@ -1,13 +1,10 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using EndlessRunner.Themes;
-using EndlessRunner.Managers;
-using EndlessRunner.Monetization;
+
+
 using TMPro;
 
-namespace EndlessRunner.UI
-{
     public class ThemeShopItemUI : MonoBehaviour
     {
         public Image themePreview;
@@ -41,7 +38,7 @@ namespace EndlessRunner.UI
             }
 
             // Check if a discount has been previously applied
-            if (PlayerPrefs.GetInt(theme.themeName + "_discounted", 0) == 1)
+            if (SaveManager.Instance != null && SaveManager.Instance.Data.discountedThemes.Contains(theme.themeName))
             {
                 isDiscounted = true;
             }
@@ -128,9 +125,12 @@ namespace EndlessRunner.UI
             {
                 if (rewardType == RewardType.ThemeUnlockDiscount)
                 {
+                    if (SaveManager.Instance != null && !SaveManager.Instance.Data.discountedThemes.Contains(theme.themeName))
+                    {
+                        SaveManager.Instance.Data.discountedThemes.Add(theme.themeName);
+                        SaveManager.Instance.SaveGame();
+                    }
                     isDiscounted = true;
-                    PlayerPrefs.SetInt(theme.themeName + "_discounted", 1); // Save discount status
-                    PlayerPrefs.Save();
                     ShowPurchaseButton(); // Refresh the UI
                 }
             });
@@ -142,4 +142,4 @@ namespace EndlessRunner.UI
             GameManager.Instance.StartGame();
         }
     }
-}
+

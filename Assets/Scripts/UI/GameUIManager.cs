@@ -4,6 +4,10 @@ using System.Collections.Generic;
 
 public class GameUIManager : Singleton<GameUIManager>
 {
+    public static event System.Action<UIPanelType> OnPanelOpened;
+    public static event System.Action<UIPanelType> OnPanelClosed;
+    public static event System.Action<UIState> OnUIStateChanged;
+    
     private Dictionary<UIPanelType, UIPanel> _uiPanels = new Dictionary<UIPanelType, UIPanel>();
 
     public void RegisterPanel(UIPanel panel)
@@ -19,6 +23,7 @@ public class GameUIManager : Singleton<GameUIManager>
         if (_uiPanels.TryGetValue(panelType, out UIPanel panel))
         {
             panel.Show();
+            OnPanelOpened?.Invoke(panelType);
         }
     }
 
@@ -27,6 +32,7 @@ public class GameUIManager : Singleton<GameUIManager>
         if (_uiPanels.TryGetValue(panelType, out UIPanel panel))
         {
             panel.Hide();
+            OnPanelClosed?.Invoke(panelType);
         }
     }
 }
@@ -37,5 +43,6 @@ public enum UIPanelType
     InGame,
     Pause,
     GameOver,
-    Settings
+    Settings,
+    Tutorial // ADDED: Missing value referenced in errors
 }

@@ -1,9 +1,6 @@
-
+﻿
 using UnityEngine;
-using EndlessRunner.Core;
 
-namespace EndlessRunner.Managers
-{
     public class SoundManager : Singleton<SoundManager>
     {
         [Header("Audio Sources")]
@@ -40,4 +37,4 @@ namespace EndlessRunner.Managers
             if (musicSource != null) musicSource.Stop();
         }
     }
-}
+

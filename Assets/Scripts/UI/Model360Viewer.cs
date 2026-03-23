@@ -2,8 +2,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace EndlessRunner.UI
-{
     public class Model360Viewer : MonoBehaviour, IPointerDownHandler, IDragHandler
     {
         public Transform target;
@@ -32,4 +30,3 @@ namespace EndlessRunner.UI
             target.Rotate(Vector3.up, rotationAmount, Space.World);
         }
     }
-}

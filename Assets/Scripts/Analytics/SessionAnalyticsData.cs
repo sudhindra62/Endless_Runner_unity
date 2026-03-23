@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 
 [System.Serializable]
-public struct PlayerDeath
+public struct PlayerDeathEvent
 {
     public string cause;
     public float distance;
 }
 
 [System.Serializable]
-public struct BossEncounter
+public struct BossEncounterEvent
 {
     public string bossName;
     public bool survived;
@@ -24,12 +24,12 @@ public class SessionAnalyticsData
     public float sessionEndTime;
     public bool sessionEndedAbruptly;
 
-    public List<PlayerDeath> deaths = new List<PlayerDeath>();
+    public List<PlayerDeathEvent> deaths = new List<PlayerDeathEvent>();
     public int totalDodges;
     public int successfulDodges;
     public int comboPeak;
     public int reviveCount;
-    public List<BossEncounter> bossEncounters = new List<BossEncounter>();
+    public List<BossEncounterEvent> bossEncounters = new List<BossEncounterEvent>();
     
     // --- CALCULATED PROPERTIES ---
     public float SessionDuration => sessionEndTime > 0 ? (sessionEndTime - sessionStartTime) : (Time.time - sessionStartTime);
@@ -58,8 +58,8 @@ public class SessionAnalyticsData
 
     public SessionAnalyticsData()
     {
-        deaths = new List<PlayerDeath>();
-        bossEncounters = new List<BossEncounter>();
+        deaths = new List<PlayerDeathEvent>();
+        bossEncounters = new List<BossEncounterEvent>();
     }
 
     public void StartSession()
@@ -84,8 +84,8 @@ public class SessionAnalyticsData
 
     public void RecordDeath(string cause, float distance)
     {
-        if (deaths == null) deaths = new List<PlayerDeath>();
-        deaths.Add(new PlayerDeath { cause = cause, distance = distance });
+        if (deaths == null) deaths = new List<PlayerDeathEvent>();
+        deaths.Add(new PlayerDeathEvent { cause = cause, distance = distance });
     }
 
     public void RecordDodge(bool success)
@@ -112,7 +112,7 @@ public class SessionAnalyticsData
 
     public void RecordBossEncounter(string bossName, bool survived)
     {
-        if (bossEncounters == null) bossEncounters = new List<BossEncounter>();
-        bossEncounters.Add(new BossEncounter { bossName = bossName, survived = survived });
+        if (bossEncounters == null) bossEncounters = new List<BossEncounterEvent>();
+        bossEncounters.Add(new BossEncounterEvent { bossName = bossName, survived = survived });
     }
 }

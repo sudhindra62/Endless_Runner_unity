@@ -45,7 +45,7 @@ public class WorldEventUI : MonoBehaviour
         countdownCoroutine = StartCoroutine(CountdownTimer(eventData.endTime));
     }
 
-    private void HandleEventDeactivated()
+    private void HandleEventDeactivated(WorldEventData eventData)
     {
         if (eventPanel == null) return;
         
@@ -71,6 +71,6 @@ public class WorldEventUI : MonoBehaviour
         // Final update to show 00:00:00 and hide panel
         if (eventTimerText != null) eventTimerText.text = "00:00:00";
         yield return new WaitForSeconds(1f);
-        HandleEventDeactivated();
+        HandleEventDeactivated(null);
     }
 }

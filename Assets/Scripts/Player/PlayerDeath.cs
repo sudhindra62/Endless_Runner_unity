@@ -1,9 +1,6 @@
-
+﻿
 using UnityEngine;
-using EndlessRunner.Managers;
 
-namespace EndlessRunner.Player
-{
     /// <summary>
     /// Handles player death conditions, such as colliding with obstacles or falling off the world.
     /// Communicates with the GameManager to end the game.
@@ -88,4 +85,4 @@ namespace EndlessRunner.Player
             gameObject.SetActive(true); // Re-enable the player object
         }
     }
-}
+

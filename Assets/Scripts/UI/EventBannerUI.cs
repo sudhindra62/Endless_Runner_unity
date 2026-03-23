@@ -22,13 +22,14 @@ public class EventBannerUI : MonoBehaviour
         LiveEventManager.OnEventEnded -= HideBanner;
     }
 
-    private void ShowBanner(LiveEventData eventData)
+    private void ShowBanner(LiveEvent liveEvent)
     {
-        eventNameText.text = eventData.eventName;
+        if (liveEvent == null) return;
+        eventNameText.text = liveEvent.eventName;
         bannerRoot.SetActive(true);
     }
 
-    private void HideBanner(LiveEventData eventData)
+    private void HideBanner(LiveEvent liveEvent)
     {
         bannerRoot.SetActive(false);
     }

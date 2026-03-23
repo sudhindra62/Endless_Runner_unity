@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using Skins;
+
 
 public class SkinShopUI : MonoBehaviour
 {

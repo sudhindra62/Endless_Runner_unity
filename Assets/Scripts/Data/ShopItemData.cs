@@ -1,14 +1,24 @@
-
 using UnityEngine;
 
-namespace EndlessRunner.Data
+/// <summary>
+/// ScriptableObject definition for a shop item.
+/// Global scope.
+/// </summary>
+[CreateAssetMenu(fileName = "New Shop Item", menuName = "Endless Runner/Data/Shop Item")]
+public class ShopItemData : ScriptableObject
 {
-    [CreateAssetMenu(fileName = "ShopItem", menuName = "EndlessRunner/Shop Item", order = 0)]
-    public class ShopItemData : ScriptableObject
-    {
-        public string Name;
-        public string Description;
-        public int Price;
-        public ItemType Type;
-    }
+    public string itemId;
+    public string itemName;
+    [TextArea(3, 5)]
+    public string description;
+    public int cost;
+    public ItemType type;
+    public Sprite icon;
+    
+    [Header("Optional Prefab")]
+    public GameObject itemPrefab;
+
+    public string Name => itemName;
+    public int Price => cost;
+    public ItemType Type => type;
 }

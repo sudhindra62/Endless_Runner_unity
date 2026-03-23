@@ -1,15 +1,13 @@
 
 using System;
 using System.Collections.Generic;
-using EndlessRunner.Themes;
+
 using UnityEngine;
 
-namespace EndlessRunner.Managers
-{
     public enum DailyRewardType { Gems, Coins, TemporaryTheme }
 
     [System.Serializable]
-    public struct Reward
+    public struct DailyRewardItem
     {
         public DailyRewardType rewardType;
         public int amount;
@@ -21,7 +19,7 @@ namespace EndlessRunner.Managers
     {
         public static DailyRewardManager Instance;
 
-        public List<Reward> possibleRewards;
+        public List<DailyRewardItem> possibleRewards;
 
         private const string LastRewardTimeKey = "LastRewardTime";
         private const string TempThemeUnlockTimeKey = "TempThemeUnlockTime_";
@@ -43,39 +41,54 @@ namespace EndlessRunner.Managers
 
         public bool IsRewardAvailable()
         {
-            if (!PlayerPrefs.HasKey(LastRewardTimeKey))
+            if (SaveManager.Instance == null) return false;
+
+            if (SaveManager.Instance.Data.lastDailyRewardTimestamp == 0)
             {
                 return true;
             }
 
-            string lastRewardTimeString = PlayerPrefs.GetString(LastRewardTimeKey);
-            DateTime lastRewardTime = DateTime.Parse(lastRewardTimeString);
-
+            DateTime lastRewardTime = DateTime.FromBinary(SaveManager.Instance.Data.lastDailyRewardTimestamp);
             return (DateTime.Now - lastRewardTime).TotalHours >= RewardIntervalHours;
         }
 
-        public Reward GetRandomReward()
+        public DailyRewardItem GetRandomReward()
         {
             if (possibleRewards.Count == 0)
             {
                 // Default reward if none are set up
-                return new Reward { rewardType = DailyRewardType.Gems, amount = 100 };
+                return new DailyRewardItem { rewardType = DailyRewardType.Gems, amount = 100 };
             }
 
             return possibleRewards[UnityEngine.Random.Range(0, possibleRewards.Count)];
         }
 
-        public void ClaimReward(Reward reward)
+        public Reward GetRandomRewardAsReward()
         {
-            if (!IsRewardAvailable()) return;
+            DailyRewardItem reward = GetRandomReward();
+            return new Reward("Daily Reward", ConvertRewardType(reward.rewardType), reward.amount, reward.rewardType.ToString())
+            {
+                temporaryTheme = reward.temporaryTheme,
+                temporaryThemeDurationHours = reward.temporaryThemeDurationHours
+            };
+        }
+
+        public void ClaimReward(DailyRewardItem reward)
+        {
+            if (!IsRewardAvailable() || SaveManager.Instance == null) return;
 
             GiveReward(reward);
 
-            PlayerPrefs.SetString(LastRewardTimeKey, DateTime.Now.ToString());
-            PlayerPrefs.Save();
+            SaveManager.Instance.Data.lastDailyRewardTimestamp = DateTime.Now.ToBinary();
+            SaveManager.Instance.SaveGame();
         }
 
-        private void GiveReward(Reward reward)
+        public void ClaimReward()
+        {
+            ClaimReward(GetRandomReward());
+        }
+
+        private void GiveReward(DailyRewardItem reward)
         {
             switch (reward.rewardType)
             {
@@ -89,14 +102,12 @@ namespace EndlessRunner.Managers
                     Debug.Log($"Daily reward claimed! {reward.amount} coins awarded.");
                     break;
                 case DailyRewardType.TemporaryTheme:
-                    if (reward.temporaryTheme != null)
+                    if (reward.temporaryTheme != null && SaveManager.Instance != null)
                     {
-                        string unlockTimeKey = TempThemeUnlockTimeKey + reward.temporaryTheme.themeName;
-                        string themeNameKey = TempThemeNameKey + reward.temporaryTheme.themeName;
-                        PlayerPrefs.SetString(unlockTimeKey, DateTime.Now.ToString());
-                        PlayerPrefs.SetString(themeNameKey, reward.temporaryTheme.themeName);
-                        PlayerPrefs.SetInt(reward.temporaryTheme.themeName + "_temp_duration", reward.temporaryThemeDurationHours);
-                        PlayerPrefs.Save();
+                        SaveManager.Instance.Data.tempThemeName = reward.temporaryTheme.themeName;
+                        SaveManager.Instance.Data.tempThemeUnlockTimestamp = DateTime.Now.ToBinary();
+                        SaveManager.Instance.Data.tempThemeDurationHours = reward.temporaryThemeDurationHours;
+                        SaveManager.Instance.SaveGame();
                         Debug.Log($"Daily reward claimed! Temporary unlock of {reward.temporaryTheme.themeName} for {reward.temporaryThemeDurationHours} hours.");
                     }
                     break;
@@ -105,12 +116,12 @@ namespace EndlessRunner.Managers
 
         public bool IsThemeTemporarilyUnlocked(ThemeSO theme)
         {
-            string unlockTimeKey = TempThemeUnlockTimeKey + theme.themeName;
-            if (PlayerPrefs.HasKey(unlockTimeKey))
+            if (SaveManager.Instance == null || string.IsNullOrEmpty(SaveManager.Instance.Data.tempThemeName)) return false;
+
+            if (SaveManager.Instance.Data.tempThemeName == theme.themeName)
             {
-                string unlockTimeString = PlayerPrefs.GetString(unlockTimeKey);
-                DateTime unlockTime = DateTime.Parse(unlockTimeString);
-                int durationHours = PlayerPrefs.GetInt(theme.themeName + "_temp_duration", 0);
+                DateTime unlockTime = DateTime.FromBinary(SaveManager.Instance.Data.tempThemeUnlockTimestamp);
+                int durationHours = SaveManager.Instance.Data.tempThemeDurationHours;
 
                 if ((DateTime.Now - unlockTime).TotalHours < durationHours)
                 {
@@ -118,14 +129,60 @@ namespace EndlessRunner.Managers
                 }
                 else
                 {
-                    // Clean up expired keys
-                    PlayerPrefs.DeleteKey(unlockTimeKey);
-                    PlayerPrefs.DeleteKey(TempThemeNameKey + theme.themeName);
-                    PlayerPrefs.DeleteKey(theme.themeName + "_temp_duration");
+                    // Clean up expired temp theme
+                    SaveManager.Instance.Data.tempThemeName = "";
+                    SaveManager.Instance.Data.tempThemeUnlockTimestamp = 0;
+                    SaveManager.Instance.Data.tempThemeDurationHours = 0;
+                    SaveManager.Instance.SaveGame();
                     return false;
                 }
             }
             return false;
         }
+
+        // --- Type Conversion Bridges (Phase 2A: Type Consistency) ---
+        
+        public void ClaimReward(DailyRewardItem reward, long bonusAmount = 0)
+        {
+            ClaimReward(reward);
+            if (bonusAmount > 0 && RewardManager.Instance != null)
+            {
+                RewardManager.Instance.Award("COINS", bonusAmount);
+            }
+        }
+
+        public DailyRewardItem CreateReward(DailyRewardType rewardType, long amount)
+        {
+            return new DailyRewardItem
+            {
+                rewardType = rewardType,
+                amount = (int)System.Math.Min(amount, int.MaxValue),
+                temporaryTheme = null,
+                temporaryThemeDurationHours = 0
+            };
+        }
+
+        public DateTime GetLastRewardTime()
+        {
+            if (SaveManager.Instance == null || SaveManager.Instance.Data.lastDailyRewardTimestamp == 0)
+                return DateTime.MinValue;
+
+            return DateTime.FromBinary(SaveManager.Instance.Data.lastDailyRewardTimestamp);
+        }
+
+        public double GetHoursSinceLastReward()
+        {
+            return (DateTime.Now - GetLastRewardTime()).TotalHours;
+        }
+
+        private static RewardType ConvertRewardType(DailyRewardType rewardType)
+        {
+            return rewardType switch
+            {
+                DailyRewardType.Gems => RewardType.Gems,
+                DailyRewardType.Coins => RewardType.Coins,
+                _ => RewardType.DailyBonus
+            };
+        }
     }
-}
+

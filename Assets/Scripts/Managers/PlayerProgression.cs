@@ -31,6 +31,7 @@ public class PlayerProgression : Singleton<PlayerProgression>
 
     public static event Action<int> OnLevelUp;
     public static event Action<long, long> OnXPChanged;
+    public static event Action<long> OnXPGained;
     public static event Action<PlayerRank> OnRankUp;
 
     private long xpForNextLevel;
@@ -41,14 +42,16 @@ public class PlayerProgression : Singleton<PlayerProgression>
     protected override void Awake()
     {
         base.Awake();
-        LoadProgression();
+        // Regression Check: Single Source of Truth [R32]
+        // Progression is now loaded from SaveManager.Instance.Data
     }
 
     private void Start()
     {
+        LoadProgression(); // Moved to Start to ensure SaveManager is ready
         CalculateXPForNextLevel();
         UpdateUI();
-        PlayerPrefs.DeleteKey(LastRunXpKey);
+        if (SaveManager.Instance != null) SaveManager.Instance.Data.currentRunXP = 0;
     }
 
     /// <summary>
@@ -60,12 +63,12 @@ public class PlayerProgression : Singleton<PlayerProgression>
 
         if (source == "RunComplete")
         {
-            if (PlayerPrefs.HasKey(LastRunXpKey))
+            if (SaveManager.Instance != null && SaveManager.Instance.Data.currentRunXP > 0)
             {
                 Debug.LogWarning("Duplicate XP addition from run detected. Ignoring.");
                 return;
             }
-            PlayerPrefs.SetInt(LastRunXpKey, (int)amount);
+            if (SaveManager.Instance != null) SaveManager.Instance.Data.currentRunXP = amount;
         }
 
         currentXP += amount;
@@ -77,6 +80,7 @@ public class PlayerProgression : Singleton<PlayerProgression>
         }
 
         OnXPChanged?.Invoke(currentXP, xpForNextLevel);
+        OnXPGained?.Invoke(currentXP);
 
         while (currentXP >= xpForNextLevel && xpForNextLevel > 0)
         {
@@ -161,29 +165,35 @@ public class PlayerProgression : Singleton<PlayerProgression>
     
     private void SaveProgression()
     {
-        PlayerPrefs.SetInt(CurrentLevelKey, currentLevel);
-        PlayerPrefs.SetString(CurrentXPKey, currentXP.ToString());
-        PlayerPrefs.Save();
+        if (SaveManager.Instance == null) return;
+        SaveManager.Instance.Data.playerLevel = currentLevel;
+        SaveManager.Instance.Data.currentXP = (float)currentXP;
+        SaveManager.Instance.SaveGame();
     }
 
     private void LoadProgression()
     {
-        currentLevel = PlayerPrefs.GetInt(CurrentLevelKey, 1);
-        currentXP = long.Parse(PlayerPrefs.GetString(CurrentXPKey, "0"));
+        if (SaveManager.Instance == null) return;
+        currentLevel = SaveManager.Instance.Data.playerLevel;
+        currentXP = (long)SaveManager.Instance.Data.currentXP;
     }
 
     [ContextMenu("Reset Player Progression")]
     public void ResetProgression()
     {
-        PlayerPrefs.DeleteKey(CurrentLevelKey);
-        PlayerPrefs.DeleteKey(CurrentXPKey);
-        PlayerPrefs.DeleteKey(LastRunXpKey);
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.playerLevel = 1;
+            SaveManager.Instance.Data.currentXP = 0;
+            SaveManager.Instance.Data.currentRunXP = 0;
+            SaveManager.Instance.SaveGame();
+        }
         currentLevel = 1;
         currentXP = 0;
         CalculateXPForNextLevel();
         OnXPChanged?.Invoke(currentXP, xpForNextLevel);
+        OnXPGained?.Invoke(currentXP);
         UpdateUI();
-        SaveProgression();
         Debug.Log("Player progression has been reset.");
     }
 

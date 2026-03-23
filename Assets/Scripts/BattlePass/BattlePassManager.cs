@@ -13,6 +13,8 @@ public class BattlePassManager : Singleton<BattlePassManager>
 {
     // --- EVENTS ---
     public static event Action<int> OnXPAdded;
+    public static event Action<int> OnXPUpdated;
+    public static event Action<int> OnLevelUp;
     public static event Action<int> OnTierUnlocked;
     public static event Action<int, bool> OnRewardClaimed; // tierIndex, isPremium
 
@@ -66,6 +68,7 @@ public class BattlePassManager : Singleton<BattlePassManager>
     {
         _currentXP += amount;
         OnXPAdded?.Invoke(_currentXP);
+        OnXPUpdated?.Invoke(_currentXP);
         Debug.Log($"Guardian Architect: Added {amount} XP. Total XP: {_currentXP}");
         UpdateTierFromXP();
         SaveProgress();
@@ -104,7 +107,18 @@ public class BattlePassManager : Singleton<BattlePassManager>
         SaveProgress();
         Debug.Log($"<color=green>Guardian Architect: Reward claimed -> Tier {tierIndex + 1} ({ (isPremium ? "Premium" : "Free") })</color>");
         
-        // TODO: Grant the actual reward items to the player (e.g., call a currency or inventory manager)
+        // Grant actual rewards
+        var tier = GetTierData(tierIndex);
+        if (tier != null)
+        {
+            var reward = isPremium ? tier.premiumReward : tier.freeReward;
+            if (PlayerDataManager.Instance != null && !string.IsNullOrEmpty(reward.itemID))
+            {
+                // In a production loop, we would parse reward.type or itemID
+                // For now, we bridge to PlayerDataManager
+                PlayerDataManager.Instance.AddCoins(reward.quantity); 
+            }
+        }
     }
     
     #endregion
@@ -122,6 +136,87 @@ public class BattlePassManager : Singleton<BattlePassManager>
     {
         return _claimedRewards.Contains(GetRewardId(tierIndex, isPremium));
     }
+
+    // --- API bridge wrappers expected by BattlePassUIController ---
+    public BattlePassProgressData GetBattlePassData()
+    {
+        return new BattlePassProgressData
+        {
+            currentXP    = _currentXP,
+            currentLevel = _currentTier,
+            hasPremiumPass = _hasPremium
+        };
+    }
+
+    public bool CanClaimReward(int rewardID) => rewardID < _battlePassTiers.Count && rewardID <= _currentTier && !IsRewardClaimed(rewardID, false);
+
+    public int GetXPRequired(int tier) => tier * XP_PER_TIER;
+
+    public int[] GetClaimedRewards() => _claimedRewards.Select(r => int.Parse(r.Split('_')[0])).Distinct().ToArray();
+
+    public int[] GetPendingRewards() 
+    { 
+        var pending = new List<int>();
+        for (int i = 0; i <= _currentTier && i < _battlePassTiers.Count; i++)
+        {
+            if (!IsRewardClaimed(i, false)) pending.Add(i);
+        }
+        return pending.ToArray();
+    }
+
+    // --- Type Conversion Overloads (Phase 2A: Type Consistency) ---
+
+    public void ClaimReward(Reward reward)
+    {
+        // Convert Reward to tier index
+        if (reward != null && int.TryParse(reward.itemID, out int tierIndex))
+        {
+            ClaimReward(tierIndex, false);
+        }
+    }
+
+    public void ClaimReward(string rewardID)
+    {
+        if (int.TryParse(rewardID, out int id))
+        {
+            ClaimReward(id, false);
+        }
+    }
+
+    public BattlePassTier GetTierByID(string tierID)
+    {
+        if (int.TryParse(tierID, out int index) && index >= 0 && index < _battlePassTiers.Count)
+        {
+            return _battlePassTiers[index];
+        }
+        return null;
+    }
+
+    public List<BattlePassLevelReward> GetSeasonRewards()
+    {
+        var list = new List<BattlePassLevelReward>();
+        for (int i = 0; i < _battlePassTiers.Count; i++)
+        {
+            var tier = _battlePassTiers[i];
+            list.Add(new BattlePassLevelReward
+            {
+                level = i + 1,
+                freeTrackReward   = tier.freeReward,
+                premiumTrackReward = tier.premiumReward
+            });
+        }
+        return list;
+    }
+
+    public void PurchasePremiumPass() => PurchasePremium();
+    public void ClaimReward(int tierIndex) => ClaimReward(tierIndex, false);
+    public void TriggerSeasonResetForTesting()
+    {
+        _currentXP = 0;
+        _currentTier = 1;
+        _claimedRewards.Clear();
+        SaveProgress();
+    }
     
     #endregion
 
@@ -137,6 +232,7 @@ public class BattlePassManager : Singleton<BattlePassManager>
                 if(i < _battlePassTiers.Count) // Ensure we don'''t unlock tiers that don'''t exist
                 {
                     OnTierUnlocked?.Invoke(i);
+                    OnLevelUp?.Invoke(i);
                     Debug.Log($"<color=yellow>Guardian Architect: Battle Pass Tier Unlocked! -> Tier {i + 1}</color>");
                 }
             }
@@ -146,27 +242,26 @@ public class BattlePassManager : Singleton<BattlePassManager>
     
     private void SaveProgress()
     {
-        PlayerPrefs.SetInt(BATTLEPASS_XP_KEY, _currentXP);
-        PlayerPrefs.SetInt(BATTLEPASS_PREMIUM_KEY, _hasPremium ? 1 : 0);
-        // A simple way to save the set of claimed rewards
-        string claimedString = string.Join(",", _claimedRewards);
-        PlayerPrefs.SetString(BATTLEPASS_CLAIMED_KEY, claimedString);
-        PlayerPrefs.Save();
+        if (SaveManager.Instance == null) return;
+        SaveManager.Instance.Data.battlePassXP = _currentXP;
+        SaveManager.Instance.Data.hasBattlePassPremium = _hasPremium;
+        SaveManager.Instance.Data.claimedBattlePassRewards = _claimedRewards.ToList();
+        SaveManager.Instance.SaveGame();
     }
 
     private void LoadProgress()
     {
-        _currentXP = PlayerPrefs.GetInt(BATTLEPASS_XP_KEY, 0);
-        _hasPremium = PlayerPrefs.GetInt(BATTLEPASS_PREMIUM_KEY, 0) == 1;
-        string claimedString = PlayerPrefs.GetString(BATTLEPASS_CLAIMED_KEY, "");
-        if (!string.IsNullOrEmpty(claimedString))
+        if (SaveManager.Instance == null)
         {
-            _claimedRewards = new HashSet<string>(claimedString.Split(','));
-        }
-        else
-        {
+            _currentXP = 0;
+            _hasPremium = false;
             _claimedRewards = new HashSet<string>();
+            return;
         }
+
+        _currentXP = SaveManager.Instance.Data.battlePassXP;
+        _hasPremium = SaveManager.Instance.Data.hasBattlePassPremium;
+        _claimedRewards = new HashSet<string>(SaveManager.Instance.Data.claimedBattlePassRewards);
     }
     
     private string GetRewardId(int tierIndex, bool isPremium) => $"{tierIndex}_{ (isPremium ? "premium" : "free") }";

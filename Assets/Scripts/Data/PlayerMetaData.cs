@@ -1,18 +1,19 @@
-
-using UnityEngine;
+using System;
 
 /// <summary>
 /// Holds persistent, non-currency data about the player.
-/// e.g., Player name, creation date, total playtime, etc.
+/// This is a serializable DTO used by GameData.
+/// Created by Supreme Guardian Architect v12 for AEIS Phase 1 Stabilization.
 /// </summary>
-public class PlayerMetaData : Singleton<PlayerMetaData>
+[Serializable]
+public class PlayerMetaData
 {
-    public string PlayerName { get; set; } = "Player1";
-    public int PlayerLevel { get; private set; } = 1;
-
-    public void IncreaseLevel()
-    {
-        PlayerLevel++;
-        // In a real game, this might trigger events for other systems.
-    }
+    public string playerName = "Player1";
+    public int playerLevel = 1;
+    public int coins = 0;
+    public int gems = 0;
+    public float xp = 0f;
+    public string playerMetaData = "{}"; // Metadata field expected by some managers
+    public long totalPlayTime = 0;
+    public string creationDate = "";
 }

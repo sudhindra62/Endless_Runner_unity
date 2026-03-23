@@ -46,4 +46,28 @@ public class EventManager : MonoBehaviour
             (events[typeof(T)] as Action<T>)?.Invoke(eventArgs);
         }
     }
+
+    public bool IsSpecialEventActive(string eventName)
+    {
+        // Delegate to LiveEventManager for actual implementation
+        if (LiveEventManager.Instance != null)
+            return LiveEventManager.Instance.IsEventActive(eventName);
+        return false;
+    }
+
+    public bool IsSpecialEventActive()
+    {
+        // Check if any special event is active
+        if (LiveEventManager.Instance != null)
+            return LiveEventManager.Instance.IsAnyEventActive();
+        return false;
+    }
+
+    public void TriggerEnvironmentEvent(EnvironmentEventType type)
+    {
+        if (EnvironmentEventManager.Instance != null)
+        {
+            EnvironmentEventManager.Instance.StartEvent(new EnvironmentEventData(type, 30f, 10, 0f));
+        }
+    }
 }

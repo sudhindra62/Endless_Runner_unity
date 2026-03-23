@@ -26,6 +26,11 @@ public class CosmeticInventoryManager : Singleton<CosmeticInventoryManager>
     {
         return _unlockedEffectIDs.Contains(effectID);
     }
+    
+    public bool IsUnlocked(string effectID) => IsEffectUnlocked(effectID);
+    public void EquipCosmetic(string effectID) { /* Hook for equipment UI */ }
+    public bool IsCosmeticUnlocked(string effectID) => IsEffectUnlocked(effectID);
+    public void EquipCosmetic(string effectID, CosmeticEffectType effectType) => EquipCosmetic(effectID);
 
     /// <summary>
     /// Unlocks a cosmetic effect for the player.
@@ -49,17 +54,14 @@ public class CosmeticInventoryManager : Singleton<CosmeticInventoryManager>
 
     private void SaveUnlockedEffects()
     {
-        string data = string.Join(",", _unlockedEffectIDs);
-        PlayerPrefs.SetString(UNLOCKED_EFFECTS_SAVE_KEY, data);
-        PlayerPrefs.Save();
+        if (SaveManager.Instance == null) return;
+        SaveManager.Instance.Data.unlockedCosmeticEffects = new List<string>(_unlockedEffectIDs);
+        SaveManager.Instance.SaveGame();
     }
 
     private void LoadUnlockedEffects()
     {
-        string data = PlayerPrefs.GetString(UNLOCKED_EFFECTS_SAVE_KEY, string.Empty);
-        if (!string.IsNullOrEmpty(data))
-        {
-            _unlockedEffectIDs = new HashSet<string>(data.Split(','));
-        }
+        if (SaveManager.Instance == null) return;
+        _unlockedEffectIDs = new HashSet<string>(SaveManager.Instance.Data.unlockedCosmeticEffects);
     }
 }

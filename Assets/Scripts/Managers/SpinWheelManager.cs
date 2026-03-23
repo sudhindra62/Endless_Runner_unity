@@ -120,13 +120,13 @@ public class SpinWheelManager : Singleton<SpinWheelManager>
 
     private void LoadSpinData()
     {
-        lastFreeSpinTime = SaveManager.Instance.LoadLastSpinTime();
+        lastFreeSpinTime = new DateTime(SaveManager.Instance.LoadLastSpinTime());
         adSpinsUsedToday = SaveManager.Instance.LoadAdSpinsUsed();
     }
 
     private void SaveSpinData()
     {
-        SaveManager.Instance.SaveLastSpinTime(lastFreeSpinTime);
+        SaveManager.Instance.SaveLastSpinTime(lastFreeSpinTime.Ticks);
         SaveManager.Instance.SaveAdSpinsUsed(adSpinsUsedToday);
     }
 

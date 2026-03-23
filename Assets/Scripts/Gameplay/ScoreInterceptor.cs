@@ -1,10 +1,7 @@
 
 using UnityEngine;
-using Core;
-using Managers;
 
-namespace Gameplay
-{
+
     /// <summary>
     /// Intercepts and potentially modifies the score before it is added to the ScoreManager.
     /// </summary>
@@ -31,4 +28,4 @@ namespace Gameplay
             }
         }
     }
-}
+

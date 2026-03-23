@@ -1,15 +1,13 @@
 
 using UnityEngine;
-using EndlessRunner.Managers;
 
-namespace EndlessRunner.UI
-{
     /// <summary>
     /// An abstract base class for all UI panels. Provides foundational Show/Hide logic
     /// and a standardized interface for the UIManager.
     /// </summary>
     public abstract class UIPanel : MonoBehaviour
     {
+        public abstract UIPanelType PanelType { get; }
         protected UIManager _uiManager;
 
         /// <summary>
@@ -36,4 +34,3 @@ namespace EndlessRunner.UI
             gameObject.SetActive(false);
         }
     }
-}

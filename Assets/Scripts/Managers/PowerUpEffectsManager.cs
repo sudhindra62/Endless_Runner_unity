@@ -1,20 +1,18 @@
 
 using UnityEngine;
 using System.Collections.Generic;
-using EndlessRunner.PowerUps;
 
-namespace EndlessRunner.Managers
-{
+
     public class PowerUpEffectsManager : MonoBehaviour
     {
         [System.Serializable]
-        public class PowerUpEffect
+        public class PowerUpVisualData
         {
             public PowerUpType type;
             public ParticleSystem particleEffect;
         }
 
-        public List<PowerUpEffect> powerUpEffects;
+        public List<PowerUpVisualData> powerUpEffects;
         private Dictionary<PowerUpType, ParticleSystem> effectsDictionary;
 
         private void Awake()
@@ -48,4 +46,5 @@ namespace EndlessRunner.Managers
             }
         }
     }
-}
+
+

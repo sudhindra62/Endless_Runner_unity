@@ -1,8 +1,6 @@
-
+﻿
 using UnityEngine;
 
-namespace EndlessRunner.Managers
-{
     public class CollectableManager : MonoBehaviour
     {
         public static CollectableManager Instance;
@@ -57,4 +55,4 @@ namespace EndlessRunner.Managers
             }
         }
     }
-}
+

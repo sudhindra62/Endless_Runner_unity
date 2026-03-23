@@ -2,10 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using EndlessRunner.Managers;
 
-namespace EndlessRunner.UI
-{
     public class HomeScreenUI : MonoBehaviour
     {
         [Header("Main Buttons")]
@@ -95,4 +92,3 @@ namespace EndlessRunner.UI
             gemText.text = gems.ToString();
         }
     }
-}

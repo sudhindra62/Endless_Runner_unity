@@ -7,6 +7,7 @@ public class QuestProgressTracker
     public QuestData questData { get; private set; }
     public int currentProgress { get; private set; }
     public bool isCompleted { get; private set; }
+    public string QuestName => questData != null ? questData.questName : string.Empty;
 
     public static event Action<QuestData> OnQuestCompleted;
 
@@ -42,14 +43,28 @@ public class QuestProgressTracker
 
     private void SaveProgress()
     {
-        PlayerPrefs.SetInt(progressKey, currentProgress);
-        PlayerPrefs.Save();
+        if (SaveManager.Instance == null) return;
+        SaveManager.Instance.Data.questProgress[questData.questName] = currentProgress;
+        if (isCompleted && !SaveManager.Instance.Data.completedQuests.Contains(questData.questName))
+        {
+            SaveManager.Instance.Data.completedQuests.Add(questData.questName);
+        }
+        SaveManager.Instance.SaveGame();
     }
 
     private void LoadProgress()
     {
-        currentProgress = PlayerPrefs.GetInt(progressKey, 0);
-        if (currentProgress >= questData.requiredProgress)
+        if (SaveManager.Instance == null) return;
+        if (SaveManager.Instance.Data.questProgress.TryGetValue(questData.questName, out int progress))
+        {
+            currentProgress = progress;
+        }
+        else
+        {
+            currentProgress = 0;
+        }
+
+        if (currentProgress >= questData.requiredProgress || SaveManager.Instance.Data.completedQuests.Contains(questData.questName))
         {
             isCompleted = true;
         }

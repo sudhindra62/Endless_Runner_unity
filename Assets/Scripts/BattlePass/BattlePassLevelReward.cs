@@ -12,6 +12,14 @@ public class BattlePassReward
 public class BattlePassLevelReward
 {
     public int level;
-    public BattlePassReward freeTrackReward;
-    public BattlePassReward premiumTrackReward;
+    public RewardItem freeTrackReward;
+    public RewardItem premiumTrackReward;
+}
+
+[Serializable]
+public class BattlePassProgressData
+{
+    public int currentXP;
+    public int currentLevel;
+    public bool hasPremiumPass;
 }

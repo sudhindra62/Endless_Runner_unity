@@ -11,8 +11,8 @@ public class ObstacleSpawner : MonoBehaviour
     {
         if (pattern == null || pattern.obstacles == null) return;
 
-        ThemeConfig currentTheme = ThemeManager.Instance.CurrentTheme;
-        if (currentTheme == null || currentTheme.obstaclePrefabs == null || currentTheme.obstaclePrefabs.Length == 0)
+        ThemeSO currentTheme = ThemeManager.Instance != null ? ThemeManager.Instance.CurrentTheme : null;
+        if (currentTheme == null || currentTheme.config == null || currentTheme.config.obstaclePrefabs == null || currentTheme.config.obstaclePrefabs.Length == 0)
         {
             Debug.LogWarning("Current theme does not have any obstacle prefabs defined.");
             return;
@@ -35,8 +35,8 @@ public class ObstacleSpawner : MonoBehaviour
             Vector3 spawnPosition = new Vector3(spawnX, 0, tileZPosition);
 
             // Get a random obstacle prefab from the current theme
-            int randomObstacleIndex = Random.Range(0, currentTheme.obstaclePrefabs.Length);
-            GameObject obstaclePrefab = currentTheme.obstaclePrefabs[randomObstacleIndex];
+            int randomObstacleIndex = Random.Range(0, currentTheme.config.obstaclePrefabs.Length);
+            GameObject obstaclePrefab = currentTheme.config.obstaclePrefabs[randomObstacleIndex];
 
             GameObject obstacle = ObjectPool.Instance.GetObject(obstaclePrefab, spawnPosition, Quaternion.identity);
             obstacle.transform.SetParent(this.transform);

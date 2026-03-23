@@ -1,8 +1,6 @@
-
+﻿
 using UnityEngine;
 
-namespace EndlessRunner.Drops
-{
     [CreateAssetMenu(fileName = "RareDropProfileData", menuName = "Rare Drops/Drop Profile")]
     public class RareDropProfileData : ScriptableObject
     {
@@ -35,4 +33,4 @@ namespace EndlessRunner.Drops
         [Tooltip("If an item of this rarity or higher isn't dropped after this many runs, a special boost or guarantee is triggered.")]
         public int pityThreshold = 0; // 0 means no pity system for this tier
     }
-}
+

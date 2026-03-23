@@ -1,49 +1,57 @@
 
 using UnityEngine;
 using System.Collections.Generic;
-using PowerUps;
+
 
 public class PowerUpUIController : MonoBehaviour
 {
     [Header("UI Prefabs")]
-    [SerializeField] private RadialTimer powerUpIconPrefab;
+    [SerializeField] private PowerUpRadialTimer powerUpIconPrefab;
 
-    private readonly Dictionary<PowerUpType, RadialTimer> activePowerUpIcons = new Dictionary<PowerUpType, RadialTimer>();
+    private readonly Dictionary<PowerUpType, PowerUpRadialTimer> activePowerUpIcons = new Dictionary<PowerUpType, PowerUpRadialTimer>();
 
     private void Start()
     {
-        PowerUpManager.Instance.OnPowerUpActivated += OnPowerUpActivated;
-        PowerUpManager.Instance.OnPowerUpUpdated += OnPowerUpUpdated;
-        PowerUpManager.Instance.OnPowerUpExpired += OnPowerUpExpired;
+        PowerUpManager.OnPowerUpActivated += HandlePowerUpActivated;
+        if (PowerUpManager.Instance != null)
+        {
+            PowerUpManager.Instance.OnPowerUpUpdated += OnPowerUpUpdated;
+            PowerUpManager.Instance.OnPowerUpExpired += OnPowerUpExpired;
+        }
     }
 
     private void OnDestroy()
     {
         if (PowerUpManager.Instance != null)
         {
-            PowerUpManager.Instance.OnPowerUpActivated -= OnPowerUpActivated;
+            PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivated;
             PowerUpManager.Instance.OnPowerUpUpdated -= OnPowerUpUpdated;
             PowerUpManager.Instance.OnPowerUpExpired -= OnPowerUpExpired;
         }
     }
 
-    private void OnPowerUpActivated(PowerUp powerUp, float duration)
+    private void HandlePowerUpActivated(PowerUpDefinition definition)
     {
-        if (!activePowerUpIcons.ContainsKey(powerUp.Type))
+        if (definition == null) return;
+
+        PowerUpType type = definition.type;
+        float duration = definition.duration;
+
+        if (!activePowerUpIcons.ContainsKey(type))
         {
-            RadialTimer icon = Instantiate(powerUpIconPrefab, transform);
-            icon.Initialize(powerUp.Type.ToString(), duration);
-            activePowerUpIcons.Add(powerUp.Type, icon);
+            PowerUpRadialTimer icon = Instantiate(powerUpIconPrefab, transform);
+            icon.Initialize(type.ToString(), duration);
+            activePowerUpIcons.Add(type, icon);
         }
         else
         {
-            activePowerUpIcons[powerUp.Type].ResetTimer(duration);
+            activePowerUpIcons[type].ResetTimer(duration);
         }
     }
 
     private void OnPowerUpUpdated(PowerUp powerUp, float fillAmount)
     {
-        if (activePowerUpIcons.TryGetValue(powerUp.Type, out RadialTimer icon))
+        if (activePowerUpIcons.TryGetValue(powerUp.Type, out PowerUpRadialTimer icon))
         {
             icon.UpdateFill(fillAmount);
         }
@@ -51,7 +59,7 @@ public class PowerUpUIController : MonoBehaviour
 
     private void OnPowerUpExpired(PowerUp powerUp)
     {
-        if (activePowerUpIcons.TryGetValue(powerUp.Type, out RadialTimer icon))
+        if (activePowerUpIcons.TryGetValue(powerUp.Type, out PowerUpRadialTimer icon))
         {
             Destroy(icon.gameObject);
             activePowerUpIcons.Remove(powerUp.Type);

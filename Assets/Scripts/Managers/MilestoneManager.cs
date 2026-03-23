@@ -12,6 +12,11 @@ public class MilestoneManager : MonoBehaviour
     private float distanceTraveled = 0f;
     private int nextMilestone = 0;
     private bool isTracking = false;
+    public float TotalDistanceTraveled => distanceTraveled;
+    public int TotalCoinsCollected { get; private set; }
+    public int TotalShieldsUsed { get; private set; }
+    public int TotalJumps { get; private set; }
+    public int TotalSlides { get; private set; }
 
     private void Awake()
     {
@@ -59,7 +64,7 @@ public class MilestoneManager : MonoBehaviour
         {
             isTracking = true;
         }
-        else if (newState == GameState.RunStart || newState == GameState.Menu)
+        else if (newState == GameState.Starting || newState == GameState.MainMenu)
         {
             isTracking = false;
             distanceTraveled = 0f;
@@ -69,5 +74,45 @@ public class MilestoneManager : MonoBehaviour
         {
             isTracking = false;
         }
+    }
+
+    public void CheckMilestones(RunSessionData session)
+    {
+        if (session == null) return;
+        // Delegate to the inner tracking logic
+        if (session.TotalScore >= nextMilestone)
+        {
+            OnMilestoneReached?.Invoke(nextMilestone);
+            nextMilestone += milestoneInterval;
+        }
+    }
+
+    public void CheckMilestones(MilestoneType type, float value)
+    {
+        Debug.Log($"[Milestone] Checking {type} with value {value}");
+        switch (type)
+        {
+            case MilestoneType.Distance:
+                distanceTraveled = value;
+                break;
+            case MilestoneType.CoinsCollected:
+                TotalCoinsCollected = Mathf.RoundToInt(value);
+                break;
+            case MilestoneType.ShieldsUsed:
+                TotalShieldsUsed = Mathf.RoundToInt(value);
+                break;
+            case MilestoneType.Jumps:
+                TotalJumps = Mathf.RoundToInt(value);
+                break;
+            case MilestoneType.Slides:
+                TotalSlides = Mathf.RoundToInt(value);
+                break;
+        }
+        // Add logic to check specific milestones based on type and value
+    }
+
+    public void CheckMilestones(MilestoneType type, int value)
+    {
+        CheckMilestones(type, (float)value);
     }
 }

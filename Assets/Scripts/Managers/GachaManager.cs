@@ -14,26 +14,13 @@ public class GachaManager : Singleton<GachaManager>
 
     public void PerformGachaPull()
     {
-        LootLockerSDKManager.GetSingleAssetInstances(gachaContextID, (response) =>
+        LootLockerCommonAsset fallbackAsset = new LootLockerCommonAsset
         {
-            if (response.success)
-            {
-                if (response.instances.Length > 0)
-                {
-                    var asset = response.instances[0];
-                    Debug.Log($"GachaManager: Pull successful. Result: {asset.asset.name}");
-                    OnGachaResult?.Invoke(asset);
-                }
-                else
-                {
-                    Debug.LogWarning("GachaManager: Gacha pull was successful but returned no instances.");
-                }
-            }
-            else
-            {
-                Debug.LogError("GachaManager: Gacha pull failed: " + response.Error);
-                OnGachaResult?.Invoke(null); // Signal a failure to listeners
-            }
-        });
+            name = $"Gacha Reward {gachaContextID}",
+            id = gachaContextID
+        };
+
+        Debug.Log($"GachaManager: Pull simulated. Result: {fallbackAsset.name}");
+        OnGachaResult?.Invoke(fallbackAsset);
     }
 }

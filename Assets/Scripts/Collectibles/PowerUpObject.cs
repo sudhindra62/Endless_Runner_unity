@@ -11,7 +11,7 @@ public class PowerUpObject : MonoBehaviour
 {
     [Header("Power-Up Configuration")]
     [Tooltip("The power-up data associated with this object.")]
-    public PowerUp powerUp;
+    public PowerUpDefinition powerUp;
 
     private void OnTriggerEnter(Collider other)
     {

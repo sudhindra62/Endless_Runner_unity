@@ -1,11 +1,8 @@
+﻿
 
-using EndlessRunner.Controllers;
-using EndlessRunner.Managers;
-using EndlessRunner.UI;
+
 using UnityEngine;
 
-namespace EndlessRunner.Core
-{
     public class Initializer : MonoBehaviour
     {
         private void Awake()
@@ -32,4 +29,5 @@ namespace EndlessRunner.Core
             // The GameFlowController will set the initial game state.
         }
     }
-}
+
+

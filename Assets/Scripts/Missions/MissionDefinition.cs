@@ -1,8 +1,6 @@
-
+﻿
 using UnityEngine;
 
-namespace EndlessRunner.Missions
-{
     [CreateAssetMenu(fileName = "New Mission", menuName = "Endless Runner/Mission Definition")]
     public class MissionDefinition : ScriptableObject
     {
@@ -12,7 +10,7 @@ namespace EndlessRunner.Missions
 
         public Mission CreateMission()
         {
-            return new Mission(description, type, target);
+            return new Mission(name, description, type, target);
         }
     }
-}
+

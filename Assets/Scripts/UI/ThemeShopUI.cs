@@ -1,11 +1,8 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using EndlessRunner.Themes;
-using EndlessRunner.Managers;
 
-namespace EndlessRunner.UI
-{
+
     public class ThemeShopUI : MonoBehaviour
     {
         public GameObject themeShopPanel;
@@ -17,6 +14,8 @@ namespace EndlessRunner.UI
             themeShopPanel.SetActive(true);
             PopulateShop();
         }
+
+        public void ShowPanel() => OpenShop();
 
         public void CloseShop()
         {
@@ -39,4 +38,4 @@ namespace EndlessRunner.UI
             }
         }
     }
-}
+

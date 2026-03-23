@@ -1,8 +1,6 @@
-
+﻿
 using UnityEngine;
 
-namespace EndlessRunner.Managers
-{
     public class EnvironmentVariationManager : MonoBehaviour
     {
         public static EnvironmentVariationManager Instance;
@@ -67,4 +65,4 @@ namespace EndlessRunner.Managers
             return randomIndex;
         }
     }
-}
+

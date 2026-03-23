@@ -57,7 +57,7 @@ public class FriendManager : Singleton<FriendManager>
     private void LoadFriends()
     {
         // Simulate loading from a persistent source
-        // In a real game, this would be PlayerPrefs, a file, or a backend response
+        // In a real game, this would be SaveManager.Instance.Data, a file, or a backend response
     }
 
     private void SaveFriends()

@@ -13,18 +13,20 @@ public class CoinMagnetPowerUp : PowerUp
 
     void Awake()
     {
-        powerUpType = PowerUpType.CoinMagnet;
+        powerUpType = PowerUpType.Magnet;
     }
 
-    public override void TriggerActivation(PlayerController player)
+    public override void ApplyEffect()
     {
+        PlayerController player = PlayerController.Instance;
         if (player == null) return;
         Debug.Log("Guardian Architect Log: Coin Magnet Activated!");
         player.SetMagnetActive(true, magnetRadius);
     }
 
-    public override void TriggerDeactivation(PlayerController player)
+    public override void RemoveEffect()
     {
+        PlayerController player = PlayerController.Instance;
         if (player == null) return;
         Debug.Log("Guardian Architect Log: Coin Magnet Deactivated.");
         player.SetMagnetActive(false, 0f);

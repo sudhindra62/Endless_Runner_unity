@@ -1,18 +1,34 @@
-
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace EndlessRunner.UI
+/// <summary>
+/// Manages the Main Menu panel.
+/// Global scope.
+/// </summary>
+public class MainMenuPanel : UIPanel
 {
-    public class MainMenuPanel : UIPanel
-    {
-        [Header("UI Elements")]
-        [SerializeField] private Button playButton;
+    public override UIPanelType PanelType => UIPanelType.MainMenu;
 
-        public override void Setup(Managers.UIManager uiManager)
+    [Header("UI Elements")]
+    [SerializeField] private Button playButton;
+    [SerializeField] private Button settingsButton;
+
+    private void Start()
+    {
+        if (playButton) playButton.onClick.AddListener(OnPlayButtonClicked);
+        if (settingsButton) settingsButton.onClick.AddListener(OnSettingsButtonClicked);
+    }
+
+    private void OnPlayButtonClicked()
+    {
+        if (GameManager.Instance != null)
         {
-            base.Setup(uiManager);
-            playButton.onClick.AddListener(() => _uiManager.OnPlayButtonPressed?.Invoke());
+            GameManager.Instance.ChangeState(GameState.Playing);
         }
+    }
+
+    private void OnSettingsButtonClicked()
+    {
+        if (UIManager.Instance != null) UIManager.Instance.ShowSettingsPanel();
     }
 }

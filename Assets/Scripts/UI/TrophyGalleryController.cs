@@ -9,12 +9,12 @@ public class TrophyGalleryController : MonoBehaviour
     {
         if (trophyGallery == null)
         {
-            trophyGallery = FindObjectOfType<TrophyGallery>();
+            trophyGallery = FindFirstObjectByType<TrophyGallery>();
         }
 
         if (achievementManager == null)
         {
-            achievementManager = FindObjectOfType<AchievementManager>();
+            achievementManager = FindFirstObjectByType<AchievementManager>();
         }
         
         // Initially hide the gallery

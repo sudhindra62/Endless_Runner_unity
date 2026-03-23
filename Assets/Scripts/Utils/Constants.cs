@@ -1,5 +1,3 @@
-namespace MyGame.Utils
-{
     public static class Constants
     {
         // Animation parameters
@@ -14,4 +12,3 @@ namespace MyGame.Utils
         public const string SceneMainMenu = "MainMenu";
         public const string SceneGame = "Game";
     }
-}

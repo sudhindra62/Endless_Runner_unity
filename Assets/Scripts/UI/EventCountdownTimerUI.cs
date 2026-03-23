@@ -9,7 +9,7 @@ using System;
 public class EventCountdownTimerUI : MonoBehaviour
 {
     [SerializeField] private Text countdownText;
-    private LiveEventData _activeEvent;
+    private LiveEvent _activeEvent;
     private bool _isEventActive = false;
 
     private void OnEnable()
@@ -24,7 +24,7 @@ public class EventCountdownTimerUI : MonoBehaviour
         LiveEventManager.OnEventEnded -= StopTimer;
     }
 
-    private void StartTimer(LiveEventData eventData)
+    private void StartTimer(LiveEvent eventData)
     {
         _activeEvent = eventData;
         _isEventActive = true;
@@ -32,7 +32,7 @@ public class EventCountdownTimerUI : MonoBehaviour
         StartCoroutine(UpdateTimer());
     }
 
-    private void StopTimer(LiveEventData eventData)
+    private void StopTimer(LiveEvent eventData)
     {
         _isEventActive = false;
         countdownText.text = "Event Ended";
@@ -43,18 +43,16 @@ public class EventCountdownTimerUI : MonoBehaviour
         while (_isEventActive)
         {
             DateTime endTime;
-            if (DateTime.TryParse(_activeEvent.endTime, out endTime))
+            endTime = _activeEvent.endTime;
+            TimeSpan remaining = endTime - DateTime.UtcNow;
+            if (remaining.TotalSeconds > 0)
             {
-                TimeSpan remaining = endTime - DateTime.UtcNow;
-                if (remaining.TotalSeconds > 0)
-                {
-                    countdownText.text = $"{remaining.Days}d {remaining.Hours}h {remaining.Minutes}m {remaining.Seconds}s";
-                }
-                else
-                {
-                    countdownText.text = "Event Ending...";
-                    _isEventActive = false;
-                }
+                countdownText.text = $"{remaining.Days}d {remaining.Hours}h {remaining.Minutes}m {remaining.Seconds}s";
+            }
+            else
+            {
+                countdownText.text = "Event Ending...";
+                _isEventActive = false;
             }
             yield return new WaitForSeconds(1f); // Update every second
         }

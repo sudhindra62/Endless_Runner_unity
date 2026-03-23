@@ -1,20 +1,31 @@
-
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace EndlessRunner.UI
+/// <summary>
+/// Manages the Pause menu panel.
+/// Global scope.
+/// </summary>
+public class PausePanel : UIPanel
 {
-    public class PausePanel : UIPanel
-    {
-        [Header("UI Elements")]
-        [SerializeField] private Button resumeButton;
-        [SerializeField] private Button mainMenuButton;
+    public override UIPanelType PanelType => UIPanelType.Pause;
 
-        public override void Setup(Managers.UIManager uiManager)
-        {
-            base.Setup(uiManager);
-            resumeButton.onClick.AddListener(() => _uiManager.OnPauseButtonPressed?.Invoke()); // Toggles pause off
-            mainMenuButton.onClick.AddListener(() => _uiManager.OnMainMenuButtonPressed?.Invoke());
-        }
+    [Header("UI Elements")]
+    [SerializeField] private Button resumeButton;
+    [SerializeField] private Button mainMenuButton;
+
+    private void Start()
+    {
+        if (resumeButton) resumeButton.onClick.AddListener(OnResumeButtonClicked);
+        if (mainMenuButton) mainMenuButton.onClick.AddListener(OnMainMenuButtonClicked);
+    }
+
+    private void OnResumeButtonClicked()
+    {
+        if (GameManager.Instance != null) GameManager.Instance.StartGame(); // Resumes state
+    }
+
+    private void OnMainMenuButtonClicked()
+    {
+        if (GameManager.Instance != null) GameManager.Instance.ReturnToMenu();
     }
 }

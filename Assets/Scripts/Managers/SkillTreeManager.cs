@@ -6,17 +6,22 @@ using System.Collections.Generic;
 public class SkillTreeManager : Singleton<SkillTreeManager>
 {
     public static event Action OnSkillTreeChanged;
+    public event Action OnSkillTreeUpdated;
 
     public int SkillPoints { get; private set; }
+    public int AvailableSkillPoints => SkillPoints;
     public Dictionary<string, int> SkillNodeLevels { get; } = new Dictionary<string, int>();
 
     private const int MAX_SKILL_LEVEL = 5;
+
+    public bool UpgradeCharacter(string skillId) => UnlockSkillNode(skillId);
 
     public void AddSkillPoints(int amount)
     {
         if (amount < 0) return;
         SkillPoints += amount;
         OnSkillTreeChanged?.Invoke();
+        OnSkillTreeUpdated?.Invoke();
     }
 
     public bool UnlockSkillNode(string skillId)
@@ -43,6 +48,7 @@ public class SkillTreeManager : Singleton<SkillTreeManager>
         SkillPoints--;
         SkillNodeLevels[skillId]++;
         OnSkillTreeChanged?.Invoke();
+        OnSkillTreeUpdated?.Invoke();
         
         Debug.Log($"Unlocked skill {skillId}. New level: {SkillNodeLevels[skillId]}");
         return true;
@@ -53,5 +59,10 @@ public class SkillTreeManager : Singleton<SkillTreeManager>
     {
         // Example: 1 point per level
         AddSkillPoints(1);
+    }
+
+    public bool UpgradeSkill(SkillNodeData nodeData)
+    {
+        return nodeData != null && UnlockSkillNode(nodeData.skillID);
     }
 }

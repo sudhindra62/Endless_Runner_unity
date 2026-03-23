@@ -1,9 +1,7 @@
-
+﻿
 using UnityEngine;
-using EndlessRunner.Economy;
 
-namespace EndlessRunner.AI
-{
+
     public enum EnemyAIType { Basic, Advanced } // Defines the type for loot tables
 
     /// <summary>
@@ -57,4 +55,5 @@ namespace EndlessRunner.AI
             }
         }
     }
-}
+
+

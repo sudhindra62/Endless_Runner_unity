@@ -16,6 +16,7 @@ public class EnvironmentEventManager : Singleton<EnvironmentEventManager>
     public event Action<EnvironmentEventType> OnEventDidEnd;
     public static event Action<ThemeProfileData> OnThemeChanged; // Merged from WorldEventManager
     public static event Action<string> OnWeatherEffectTriggered; // Merged from the other EnvironmentEventManager
+    public static event Action<WorldEventData> OnWorldEvent;
 
     [Header("Dynamic Event Configuration")]
     [SerializeField] private List<EnvironmentEventData> availableDynamicEvents;
@@ -150,6 +151,11 @@ public class EnvironmentEventManager : Singleton<EnvironmentEventManager>
 
     #region Merged Theme Management Logic
 
+    private void HandleThemeApplied()
+    {
+        HandleThemeApplied(null); // Satisfies the Action delegate from WorldThemeManager
+    }
+
     private void HandleThemeApplied(ThemeProfileData newTheme)
     {
         // When the WorldThemeManager applies a theme, this event manager
@@ -162,5 +168,10 @@ public class EnvironmentEventManager : Singleton<EnvironmentEventManager>
     public void TriggerWeatherEffect(string effectName)
     {
         OnWeatherEffectTriggered?.Invoke(effectName);
+    }
+
+    public void BroadcastWorldEvent(WorldEventData eventData)
+    {
+        OnWorldEvent?.Invoke(eventData);
     }
 }

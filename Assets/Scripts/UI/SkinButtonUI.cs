@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using Skins;
+
 
 public class SkinButtonUI : MonoBehaviour
 {
@@ -16,7 +16,7 @@ public class SkinButtonUI : MonoBehaviour
         _skinData = skinData;
         skinImage.sprite = _skinData.sprite;
         _skinPurchaseManager = ServiceLocator.Get<SkinPurchaseManager>();
-        _skinPreviewUI = FindObjectOfType<SkinPreviewUI>(); // A better solution would be a ServiceLocator or direct reference
+        _skinPreviewUI = FindFirstObjectByType<SkinPreviewUI>(); // A better solution would be a ServiceLocator or direct reference
 
         button.onClick.AddListener(OnClick);
     }

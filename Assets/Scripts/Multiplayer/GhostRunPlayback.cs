@@ -54,12 +54,30 @@ public class GhostRunPlayback : MonoBehaviour
         }
     }
 
-    private void StopPlayback()
+    public void StopPlayback()
     {
         isPlaying = false;
         Debug.Log("Ghost playback finished.");
         // LONG SESSION SAFETY: Ensure no duplicate ghost spawn by destroying self
         Destroy(gameObject);
+    }
+
+    public void LoadGhostRun(List<GhostDataPoint> dataPoints)
+    {
+        if (dataPoints == null) return;
+
+        ghostPositions.Clear();
+        foreach (GhostDataPoint point in dataPoints)
+        {
+            ghostPositions.Add(point.position);
+        }
+
+        if (ghostPositions.Count > 0)
+        {
+            isPlaying = true;
+            currentPositionIndex = 0;
+            playbackTimer = 0f;
+        }
     }
 
     private void DeserializePositions(byte[] data)

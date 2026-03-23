@@ -2,12 +2,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using EndlessRunner.Managers;
 
-namespace EndlessRunner.UI
-{
     public class GameplayPanel : UIPanel
     {
+        public override UIPanelType PanelType => UIPanelType.InGame;
+
         [Header("UI Elements")]
         [SerializeField] private TextMeshProUGUI scoreText;
         [SerializeField] private TextMeshProUGUI coinsText;
@@ -16,7 +15,7 @@ namespace EndlessRunner.UI
         public override void Setup(UIManager uiManager)
         {
             base.Setup(uiManager);
-            pauseButton.onClick.AddListener(() => _uiManager.OnPauseButtonPressed?.Invoke());
+            pauseButton.onClick.AddListener(() => _uiManager.OnPauseButtonPressed());
         }
 
         public override void Show()
@@ -35,16 +34,20 @@ namespace EndlessRunner.UI
 
         private void SubscribeToGameEvents()
         {
-            if (GameManager.Instance == null) return;
-            GameManager.Instance.OnScoreChanged += UpdateScore;
-            GameManager.Instance.OnCoinsChanged += UpdateCoins;
+            if (GameManager.Instance != null)
+            {
+                GameManager.OnScoreChanged += UpdateScore;
+                GameManager.OnCoinsChanged += UpdateCoins;
+            }
         }
 
         private void UnsubscribeFromGameEvents()
         {
-            if (GameManager.Instance == null) return;
-            GameManager.Instance.OnScoreChanged -= UpdateScore;
-            GameManager.Instance.OnCoinsChanged -= UpdateCoins;
+            if (GameManager.Instance != null)
+            {
+                GameManager.OnScoreChanged -= UpdateScore;
+                GameManager.OnCoinsChanged -= UpdateCoins;
+            }
         }
 
         private void UpdateScore(int newScore)
@@ -57,4 +60,3 @@ namespace EndlessRunner.UI
             coinsText.text = $"Coins: {newCoins}";
         }
     }
-}

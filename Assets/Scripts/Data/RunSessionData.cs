@@ -13,6 +13,23 @@ public class RunSessionData
     public Dictionary<ObstacleType, int> ObstacleHitCounts = new Dictionary<ObstacleType, int>();
     public DeathCause? DeathCause;
 
+    public int score { get => Score; set => Score = value; }
+    public float distance { get => Distance; set => Distance = value; }
+    public int reviveCount;
+
+    // Extended fields for advanced analytics and Integrity checks
+    public int TotalScore => Score;
+    public float TotalTime;
+    public int ObstaclesDodged => DodgeSuccessHistory.FindAll(b => b).Count;
+    public int PerfectDodges;
+    public int RevivesUsed => reviveCount;
+    public bool hasUsedTimeWarp;
+    public float highestMultiplier;
+
+    public RunSessionData() : this(0, 0, 0f, new List<bool>(), new Dictionary<ObstacleType, int>(), null)
+    {
+    }
+
     public RunSessionData(int score, int coins, float distance, List<bool> dodgeSuccessHistory, Dictionary<ObstacleType, int> obstacleHitCounts, DeathCause? deathCause)
     {
         Score = score;

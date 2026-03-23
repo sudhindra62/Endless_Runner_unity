@@ -13,6 +13,7 @@ public class NearMissManager : MonoBehaviour
 
     // --- Events ---
     public event Action<NearMissData> OnNearMissProcessed;
+    public static event Action<NearMissData> OnNearMiss;
 
     [Header("Gameplay Configuration")]
     [SerializeField] private float scoreBonus = 100f;
@@ -73,6 +74,7 @@ public class NearMissManager : MonoBehaviour
         // --- BROADCAST and APPLY BONUSES ---
         Debug.Log($"[NearMissManager] Near miss PROCESSED for obstacle {obstacleInstanceID}");
         OnNearMissProcessed?.Invoke(nearMissData);
+        OnNearMiss?.Invoke(nearMissData);
 
         // Route bonuses to the authoritative managers
         ApplyBonuses();

@@ -26,16 +26,19 @@ public class PowerUpFusionUI : MonoBehaviour
 
     private void Start()
     {
-        PowerUpFusionManager.OnFusionActivated += HandleFusionActivation;
-        PowerUpFusionManager.OnFusionDeactivated += HandleFusionDeactivation;
+        if (PowerUpFusionManager.Instance != null)
+        {
+            PowerUpFusionManager.Instance.OnFusionActivated += HandleFusionActivation;
+            PowerUpFusionManager.Instance.OnFusionDeactivated += HandleFusionDeactivation;
+        }
         SetUIVisible(false);
     }
 
     private void OnDestroy()
     {
         if (PowerUpFusionManager.Instance != null) {
-            PowerUpFusionManager.OnFusionActivated -= HandleFusionActivation;
-            PowerUpFusionManager.OnFusionDeactivated -= HandleFusionDeactivation;
+            PowerUpFusionManager.Instance.OnFusionActivated -= HandleFusionActivation;
+            PowerUpFusionManager.Instance.OnFusionDeactivated -= HandleFusionDeactivation;
         }
     }
 
@@ -53,7 +56,7 @@ public class PowerUpFusionUI : MonoBehaviour
         }
     }
 
-    private void HandleFusionDeactivation(FusionType type)
+    private void HandleFusionDeactivation()
     { 
         if(activeFusionCoroutine != null)
         {

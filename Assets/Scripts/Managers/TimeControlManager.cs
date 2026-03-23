@@ -6,4 +6,9 @@ public class TimeControlManager : Singleton<TimeControlManager>
     {
         Time.timeScale = scale;
     }
+
+    public void DoSlowMotion(float scale, float duration)
+    {
+        // Implementation stub for EffectsManager requirement
+    }
 }

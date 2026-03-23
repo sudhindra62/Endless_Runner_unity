@@ -1,27 +1,59 @@
-
 using UnityEngine;
 
-namespace EndlessRunner.Data
+/// <summary>
+/// Defines the various types of achievements available in the game.
+/// Global scope for project-wide accessibility.
+/// </summary>
+public enum AchievementType
 {
-    public enum AchievementType
-    {
-        Score,          // Reach a certain score in a single run
-        CoinsCollected, // Collect a certain number of coins in a single run
-        Distance,       // Run a certain distance
-        PowerUpsUsed,   // Use a certain number of power-ups
-    }
+    Score,
+    CoinsCollected,
+    Distance,
+    PowerUpsUsed,
+    Jumps,
+    Coins
+}
 
-    [System.Serializable]
-    public class Achievement
-    {
-        public string id;
-        public string title;
-        [TextArea(3, 5)]
-        public string description;
-        public AchievementType type;
-        public int requiredValue;
-        public int rewardCoins;
-        public bool isUnlocked;
-        public bool isRewardClaimed;
-    }
+/// <summary>
+/// A ScriptableObject defining an achievement's static data.
+/// Global scope.
+/// </summary>
+[CreateAssetMenu(fileName = "New Achievement", menuName = "Endless Runner/Data/Achievement")]
+public class Achievement : ScriptableObject
+{
+    public string id;
+    public string title;
+    public string achievementName => title;
+    public string tier;
+    [TextArea(3, 5)]
+    public string description;
+    public AchievementType type;
+    public AchievementType achievementType => type; // alias used by AchievementManager
+    public int requiredValue;
+    public int unlockThreshold => requiredValue;    // alias used by AchievementManager
+    public int rewardCoins;
+    public int rewardGems;
+    public bool isUnlocked;        
+    public bool isRewardClaimed;   
+
+    public string ID => id;
+    public string Name => title;
+    public string Description => description;
+    public string iconReference; // For dynamic loading if Sprite is null
+    public Sprite Badge;
+    public bool isHidden; // For secret achievements
+
+    public void ClaimReward() { isRewardClaimed = true; }
+}
+
+/// <summary>
+/// Serializable data for tracking achievement progress in save games.
+/// </summary>
+[System.Serializable]
+public class DeploymentAchievementData
+{
+    public string id;
+    public int currentValue;
+    public bool isUnlocked;
+    public bool isRewardClaimed;
 }

@@ -19,12 +19,12 @@ public class SmartAdScheduler : Singleton<SmartAdScheduler>
         displayValidator = AdDisplayValidator.Instance;
 
         // Subscribe to the key event that triggers ad logic
-        GameFlowController.OnRunEnded += OnRunCompleted;
+        GameFlowController.Instance.OnRunEnded += OnRunCompleted;
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
-        GameFlowController.OnRunEnded -= OnRunCompleted;
+        GameFlowController.Instance.OnRunEnded -= OnRunCompleted;
     }
 
     private void OnRunCompleted()

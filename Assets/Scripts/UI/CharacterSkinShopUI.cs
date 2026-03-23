@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace EndlessRunner.Character
-{
     public class CharacterSkinShopUI : MonoBehaviour
     {
         public GameObject skinItemPrefab;
@@ -30,4 +28,3 @@ namespace EndlessRunner.Character
             }
         }
     }
-}

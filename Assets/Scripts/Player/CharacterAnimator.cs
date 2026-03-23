@@ -1,12 +1,15 @@
 
 using UnityEngine;
-using EndlessRunner.Player;
 
-namespace EndlessRunner.Animation
-{
+
     [RequireComponent(typeof(Animator))]
     public class CharacterAnimator : MonoBehaviour
     {
+        // --- Static events for external systems to react to animator state ---
+        public static event System.Action OnJump;
+        public static event System.Action OnSlideStart;
+        public static event System.Action OnSlideEnd;
+
         // --- Animator Parameter Hashes ---
         private readonly int _isRunningHash = Animator.StringToHash("IsRunning");
         private readonly int _jumpHash = Animator.StringToHash("Jump");
@@ -63,16 +66,19 @@ namespace EndlessRunner.Animation
         private void HandleJump()
         {
             _animator.SetTrigger(_jumpHash);
+            OnJump?.Invoke();
         }
 
         private void HandleSlideStart()
         {
             _animator.SetBool(_isSlidingHash, true);
+            OnSlideStart?.Invoke();
         }
 
         private void HandleSlideEnd()
         {
             _animator.SetBool(_isSlidingHash, false);
+            OnSlideEnd?.Invoke();
         }
 
         private void HandleLaneChange(int direction)
@@ -87,4 +93,5 @@ namespace EndlessRunner.Animation
             }
         }
     }
-}
+
+

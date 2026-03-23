@@ -12,7 +12,7 @@ public class EntitlementResolver : Singleton<EntitlementResolver>
     protected override void Awake()
     {
         base.Awake();
-        LoadProcessedTransactions();
+        _processedTransactionIds = SaveManager.Instance != null ? SaveManager.Instance.Data.processedTransactions : new List<string>();
     }
 
     public void ResolvePurchase(string productId, string transactionId)
@@ -59,30 +59,26 @@ public class EntitlementResolver : Singleton<EntitlementResolver>
 
     private void GrantRemoveAds()
     {
-        PlayerPrefs.SetInt(RemoveAdsKey, 1);
-        PlayerPrefs.Save();
+        if (SaveManager.Instance == null) return;
+        SaveManager.Instance.Data.isAdsRemoved = true;
+        SaveManager.Instance.SaveGame();
         Debug.Log("Ads have been permanently removed.");
     }
 
     public bool AreAdsRemoved()
     {
-        return PlayerPrefs.GetInt(RemoveAdsKey, 0) == 1;
-    }
-
-    private void LoadProcessedTransactions()
-    {
-        string transactions = PlayerPrefs.GetString(ProcessedTransactionsKey, "");
-        if (!string.IsNullOrEmpty(transactions))
-        {
-            _processedTransactionIds = new List<string>(transactions.Split(','));
-        }
+        return SaveManager.Instance != null && SaveManager.Instance.Data.isAdsRemoved;
     }
 
     private void AddProcessedTransaction(string transactionId)
     {
-        _processedTransactionIds.Add(transactionId);
-        PlayerPrefs.SetString(ProcessedTransactionsKey, string.Join(",", _processedTransactionIds));
-        PlayerPrefs.Save();
+        if (SaveManager.Instance == null) return;
+        if (!_processedTransactionIds.Contains(transactionId))
+        {
+            _processedTransactionIds.Add(transactionId);
+            SaveManager.Instance.Data.processedTransactions = new List<string>(_processedTransactionIds);
+            SaveManager.Instance.SaveGame();
+        }
     }
 
     private bool IsTransactionProcessed(string transactionId)

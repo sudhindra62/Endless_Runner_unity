@@ -16,18 +16,6 @@ public enum CustomizationSlot
 }
 
 /// <summary>
-/// Defines the rarity tiers for cosmetic items.
-/// </summary>
-public enum CosmeticRarity
-{
-    Common,
-    Rare,
-    Epic,
-    Legendary,
-    Mythic
-}
-
-/// <summary>
 /// Data container for a single cosmetic item, defining its appearance, slot, and properties.
 /// </summary>
 [CreateAssetMenu(fileName = "CustomizationItem", menuName = "Endless Runner/Customization Item", order = 1)]

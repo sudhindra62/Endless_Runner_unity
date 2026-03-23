@@ -5,12 +5,19 @@ public class FlowComboManager : MonoBehaviour
 {
     public static FlowComboManager Instance { get; private set; }
 
-    public event Action<int> OnComboChanged;
-    public event Action<float> OnComboMultiplierChanged;
+    public static event Action<int> OnComboChanged;
+    public static event Action<float> OnComboMultiplierChanged;
+    public static event Action<int> OnComboBroken;
+    public static event Action<int, int> OnTierIncreased;
 
     private int currentCombo;
-    private float comboMultiplier = 1f;
     private float comboDecayTimer;
+    private float comboMultiplier = 1f;
+    private int currentTier;
+    
+    public float timeout => comboDecayTimer;
+    public int ComboCount => currentCombo;
+    public float ComboMultiplier => comboMultiplier;
 
     private const float COMBO_DECAY_TIME = 3f;
 
@@ -50,9 +57,13 @@ public class FlowComboManager : MonoBehaviour
         UpdateMultiplier();
         OnComboChanged?.Invoke(currentCombo);
     }
+    
+    public void AddCombo() => IncreaseCombo();
+    public void AddCombo(int amount) { for (int i = 0; i < amount; i++) IncreaseCombo(); }
 
     public void ResetCombo()
     {
+        if (currentCombo > 0) OnComboBroken?.Invoke(currentCombo);
         currentCombo = 0;
         comboDecayTimer = 0;
         UpdateMultiplier();
@@ -69,9 +80,27 @@ public class FlowComboManager : MonoBehaviour
 
         if (Math.Abs(newMultiplier - comboMultiplier) > 0.01f)
         {
+            int previousTier = currentTier;
             comboMultiplier = newMultiplier;
+            currentTier = GetTierForMultiplier(comboMultiplier);
             OnComboMultiplierChanged?.Invoke(comboMultiplier);
+            if (currentTier > previousTier)
+            {
+                OnTierIncreased?.Invoke(previousTier, currentTier);
+            }
         }
+    }
+
+    public void SetTimeout(float duration) { comboDecayTimer = duration; }
+    public float GetTimeout() => comboDecayTimer;
+
+    private static int GetTierForMultiplier(float multiplier)
+    {
+        if (multiplier >= 4f) return 4;
+        if (multiplier >= 3f) return 3;
+        if (multiplier >= 2f) return 2;
+        if (multiplier >= 1.5f) return 1;
+        return 0;
     }
 
     private void OnDestroy()

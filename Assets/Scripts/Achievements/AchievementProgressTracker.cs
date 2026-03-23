@@ -1,6 +1,6 @@
 
 using UnityEngine;
-using Achievements;
+
 
 /// <summary>
 /// Tracks various gameplay stats and reports progress to the AchievementManager.
@@ -27,15 +27,13 @@ public class AchievementProgressTracker : MonoBehaviour
     // Example handler for score changes
     private void HandleScoreChange(int newScore)
     {
-        AchievementManager.Instance.AddProgress(AchievementID.Score10000Points, newScore);
-        AchievementManager.Instance.AddProgress(AchievementID.Score50000Points, newScore);
-        AchievementManager.Instance.AddProgress(AchievementID.Score250000Points, newScore);
+        AchievementManager.Instance.AddProgress(AchievementType.Score, newScore);
     }
 
     // Example handler for distance changes
     private void HandleDistanceChange(float newDistance)
     {
-        AchievementManager.Instance.AddProgress(AchievementID.TotalDistance, (int)newDistance);
+        AchievementManager.Instance.AddProgress(AchievementType.Distance, (int)newDistance);
     }
     
     // Add more handlers for other events like coin collection, power-up usage, etc.

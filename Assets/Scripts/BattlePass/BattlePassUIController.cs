@@ -65,6 +65,11 @@ public class BattlePassUIController : MonoBehaviour
         }
     }
 
+    private void UpdateXPUI(int currentXP)
+    {
+        UpdateXPUI(currentXP, 100); // Default wrapper matching the Action<int> delegate
+    }
+
     private void UpdateXPUI(int currentXP, int xpToNextLevel)
     {
         xpSlider.value = (float)currentXP / xpToNextLevel;

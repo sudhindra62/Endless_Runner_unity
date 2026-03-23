@@ -5,6 +5,12 @@ public class LeagueManager : MonoBehaviour
 {
     public static LeagueManager Instance { get; private set; }
 
+    public static System.Action OnLeagueDataUpdated;
+
+    public LeagueTier CurrentLeague { get; private set; } = LeagueTier.Bronze;
+    public int WeeklyBestScore { get; private set; }
+    public System.DateTime WeeklyCycleStartTime { get; private set; } = System.DateTime.UtcNow;
+
     private float leaguePointsMultiplier = 1f;
 
     private void Awake()

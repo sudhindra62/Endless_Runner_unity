@@ -36,20 +36,28 @@ public class AdSessionTracker : Singleton<AdSessionTracker>
 
     private void LoadRunCount()
     {
-        RunsSinceLastInterstitial = PlayerPrefs.GetInt(RUNS_SINCE_LAST_AD_KEY, 0);
+        RunsSinceLastInterstitial = SaveManager.Instance != null ? SaveManager.Instance.Data.runsSinceLastInterstitial : 0;
     }
 
     private void IncrementRunCount()
     {
         runsThisSession++;
         RunsSinceLastInterstitial++;
-        PlayerPrefs.SetInt(RUNS_SINCE_LAST_AD_KEY, RunsSinceLastInterstitial);
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.runsSinceLastInterstitial = RunsSinceLastInterstitial;
+            SaveManager.Instance.SaveGame();
+        }
     }
 
     public void ResetRunCount()
     {
         RunsSinceLastInterstitial = 0;
-        PlayerPrefs.SetInt(RUNS_SINCE_LAST_AD_KEY, 0);
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.runsSinceLastInterstitial = 0;
+            SaveManager.Instance.SaveGame();
+        }
     }
 
     private void HandleRewardedAdView(object adData) // Assuming ad manager passes some data

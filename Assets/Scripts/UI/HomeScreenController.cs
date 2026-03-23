@@ -60,7 +60,7 @@ public class HomeScreenController : MonoBehaviour
         // Subscribe to events
         PlayerDataManager.OnCoinsChanged += UpdateCoinsUI;
         PlayerDataManager.OnGemsChanged += UpdateGemsUI;
-        ScoreManager.OnBestScoreChanged += UpdateBestScoreUI;
+        ScoreManager.OnHighScoreChanged += UpdateBestScoreUI;
 
         // Add button listeners
         if (playButton) playButton.onClick.AddListener(PlayGame);
@@ -82,7 +82,7 @@ public class HomeScreenController : MonoBehaviour
         // Unsubscribe from events
         PlayerDataManager.OnCoinsChanged -= UpdateCoinsUI;
         PlayerDataManager.OnGemsChanged -= UpdateGemsUI;
-        ScoreManager.OnBestScoreChanged -= UpdateBestScoreUI;
+        ScoreManager.OnHighScoreChanged -= UpdateBestScoreUI;
 
         // Remove button listeners
         if (playButton) playButton.onClick.RemoveListener(PlayGame);
@@ -160,36 +160,33 @@ public class HomeScreenController : MonoBehaviour
 
     private void CheckDailyRewardStatus()
     {
-        string lastRewardTimeStr = PlayerPrefs.GetString(LAST_REWARD_TIME_KEY, "");
+        if (SaveManager.Instance == null) return;
+        long lastRewardTicks = SaveManager.Instance.Data.homeScreenLastRewardTimestamp;
 
-        if (string.IsNullOrEmpty(lastRewardTimeStr))
+        if (lastRewardTicks == 0)
         {
             SetRewardAsReady();
             return;
         }
 
-        if (DateTime.TryParse(lastRewardTimeStr, out DateTime lastRewardTime))
+        DateTime lastRewardTime = new DateTime(lastRewardTicks);
+        if (DateTime.UtcNow - lastRewardTime >= rewardCooldown)
         {
-            if (DateTime.UtcNow - lastRewardTime >= rewardCooldown)
-            {
-                SetRewardAsReady();
-            }
-            else
-            {
-                SetRewardAsOnCooldown();
-            }
+            SetRewardAsReady();
         }
         else
         {
-            // Handle corrupted or invalid time string
-            SetRewardAsReady();
+            SetRewardAsOnCooldown();
         }
     }
 
     private void UpdateRewardCooldownTimer()
     {
-        string lastRewardTimeStr = PlayerPrefs.GetString(LAST_REWARD_TIME_KEY, "");
-        if (string.IsNullOrEmpty(lastRewardTimeStr) || !DateTime.TryParse(lastRewardTimeStr, out DateTime lastRewardTime)) return;
+        if (SaveManager.Instance == null) return;
+        long lastRewardTicks = SaveManager.Instance.Data.homeScreenLastRewardTimestamp;
+        if (lastRewardTicks == 0) return;
+
+        DateTime lastRewardTime = new DateTime(lastRewardTicks);
 
         TimeSpan remainingTime = (lastRewardTime + rewardCooldown) - DateTime.UtcNow;
 
@@ -205,13 +202,15 @@ public class HomeScreenController : MonoBehaviour
 
     public void ClaimDailyReward()
     {
-        if (!isRewardReady) return;
-
         // Use PlayerDataManager to add currency
         PlayerDataManager.Instance.AddCoins(250);
         PlayerDataManager.Instance.AddGems(5);
 
-        PlayerPrefs.SetString(LAST_REWARD_TIME_KEY, DateTime.UtcNow.ToString());
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.Data.homeScreenLastRewardTimestamp = DateTime.UtcNow.Ticks;
+            SaveManager.Instance.SaveGame();
+        }
         
         SetRewardAsOnCooldown();
     }

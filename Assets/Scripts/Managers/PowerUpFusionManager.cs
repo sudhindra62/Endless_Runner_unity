@@ -1,50 +1,48 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-
-// Enum definitions for clarity. Assumed to be globally accessible or defined in a separate file.
-public enum PowerUpType { Magnet, Shield, CoinDoubler, ScoreMultiplier, SpeedBoost, FlowCombo }
-public enum FusionType { None, CoinStorm, InvincibleDash, FeverMode }
+using System.Linq;
 
 /// <summary>
-/// Data structure for passing fusion information through events.
+/// Manages the process of fusing power-ups. 
+/// Monitored by ScriptableObject definitions for scalability and event-driven for system decoupling.
+/// Global scope Singleton.
 /// </summary>
 public class FusionModifierData
 {
     public FusionType Type { get; }
     public float Duration { get; }
-
-    public FusionModifierData(FusionType type, float duration)
-    {
-        Type = type;
-        Duration = duration;
-    }
+    public FusionModifierData(FusionType type, float duration) { Type = type; Duration = duration; }
 }
 
-/// <summary>
-/// Manages the logic for fusing active power-ups into more powerful, temporary modes.
-/// Acts as an event-driven extension layer to PowerUpManager.
-/// </summary>
-public class PowerUpFusionManager : MonoBehaviour
+public class PowerUpFusionManager : Singleton<PowerUpFusionManager>
 {
-    public static PowerUpFusionManager Instance { get; private set; }
-
     public event Action<FusionModifierData> OnFusionActivated;
     public event Action OnFusionDeactivated;
 
-    private readonly HashSet<PowerUpType> activePowerUps = new HashSet<PowerUpType>();
+    [Header("Fusion Configuration")]
+    [SerializeField] private GameObject fusionCorePrefab;
+    private List<PowerUpFusionDefinition> fusionDefinitions;
+    
     private FusionType currentFusion = FusionType.None;
     private float fusionTimer;
-    private const float FUSION_BASE_DURATION = 10f;
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
+        base.Awake();
+        LoadFusionDefinitions();
+    }
+
+    private void Start()
+    {
+        PowerUpManager.OnPowerUpActivated += HandlePowerUpActivated;
+        PowerUpManager.OnPowerUpDeactivated += HandlePowerUpDeactivated;
+    }
+
+    private void OnDestroy()
+    {
+        PowerUpManager.OnPowerUpActivated -= HandlePowerUpActivated;
+        PowerUpManager.OnPowerUpDeactivated -= HandlePowerUpDeactivated;
     }
 
     private void Update()
@@ -52,75 +50,65 @@ public class PowerUpFusionManager : MonoBehaviour
         if (currentFusion != FusionType.None)
         {
             fusionTimer -= Time.deltaTime;
-            if (fusionTimer <= 0)
+            if (fusionTimer <= 0) DeactivateFusion();
+        }
+    }
+
+    private void LoadFusionDefinitions()
+    {
+        fusionDefinitions = Resources.LoadAll<PowerUpFusionDefinition>("PowerUpFusions").ToList();
+    }
+
+    private void HandlePowerUpActivated(PowerUpDefinition definition) => CheckFusions();
+    private void HandlePowerUpDeactivated(PowerUpDefinition definition) => CheckFusions();
+
+    private void CheckFusions()
+    {
+        if (currentFusion != FusionType.None || PowerUpManager.Instance == null) return;
+
+        HashSet<PowerUpType> activePowerUps = new HashSet<PowerUpType>(PowerUpManager.Instance.GetActivePowerUpTypes());
+        foreach (var fusion in fusionDefinitions)
+        {
+            if (activePowerUps.Contains(fusion.powerUp1) && activePowerUps.Contains(fusion.powerUp2))
             {
-                DeactivateFusion();
+                TriggerFusion(fusion);
+                break;
             }
         }
     }
 
-    public void RegisterPowerUp(PowerUpType type)
+    private void TriggerFusion(PowerUpFusionDefinition fusion)
     {
-        if (activePowerUps.Contains(type) || currentFusion != FusionType.None) return;
+        currentFusion = ConvertTypeToFusionEnum(fusion.fusedPowerUp);
+        fusionTimer = fusion.fusedDuration;
 
-        activePowerUps.Add(type);
-        CheckForFusion();
-    }
+        PowerUpManager.Instance.DeactivatePowerUp(fusion.powerUp1);
+        PowerUpManager.Instance.DeactivatePowerUp(fusion.powerUp2);
+        PowerUpManager.Instance.ActivatePowerUp(fusion.fusedPowerUp, fusion.fusedDuration);
 
-    public void UnregisterPowerUp(PowerUpType type)
-    {
-        activePowerUps.Remove(type);
-    }
+        OnFusionActivated?.Invoke(new FusionModifierData(currentFusion, fusionTimer));
 
-    private void CheckForFusion()
-    {
-        // Check for Coin Storm (Magnet + Coin Doubler)
-        if (activePowerUps.Contains(PowerUpType.Magnet) && activePowerUps.Contains(PowerUpType.CoinDoubler))
+        if (fusionCorePrefab != null && PlayerController.Instance != null)
         {
-            ActivateFusion(FusionType.CoinStorm, new List<PowerUpType> { PowerUpType.Magnet, PowerUpType.CoinDoubler });
-            return;
-        }
-
-        // Check for Invincible Dash (Shield + Speed Boost)
-        if (activePowerUps.Contains(PowerUpType.Shield) && activePowerUps.Contains(PowerUpType.SpeedBoost))
-        {
-            ActivateFusion(FusionType.InvincibleDash, new List<PowerUpType> { PowerUpType.Shield, PowerUpType.SpeedBoost });
-            return;
-        }
-
-        // Check for Fever Mode (Multiplier + High Flow Combo)
-        // NOTE: Requires external state from FlowComboManager.
-        if (activePowerUps.Contains(PowerUpType.ScoreMultiplier) && FlowComboManager.Instance.GetCurrentMultiplier() >= 3f)
-        {
-            ActivateFusion(FusionType.FeverMode, new List<PowerUpType> { PowerUpType.ScoreMultiplier });
-            return;
-        }
-    }
-
-    private void ActivateFusion(FusionType fusionType, List<PowerUpType> consumedPowerUps)
-    {
-        currentFusion = fusionType;
-        fusionTimer = FUSION_BASE_DURATION;
-
-        Debug.Log($"FUSION ACTIVATED: {fusionType}");
-
-        // Notify other systems of the new fusion state.
-        var fusionData = new FusionModifierData(fusionType, fusionTimer);
-        OnFusionActivated?.Invoke(fusionData);
-
-        // Consume the base power-ups used in the fusion.
-        foreach (var powerUp in consumedPowerUps)
-        {
-            UnregisterPowerUp(powerUp);
-            // PowerUpManager should listen to the OnFusionActivated event to end the base power-ups.
+            Instantiate(fusionCorePrefab, PlayerController.Instance.transform.position, Quaternion.identity);
         }
     }
 
     private void DeactivateFusion()
     {
-        Debug.Log($"FUSION DEACTIVATED: {currentFusion}");
         currentFusion = FusionType.None;
         fusionTimer = 0;
         OnFusionDeactivated?.Invoke();
+    }
+
+    private FusionType ConvertTypeToFusionEnum(PowerUpType type)
+    {
+        return type switch
+        {
+            PowerUpType.CoinStorm => FusionType.CoinStorm,
+            PowerUpType.InvincibleDash => FusionType.InvincibleDash,
+            PowerUpType.FeverFrenzy => FusionType.FeverFrenzy,
+            _ => FusionType.None
+        };
     }
 }

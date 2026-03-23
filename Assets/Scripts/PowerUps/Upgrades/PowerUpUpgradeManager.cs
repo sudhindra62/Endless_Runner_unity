@@ -14,8 +14,13 @@ public class PowerUpUpgradeManager : Singleton<PowerUpUpgradeManager>
 
     public int GetPowerUpLevel(PowerUpType type)
     {
-        // In a real game, you would get this from PlayerMetaData
-        return PlayerPrefs.GetInt(type.ToString() + "Level", 1);
+        if (SaveManager.Instance == null) return 1;
+        string key = type.ToString();
+        if (SaveManager.Instance.Data.powerUpLevels.TryGetValue(key, out int level))
+        {
+            return level;
+        }
+        return 1;
     }
 
     public void UpgradePowerUp(PowerUpType type)
@@ -28,16 +33,16 @@ public class PowerUpUpgradeManager : Singleton<PowerUpUpgradeManager>
         }
 
         PowerUpUpgradeTier nextTier = upgradeData[type].upgradeTiers[currentLevel];
-        // In a real game, you would use your CurrencyManager
-        // if (CurrencyManager.Instance.Spend(nextTier.cost, nextTier.currencyType))
-        // {
-        //     PlayerPrefs.SetInt(type.ToString() + "Level", currentLevel + 1);
-        //     Debug.Log($"{type} upgraded to level {currentLevel + 1}");
-        // }
-        // else
-        // {
-        //     Debug.Log("Not enough currency.");
-        // }
+        if (PlayerDataManager.Instance != null && PlayerDataManager.Instance.SpendCurrency(ParseCurrencyType(nextTier.currencyType), nextTier.cost))
+        {
+            SaveManager.Instance.Data.powerUpLevels[type.ToString()] = currentLevel + 1;
+            SaveManager.Instance.SaveGame();
+            Debug.Log($"{type} upgraded to level {currentLevel + 1}");
+        }
+        else
+        {
+            Debug.Log("Not enough currency.");
+        }
     }
 
     public float GetPowerUpValue(PowerUpType type)
@@ -48,5 +53,12 @@ public class PowerUpUpgradeManager : Singleton<PowerUpUpgradeManager>
             return upgradeData[type].upgradeTiers[level].value;
         }
         return 0; // Default value if not found
+    }
+
+    private CurrencyType ParseCurrencyType(string currencyType)
+    {
+        return System.Enum.TryParse(currencyType, true, out CurrencyType parsedType)
+            ? parsedType
+            : CurrencyType.Coins;
     }
 }

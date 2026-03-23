@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -41,6 +42,25 @@ public class GhostRunData
 
             byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
             return BitConverter.ToString(hash).Replace("-", "");
+        }
+    }
+
+    public byte[] ToBytes()
+    {
+        using (MemoryStream ms = new MemoryStream())
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            bf.Serialize(ms, this);
+            return ms.ToArray();
+        }
+    }
+
+    public static GhostRunData FromBytes(byte[] bytes)
+    {
+        using (MemoryStream ms = new MemoryStream(bytes))
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            return (GhostRunData)bf.Deserialize(ms);
         }
     }
 }

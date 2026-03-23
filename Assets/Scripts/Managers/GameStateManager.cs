@@ -1,9 +1,7 @@
-
+﻿
 using System;
 using UnityEngine;
 
-namespace EndlessRunner.Managers
-{
     public class GameStateManager : MonoBehaviour
     {
         public static GameStateManager Instance { get; private set; }
@@ -39,4 +37,4 @@ namespace EndlessRunner.Managers
             OnGameStateChanged?.Invoke(newState);
         }
     }
-}
+

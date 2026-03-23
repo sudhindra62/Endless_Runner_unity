@@ -2,8 +2,6 @@
 using System.Collections;
 using UnityEngine;
 
-namespace Spawners
-{
     public class PowerUpSpawner : MonoBehaviour
     {
         public GameObject[] powerUpPrefabs;
@@ -41,4 +39,3 @@ namespace Spawners
             Instantiate(powerUpPrefab, randomPosition, Quaternion.identity);
         }
     }
-}

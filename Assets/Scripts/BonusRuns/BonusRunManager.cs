@@ -10,8 +10,6 @@ public class BonusRunManager : Singleton<BonusRunManager>
     private int bonusRunsRemaining;
     private DateTime nextResetTime;
 
-    private const string BONUS_RUNS_KEY = "BonusRunsRemaining";
-    private const string NEXT_RESET_TIME_KEY = "NextBonusRunResetTime";
 
     private void Start()
     {
@@ -25,11 +23,12 @@ public class BonusRunManager : Singleton<BonusRunManager>
 
     private void LoadData()
     {
-        bonusRunsRemaining = PlayerPrefs.GetInt(BONUS_RUNS_KEY, bonusRunData.bonusRunsPerDay);
-        string storedTime = PlayerPrefs.GetString(NEXT_RESET_TIME_KEY, "");
-        if (!string.IsNullOrEmpty(storedTime))
+        if (SaveManager.Instance == null) return;
+        
+        bonusRunsRemaining = SaveManager.Instance.Data.bonusRunsRemaining;
+        if (SaveManager.Instance.Data.nextBonusRunResetTimestamp != 0)
         {
-            nextResetTime = DateTime.Parse(storedTime);
+            nextResetTime = DateTime.FromBinary(SaveManager.Instance.Data.nextBonusRunResetTimestamp);
         }
         else
         {
@@ -39,13 +38,20 @@ public class BonusRunManager : Singleton<BonusRunManager>
 
     private void SaveData()
     {
-        PlayerPrefs.SetInt(BONUS_RUNS_KEY, bonusRunsRemaining);
-        PlayerPrefs.SetString(NEXT_RESET_TIME_KEY, nextResetTime.ToString());
+        if (SaveManager.Instance == null) return;
+        SaveManager.Instance.Data.bonusRunsRemaining = bonusRunsRemaining;
+        SaveManager.Instance.Data.nextBonusRunResetTimestamp = nextResetTime.ToBinary();
+        SaveManager.Instance.SaveGame();
     }
 
     private void SetNextResetTime()
     {
         nextResetTime = DateTime.Now.Date.AddDays(1).AddHours(4); // Resets at 4 AM
+    }
+
+    public int GetBonusRunsRemaining()
+    {
+        return bonusRunsRemaining;
     }
 
     public void ResetBonusRuns()

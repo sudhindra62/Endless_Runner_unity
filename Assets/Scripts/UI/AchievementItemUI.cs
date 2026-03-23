@@ -2,11 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using EndlessRunner.Data;
-using EndlessRunner.Managers;
 
-namespace EndlessRunner.UI
-{
     public class AchievementItemUI : MonoBehaviour
     {
         [SerializeField] private TextMeshProUGUI titleText;
@@ -54,4 +50,3 @@ namespace EndlessRunner.UI
             Refresh();
         }
     }
-}

@@ -15,6 +15,8 @@ public class WorldEventData
     public string visualThemeId;
     public int riskTier;
     public bool isStackableWithRunModifier;
+    public bool IsLaneBased;
+    public bool IsActive;
 }
 
 [Serializable]

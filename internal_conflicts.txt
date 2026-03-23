@@ -1,0 +1,15 @@
+CoinSystem | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Core\CoinSystem.cs
+CoinSystem | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Core\CoinSystem_Legacy.cs
+Challenge | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\ChallengeSystem\Challenge.cs
+Challenge | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Social\FriendChallengeManager.cs
+LeagueDivisionData | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Data\LeagueDivisionData.cs
+LeagueDivisionData | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Leagues\LeagueData.cs
+LeagueRewardData | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Data\LeagueDivisionData.cs
+LeagueRewardData | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Leagues\LeagueData.cs
+LeagueRewardData | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Leagues\LeagueRewardData.cs
+ObstaclePattern | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Data\ObstaclePattern.cs
+ObstaclePattern | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Managers\ProceduralPatternGenerator.cs
+SkinData | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Data\SkinData.cs
+SkinData | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Data\SkinDataManager.cs
+PlayerController | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Gameplay\PlayerController.cs
+PlayerController | C:\EndlessFinal\EndlessRunnerProject\Assets\Scripts\Player\PlayerController.cs

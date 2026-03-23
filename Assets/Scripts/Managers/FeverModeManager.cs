@@ -56,6 +56,13 @@ public class FeverModeManager : MonoBehaviour
         StartFeverMode();
     }
 
+    public void AddFeverPoints(int points) 
+    {
+        // Internal tracking structure for FeverPoints can be placed here.
+        // Once threshold triggers, execute:
+        TryActivateFeverMode();
+    }
+
     private void StartFeverMode()
     {
         Debug.Log("[FeverModeManager] Fever Mode ACTIVATED!");

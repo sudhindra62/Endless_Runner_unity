@@ -29,7 +29,7 @@ public class ReplayViewerUI : MonoBehaviour
     {
         replayManager = ReplayManager.Instance;
         // The playback controller might be on a different object, so we find it.
-        playbackController = FindObjectOfType<ReplayPlaybackController>();
+        playbackController = FindFirstObjectByType<ReplayPlaybackController>();
 
         // Hook up button listeners
         playButton.onClick.AddListener(OnPlay); 

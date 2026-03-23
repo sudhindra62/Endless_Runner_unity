@@ -5,18 +5,18 @@ using UnityEngine;
 /// </summary>
 public class SaveIntegrityGuard
 {
-    private SaveData lastKnownGoodSave;
-    private string backupSaveSlot = "BackupSaveData";
+    private GameData lastKnownGoodSave;
+    private string backupSaveSlot = "BackupGameData";
 
     /// <summary>
     /// Creates a snapshot of the current save data before a new save operation.
     /// </summary>
     /// <param name="currentSaveData">The current state of the game data.</param>
-    public void CreateBackup(SaveData currentSaveData)
+    public void CreateBackup(GameData currentSaveData)
     {
         // In a real implementation, we would create a deep copy.
-        // For this structure, we'll assume SaveData is a class and can be referenced.
-        lastKnownGoodSave = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(currentSaveData));
+        // For this structure, we'll assume GameData is a class and can be referenced.
+        lastKnownGoodSave = JsonUtility.FromJson<GameData>(JsonUtility.ToJson(currentSaveData));
         PlayerPrefs.SetString(backupSaveSlot, JsonUtility.ToJson(lastKnownGoodSave));
         Debug.Log("[SaveIntegrityGuard] Created a backup of the current save data.");
     }
@@ -25,8 +25,8 @@ public class SaveIntegrityGuard
     /// Restores the last known good save data.
     /// This is called when corruption is detected in the main save file.
     /// </summary>
-    /// <returns>The restored SaveData object.</returns>
-    public SaveData RestoreBackup()
+    /// <returns>The restored GameData object.</returns>
+    public GameData RestoreBackup()
     {
         if (lastKnownGoodSave != null)
         {
@@ -41,12 +41,12 @@ public class SaveIntegrityGuard
         {
             Debug.LogWarning("[SaveIntegrityGuard] Corruption detected! Restoring from PlayerPrefs backup.");
             IntegrityManager.Instance.NotifyPlayerOfDataRestoration();
-            return JsonUtility.FromJson<SaveData>(backupJson);
+            return JsonUtility.FromJson<GameData>(backupJson);
         }
 
         // If no backup exists, we must create a new save file.
         Debug.LogError("[SaveIntegrityGuard] Corruption detected, but no backup was found! Creating a new save file.");
-        return new SaveData();
+        return new GameData();
     }
 
     /// <summary>
@@ -54,18 +54,17 @@ public class SaveIntegrityGuard
     /// </summary>
     /// <param name="dataToValidate">The save data that was just loaded.</param>
     /// <returns>True if the data is valid, false otherwise.</returns>
-    public bool ValidateSaveData(SaveData dataToValidate)
+    public bool ValidateGameData(GameData dataToValidate)
     { 
         // Example Rule 1: Currencies should not be negative.
-        if (dataToValidate.playerMetaData.coins < 0 || dataToValidate.playerMetaData.gems < 0)
+        if (dataToValidate.totalCoins < 0 || dataToValidate.gems < 0)
         {
             IntegrityManager.Instance.ReportError("Save data validation failed: Negative currency found.");
             return false;
         }
 
         // Example Rule 2: Player level should be within a reasonable range.
-        // This range could be defined in a remote config.
-        if (dataToValidate.playerMetaData.playerLevel > 200) // 200 is an arbitrary max level for this example
+        if (dataToValidate.playerLevel > 200) 
         {
             IntegrityManager.Instance.ReportError("Save data validation failed: Player level out of range.");
             return false;

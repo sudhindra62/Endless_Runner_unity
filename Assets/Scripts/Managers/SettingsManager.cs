@@ -1,9 +1,6 @@
-
+﻿
 using UnityEngine;
-using EndlessRunner.Core;
 
-namespace EndlessRunner.Managers
-{
     public class SettingsManager : Singleton<SettingsManager>
     {
         public const string MusicVolumeKey = "MusicVolume";
@@ -62,4 +59,4 @@ namespace EndlessRunner.Managers
             SetGraphicsQuality(GraphicsQuality);
         }
     }
-}
+

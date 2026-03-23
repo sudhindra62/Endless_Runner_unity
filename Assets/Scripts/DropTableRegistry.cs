@@ -1,10 +1,8 @@
-
+﻿
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace EndlessRunner.Drops
-{
     /// <summary>
     /// A ScriptableObject that holds all drop tables for the game.
     /// Refactored by the Supreme Guardian Architect v13 to use a dictionary for high-performance lookups.
@@ -101,4 +99,4 @@ namespace EndlessRunner.Drops
             return null;
         }
     }
-}
+

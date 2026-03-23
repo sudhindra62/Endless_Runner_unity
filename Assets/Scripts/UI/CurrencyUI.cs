@@ -1,7 +1,12 @@
 
 using UnityEngine;
 
-namespace EndlessRunner.UI
+public class CurrencyUI : MonoBehaviour
 {
-    public class CurrencyUI : MonoBehaviour { }
+    public void UpdateDisplay(int amount) { /* UI Logic */ }
+
+    public void UpdateDisplay(int coins, int gems)
+    {
+        UpdateDisplay(coins);
+    }
 }

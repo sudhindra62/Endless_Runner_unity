@@ -67,6 +67,23 @@ public class RewardManager : Singleton<RewardManager>
         }
     }
 
+    public void GrantReward(string itemID, int quantity = 1) => Award(itemID, quantity);
+
+    public void GrantReward(Reward reward)
+    {
+        if (reward != null)
+        {
+            Award(reward.itemID, reward.quantity);
+        }
+    }
+
+    public void GrantLevelUpReward(int level)
+    {
+        // Award coins proportional to new level
+        Award("COINS", level * 100);
+        Debug.Log($"REWARD_MANAGER: Level-up reward granted for level {level}.");
+    }
+
     public void AwardChallengeReward()
     {
         int coinReward = 500;
@@ -124,4 +141,34 @@ public class RewardManager : Singleton<RewardManager>
     }
 
     #endregion
+
+    // --- Type Conversion Bridges (Phase 2A: Type Consistency) ---
+    
+    public void Award(string itemID, long quantity)
+    {
+        Award(itemID, (int)System.Math.Min(quantity, int.MaxValue));
+    }
+
+    public void GrantReward(string itemID, long quantity = 1)
+    {
+        GrantReward(itemID, (int)System.Math.Min(quantity, int.MaxValue));
+    }
+
+    public void GrantLevelUpReward(long level)
+    {
+        GrantLevelUpReward((int)System.Math.Min(level, int.MaxValue));
+    }
+
+    public void ProcessEndOfRunRewards(RunSessionData runData, bool bossDefeated, long bonusCoins = 0)
+    {
+        if (bonusCoins > 0)
+        {
+            ProcessEndOfRunRewards(runData, bossDefeated);
+            Award("COINS", bonusCoins);
+        }
+        else
+        {
+            ProcessEndOfRunRewards(runData, bossDefeated);
+        }
+    }
 }

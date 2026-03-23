@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 [System.Serializable]
-public class SkinData
+public class SkinState
 {
     public string skinName;
     public int cost;
@@ -14,7 +14,7 @@ public class SkinDataManager : MonoBehaviour
 {
     public static SkinDataManager Instance { get; private set; }
 
-    public List<SkinData> skins;
+    public List<SkinState> skins;
 
     private void Awake()
     {
@@ -31,7 +31,7 @@ public class SkinDataManager : MonoBehaviour
 
     public void UnlockSkin(string skinName)
     {
-        SkinData skin = skins.Find(s => s.skinName == skinName);
+        SkinState skin = skins.Find(s => s.skinName == skinName);
         if (skin != null && !skin.isUnlocked)
         {
             skin.isUnlocked = true;

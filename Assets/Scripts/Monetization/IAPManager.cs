@@ -1,11 +1,7 @@
 
 using System;
 using UnityEngine;
-using EndlessRunner.Core;
-using EndlessRunner.Data;
 
-namespace EndlessRunner.Monetization
-{
     /// <summary>
     /// Manages all In-App Purchase logic.
     /// Provides a simplified interface for purchasing items like coins or shards.
@@ -49,6 +45,8 @@ namespace EndlessRunner.Monetization
             ProcessSuccessfulPurchase(productId);
         }
 
+        public void ConfirmPurchase(string productId) => InitiatePurchase(productId);
+
         /// <summary>
         /// This method would be called by the IAP SDK upon a successful transaction.
         /// </summary>
@@ -67,7 +65,12 @@ namespace EndlessRunner.Monetization
                     break;
                 case "com.endlessrunner.10rareshards":
                     var inventory = DataManager.Instance.GameData.GetShardInventory();
-                    inventory[ShardType.Rare] += 10;
+                    string rareKey = ShardType.Rare.ToString();
+                    if (!inventory.ContainsKey(rareKey))
+                    {
+                        inventory[rareKey] = 0;
+                    }
+                    inventory[rareKey] += 10;
                     DataManager.Instance.GameData.SetShardInventory(inventory);
                     break;
                 default:
@@ -76,7 +79,7 @@ namespace EndlessRunner.Monetization
             }
             
             // Save the changes and notify listeners
-            DataManager.Instance.SaveData();
+            DataManager.Instance.SaveGameData();
             OnPurchaseCompleted?.Invoke(productId, true);
         }
 
@@ -89,4 +92,4 @@ namespace EndlessRunner.Monetization
             OnPurchaseCompleted?.Invoke(productId, false);
         }
     }
-}
+

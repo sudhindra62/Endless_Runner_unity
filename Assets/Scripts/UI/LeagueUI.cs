@@ -55,7 +55,7 @@ public class LeagueUI : MonoBehaviour
         float progress = 0;
         if (leagueData.ContainsKey(currentLeague))
         {
-            LeagueManager.LeagueTierData tierData = leagueData[currentLeague];
+            LeagueTierData tierData = leagueData[currentLeague];
             progress = (float)weeklyBestScore / tierData.promotionScore;
             progressBar.value = progress;
 
@@ -79,8 +79,8 @@ public class LeagueUI : MonoBehaviour
 
         if (leagueData.ContainsKey(league))
         {
-            List<LeagueManager.LeagueReward> rewards = leagueData[league].rewards;
-            foreach (LeagueManager.LeagueReward reward in rewards)
+            List<LeagueReward> rewards = leagueData[league].rewards;
+            foreach (LeagueReward reward in rewards)
             {
                 GameObject rewardGO = Instantiate(rewardPreviewPrefab, rewardPreviewContainer);
                 // Set icon and amount on the reward prefab
@@ -89,12 +89,12 @@ public class LeagueUI : MonoBehaviour
     }
 
     //This is a placeholder for the real league data
-    private Dictionary<LeagueTier, LeagueManager.LeagueTierData> leagueData = new Dictionary<LeagueTier, LeagueManager.LeagueTierData>
+    private Dictionary<LeagueTier, LeagueTierData> leagueData = new Dictionary<LeagueTier, LeagueTierData>
     {
-        { LeagueTier.Bronze, new LeagueManager.LeagueTierData(0, 10000, new List<LeagueManager.LeagueReward> { new LeagueManager.LeagueReward(RewardType.Coins, 100) }) },
-        { LeagueTier.Silver, new LeagueManager.LeagueTierData(10000, 50000, new List<LeagueManager.LeagueReward> { new LeagueManager.LeagueReward(RewardType.Coins, 250), new LeagueManager.LeagueReward(RewardType.XP, 50) }) },
-        { LeagueTier.Gold, new LeagueManager.LeagueTierData(50000, 150000, new List<LeagueManager.LeagueReward> { new LeagueManager.LeagueReward(RewardType.Coins, 500), new LeagueManager.LeagueReward(RewardType.Gems, 10), new LeagueManager.LeagueReward(RewardType.XP, 100) }) },
-        { LeagueTier.Platinum, new LeagueManager.LeagueTierData(150000, 500000, new List<LeagueManager.LeagueReward> { new LeagueManager.LeagueReward(RewardType.Coins, 1000), new LeagueManager.LeagueReward(RewardType.Gems, 25), new LeagueManager.LeagueReward(RewardType.XP, 250) }) },
-        { LeagueTier.Diamond, new LeagueManager.LeagueTierData(500000, int.MaxValue, new List<LeagueManager.LeagueReward> { new LeagueManager.LeagueReward(RewardType.Coins, 2500), new LeagueManager.LeagueReward(RewardType.Gems, 50), new LeagueManager.LeagueReward(RewardType.Chest, 1), new LeagueManager.LeagueReward(RewardType.XP, 500) }) }
+        { LeagueTier.Bronze, new LeagueTierData(0, 10000, new List<LeagueReward> { new LeagueReward(RewardType.Coins, 100) }) },
+        { LeagueTier.Silver, new LeagueTierData(10000, 50000, new List<LeagueReward> { new LeagueReward(RewardType.Coins, 250), new LeagueReward(RewardType.XP, 50) }) },
+        { LeagueTier.Gold, new LeagueTierData(50000, 150000, new List<LeagueReward> { new LeagueReward(RewardType.Coins, 500), new LeagueReward(RewardType.Gems, 10), new LeagueReward(RewardType.XP, 100) }) },
+        { LeagueTier.Platinum, new LeagueTierData(150000, 500000, new List<LeagueReward> { new LeagueReward(RewardType.Coins, 1000), new LeagueReward(RewardType.Gems, 25), new LeagueReward(RewardType.XP, 250) }) },
+        { LeagueTier.Diamond, new LeagueTierData(500000, int.MaxValue, new List<LeagueReward> { new LeagueReward(RewardType.Coins, 2500), new LeagueReward(RewardType.Gems, 50), new LeagueReward(RewardType.Chest, 1), new LeagueReward(RewardType.XP, 500) }) }
     };
 }

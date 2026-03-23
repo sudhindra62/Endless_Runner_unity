@@ -1,8 +1,6 @@
 
 using UnityEngine;
 
-namespace EndlessRunner.Managers
-{
     public class SubscriptionManager : MonoBehaviour
     {
         public static SubscriptionManager Instance;
@@ -20,11 +18,48 @@ namespace EndlessRunner.Managers
             }
         }
 
+        private const string PREMIUM_STATUS_KEY = "PremiumStatus";
+        private const string PREMIUM_EXPIRATION_KEY = "PremiumExpiration";
+
         public bool IsSubscribed()
         {
-            // In a real implementation, this would check with a subscription service.
-            // For now, it will return a default value.
-            return false;
+            CheckSubscriptionStatus();
+            return SaveManager.Instance != null && SaveManager.Instance.Data.isPremiumSubscribed;
+        }
+
+        public void CheckSubscriptionStatus()
+        {
+            if (SaveManager.Instance == null) return;
+            
+            bool isPremium = SaveManager.Instance.Data.isPremiumSubscribed;
+            if (isPremium)
+            {
+                long expirationTicks = SaveManager.Instance.Data.premiumExpirationTimestamp;
+                if (expirationTicks != 0)
+                {
+                    System.DateTime expirationTime = new System.DateTime(expirationTicks);
+                    if (System.DateTime.UtcNow > expirationTime)
+                    {
+                        SaveManager.Instance.Data.isPremiumSubscribed = false;
+                        SaveManager.Instance.SaveGame();
+                    }
+                }
+            }
+        }
+
+        public void Subscribe(int days)
+        {
+            if (SaveManager.Instance == null) return;
+            
+            System.DateTime expirationTime = System.DateTime.UtcNow.AddDays(days);
+            SaveManager.Instance.Data.isPremiumSubscribed = true;
+            SaveManager.Instance.Data.premiumExpirationTimestamp = expirationTime.Ticks;
+            SaveManager.Instance.SaveGame();
+            
+            if (ThemeUnlockManager.Instance != null)
+            {
+                ThemeUnlockManager.Instance.UnlockAllPremiumThemes();
+            }
         }
     }
-}
+

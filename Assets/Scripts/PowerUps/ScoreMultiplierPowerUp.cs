@@ -16,14 +16,14 @@ public class ScoreMultiplierPowerUp : PowerUp
         powerUpType = PowerUpType.ScoreMultiplier;
     }
 
-    public override void TriggerActivation(PlayerController player)
+    public override void ApplyEffect()
     {
         if (ScoreManager.Instance == null) return;
         Debug.Log("Guardian Architect Log: Score Multiplier Activated!");
         ScoreManager.Instance.SetScoreMultiplier(multiplier);
     }
 
-    public override void TriggerDeactivation(PlayerController player)
+    public override void RemoveEffect()
     {
         if (ScoreManager.Instance == null) return;
         Debug.Log("Guardian Architect Log: Score Multiplier Deactivated.");

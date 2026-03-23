@@ -3,8 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-namespace EndlessRunner.UI.Bindings
-{
     public class ReviveUIBinder : MonoBehaviour
     {
         [Header("UI Elements")]
@@ -14,7 +12,7 @@ namespace EndlessRunner.UI.Bindings
         [SerializeField] private Button watchAdButton;
         [SerializeField] private Button declineButton;
         [SerializeField] private TextMeshProUGUI gemCostText;
-        [SerializeField] private TextMeshProUGI tokenCountText;
+        [SerializeField] private TextMeshProUGUI tokenCountText;
 
         [Header("Auto Decline")]
         [SerializeField] private float autoDeclineTime = 8f;
@@ -82,4 +80,3 @@ namespace EndlessRunner.UI.Bindings
             reviveManager.DeclineRevive();
         }
     }
-}

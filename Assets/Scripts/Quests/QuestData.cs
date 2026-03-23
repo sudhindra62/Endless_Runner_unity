@@ -19,6 +19,7 @@ public enum QuestDifficulty
 [CreateAssetMenu(fileName = "QuestData", menuName = "Quests/Quest Data")]
 public class QuestData : ScriptableObject
 {
+    public string questID;
     public string questName;
     public QuestType questType;
     public QuestDifficulty difficulty;
@@ -30,4 +31,5 @@ public class QuestData : ScriptableObject
     public GameObject rewardItemPrefab; // For chests or cosmetic fragments
     public bool isEventQuest = false;
 
+    public string ID => string.IsNullOrEmpty(questID) ? questName : questID;
 }

@@ -1,13 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using CompetitiveGaming;
+
 
 public class CompetitiveLeagueManager : MonoBehaviour
 {
     public static CompetitiveLeagueManager Instance { get; private set; }
 
-    public static event System.Action<LeagueTier> OnPlayerLeagueChanged;
+    public static event System.Action<LeagueTierInfo> OnPlayerLeagueChanged;
 
     [SerializeField] private List<LeagueDivisionData> leagueStructure;
 
@@ -51,6 +51,19 @@ public class CompetitiveLeagueManager : MonoBehaviour
         playerScoreInDivision = score;
     }
 
+    public void AddLeagueXP(int amount)
+    {
+        // Simply adding to score for now as a proxy for league XP
+        playerScoreInDivision += amount;
+        Debug.Log($"[CompetitiveLeague] Added {amount} league XP.");
+    }
+
+    public void UpdateLeague(string leagueId)
+    {
+        playerDivisionId = leagueId;
+        Debug.Log($"[CompetitiveLeague] League updated to: {leagueId}");
+    }
+
     private void ProcessWeeklyReset()
     {
         // 1. Determine player's rank in their 50-person group
@@ -83,7 +96,7 @@ public class CompetitiveLeagueManager : MonoBehaviour
         // Logic to move the player to the next division/tier
         Debug.Log("Player Promoted!");
         var division = leagueStructure.FirstOrDefault(d => d.TierName + d.Division == playerDivisionId);
-        OnPlayerLeagueChanged?.Invoke(new LeagueTier { LeagueName = division.TierName, Tier = division.Division });
+        OnPlayerLeagueChanged?.Invoke(new LeagueTierInfo { LeagueName = division.TierName, Rank = (LeagueRank)division.Division });
     }
 
     private void DemotePlayer() 
@@ -91,7 +104,7 @@ public class CompetitiveLeagueManager : MonoBehaviour
         // Logic to move the player to the previous division/tier
         Debug.Log("Player Demoted.");
         var division = leagueStructure.FirstOrDefault(d => d.TierName + d.Division == playerDivisionId);
-        OnPlayerLeagueChanged?.Invoke(new LeagueTier { LeagueName = division.TierName, Tier = division.Division });
+        OnPlayerLeagueChanged?.Invoke(new LeagueTierInfo { LeagueName = division.TierName, Rank = (LeagueRank)division.Division });
     }
 
     private int GetPlayerRankInGroup()

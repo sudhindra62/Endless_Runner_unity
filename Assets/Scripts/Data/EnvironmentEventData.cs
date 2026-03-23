@@ -12,7 +12,11 @@ public enum EnvironmentEventType
     SpeedTunnel,        // Forced speed boost with score multiplier.
     SplitTrack,         // The track splits into multiple paths.
     TrainCrossing,      // A large, timed obstacle crossing the track.
-    EnvironmentalTrap   // A short, high-density hazard section.
+    EnvironmentalTrap,   // A short, high-density hazard section.
+    MeteorShower,        // Dynamic meteor strikes.
+    Blizzard,            // Low visibility and freezing effects.
+    Sandstorm,           // Wind forces and dust particles.
+    Thunderstorm         // Lightning strikes and heavy rain.
 }
 
 /// <summary>

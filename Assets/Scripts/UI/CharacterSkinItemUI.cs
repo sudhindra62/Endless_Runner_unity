@@ -1,11 +1,9 @@
-
+﻿
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using EndlessRunner.UI; // Added namespace
+ // Added namespace
 
-namespace EndlessRunner.Character
-{
     public class CharacterSkinItemUI : MonoBehaviour
     {
         public TextMeshProUGUI characterNameText;
@@ -87,4 +85,4 @@ namespace EndlessRunner.Character
             if(previewInstance != null) Destroy(previewInstance);
         }
     }
-}
+

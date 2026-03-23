@@ -1,8 +1,6 @@
-
+﻿
 using UnityEngine;
 
-namespace EndlessRunner.Core
-{
     public static class Logger
     {
         public static void Log(string tag, string message)
@@ -26,4 +24,4 @@ namespace EndlessRunner.Core
 #endif
         }
     }
-}
+

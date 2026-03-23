@@ -67,6 +67,27 @@ public class AchievementUIEntry : MonoBehaviour
         UpdateVisuals();
     }
 
+    public void Setup(Achievement achievement)
+    {
+        if (achievement == null)
+        {
+            Setup((AchievementData)null);
+            return;
+        }
+
+        Setup(new AchievementData(achievement.id)
+        {
+            id = achievement.id,
+            name = achievement.title,
+            achievementName = achievement.title,
+            description = achievement.description,
+            icon = achievement.Badge,
+            tier = achievement.tier,
+            requiredValue = achievement.requiredValue,
+            isUnlocked = achievement.isUnlocked
+        });
+    }
+
     /// <summary>
     /// Updates the dynamic elements of the UI, such as the progress bar and unlocked state.
     /// This should be called whenever the UI needs to be refreshed.

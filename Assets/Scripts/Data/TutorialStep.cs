@@ -1,22 +1,27 @@
-
 using UnityEngine;
 
-namespace EndlessRunner.Data
+/// <summary>
+/// Triggers that can advance a tutorial step.
+/// </summary>
+public enum TutorialTrigger
 {
-    public enum TutorialTrigger
-    {
-        None, // Used for steps that only require a button press to continue
-        SwipeLeft,
-        SwipeRight,
-        SwipeUp
-    }
+    None, 
+    SwipeLeft,
+    SwipeRight,
+    SwipeUp,
+    ButtonPress
+}
 
-    [System.Serializable]
-    public class TutorialStep
-    {
-        [TextArea(3, 10)]
-        public string instructionText;
-        public TutorialTrigger trigger;
-        // Potentially add references to UI elements to highlight, etc.
-    }
+/// <summary>
+/// Data structure for a single step in the tutorial sequence.
+/// Global scope.
+/// </summary>
+[System.Serializable]
+public class TutorialStep
+{
+    public string title;
+    [TextArea(3, 10)]
+    public string instructionText;
+    public TutorialTrigger trigger;
+    public Sprite icon;
 }

@@ -1,8 +1,7 @@
 
 using UnityEngine;
 using UnityEngine.UI; // Required for Canvas, CanvasScaler, GraphicRaycaster
-using Managers; // Required for accessing SaveManager and its data structures
-using Core; // Required for Singleton access
+
 
 /// <summary>
 /// Automatically and comprehensively sets up the HomeScene with ALL necessary singleton managers and a foundational UI structure.
@@ -82,23 +81,20 @@ public class HomeSceneSetup : MonoBehaviour
     /// </summary>
     private void SetupTutorialManager()
     {
-        // A-TO-Z CONNECTIVITY: This is the authoritative check for the tutorial.
-        SaveData data = SaveManager.Instance.LoadData();
+        // A-TO-Z CONNECTIVITY: Read tutorial state from correct SaveManager property
+        bool tutorialCompleted = (SaveManager.Instance != null) && SaveManager.Instance.Data.hasCompletedTutorial;
         
-        if (data == null || !data.TutorialCompleted)
+        if (!tutorialCompleted)
         {
-            Debug.Log("Guardian Architect: Player has not completed the tutorial. Initializing and commanding TutorialManager.");
-            
-            // Ensure the manager exists in the scene.
+            Debug.Log("Guardian Architect: Player has not completed the tutorial. Initializing TutorialManager.");
             EnsureManager<TutorialManager>();
-
-            // Command the TutorialManager to begin its sequence.
-            // The manager will internally wait for the correct game state before displaying UI.
-            TutorialManager.Instance.StartTutorial();
+            // StartTutorial accessible via public method
+            if (TutorialManager.Instance != null)
+                TutorialManager.Instance.StartTutorial();
         }
         else
         {
-            Debug.Log("Guardian Architect: Player has already completed the tutorial. Skipping TutorialManager setup.");
+            Debug.Log("Guardian Architect: Tutorial already completed. Skipping.");
         }
     }
 

@@ -1,21 +1,36 @@
-
 using UnityEngine;
 
-namespace EndlessRunner.Gameplay
+/// <summary>
+/// Manages the camera, making it smoothly follow the player.
+/// Global scope.
+/// </summary>
+public class CameraController : Singleton<CameraController>
 {
-    public class CameraController : MonoBehaviour
+    [Header("Camera Settings")]
+    [SerializeField] private Vector3 cameraOffset = new Vector3(0, 5, -10);
+    [SerializeField] private float smoothSpeed = 10f;
+
+    private Transform playerTarget;
+
+    private void Start()
     {
-        [SerializeField] private Transform playerTransform;
-        [SerializeField] private Vector3 offset = new Vector3(0, 5, -10);
-        [SerializeField] private float smoothSpeed = 0.125f;
-
-        private void LateUpdate()
+        if (PlayerController.Instance != null)
         {
-            if (playerTransform == null) return;
-
-            Vector3 desiredPosition = playerTransform.position + offset;
-            Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed);
-            transform.position = smoothedPosition;
+            playerTarget = PlayerController.Instance.transform;
         }
     }
+
+    private void LateUpdate()
+    {
+        if (playerTarget == null) return;
+
+        Vector3 desiredPosition = playerTarget.position + cameraOffset;
+        Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
+        transform.position = smoothedPosition;
+    }
+
+    public void SetTarget(Transform target) => playerTarget = target;
+
+    public void ShakeCamera() { }
+    public void ShakeCamera(float duration, float magnitude) { }
 }
