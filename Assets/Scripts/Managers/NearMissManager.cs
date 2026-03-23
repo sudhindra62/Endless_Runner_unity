@@ -21,6 +21,10 @@ public class NearMissManager : MonoBehaviour
     [SerializeField] private float slowMoDuration = 0.15f;
     [SerializeField] private float slowMoFactor = 0.5f;
     [SerializeField] private float cooldownSeconds = 0.2f; // Cooldown to prevent spam from a single obstacle group
+    public float ScoreBonus => scoreBonus;
+    public float ComboBonus => comboBonus;
+    public float SlowMoDuration => slowMoDuration;
+    public float SlowMoFactor => slowMoFactor;
 
     // --- State ---
     private float lastMissTime = -1f;

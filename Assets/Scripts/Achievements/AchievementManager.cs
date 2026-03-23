@@ -197,6 +197,15 @@ using UnityEngine;
             if (achievement != null) UnlockAchievementInternal(achievement);
         }
 
+        public void UnlockAchievement(string achievementID)
+        {
+            var achievement = GetAchievementByID(achievementID);
+            if (achievement != null)
+            {
+                UnlockAchievementInternal(achievement);
+            }
+        }
+
         public void TrackProgress(Achievement achievement, int amount)
         {
             if (achievement != null)

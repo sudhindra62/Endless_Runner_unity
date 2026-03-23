@@ -16,6 +16,10 @@ public class RunSessionData
     public int score { get => Score; set => Score = value; }
     public float distance { get => Distance; set => Distance = value; }
     public int reviveCount;
+    public int styleScore;
+    public int comboPeak;
+    public int riskLaneUsage;
+    public float duration;
 
     // Extended fields for advanced analytics and Integrity checks
     public int TotalScore => Score;

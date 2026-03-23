@@ -71,6 +71,7 @@ public class AudioManager : Singleton<AudioManager>
             if (track.source && track.source.isPlaying) track.source.Stop();
         }
         s.source.Play();
+        OnMusicChanged?.Invoke(name);
     }
 
     public void PlaySFX(string name)
@@ -152,4 +153,3 @@ public class AudioManager : Singleton<AudioManager>
         SetSfxVolume(sfxVolume);
     }
 }
-

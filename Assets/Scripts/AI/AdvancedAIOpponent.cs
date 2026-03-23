@@ -30,8 +30,10 @@ using UnityEngine;
             Debug.Log($"AI_OPPONENT: {enemyType} opponent defeated.");
 
             // 1. Award score to the player
-            // In a real game, this should go through an event to the GameManager
-            // GameManager.Instance.AddScore(scoreValue);
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.AddScore(scoreValue);
+            }
 
             // 2. Trigger the shard drop calculation
             ShardDropEngine.CalculateAndAwardShard(enemyType);

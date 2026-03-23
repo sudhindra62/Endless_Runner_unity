@@ -51,12 +51,12 @@ public class MainSceneSetup : MonoBehaviour
     private void InstantiateManagers()
     {
         // Add managers to the scene if they're missing, ensuring systems are ready.
-        if (FindObjectOfType<LightingManager>() == null) new GameObject("LightingManager").AddComponent<LightingManager>();
-        if (FindObjectOfType<VFXManager>() == null) new GameObject("VFXManager").AddComponent<VFXManager>();
-        if (FindObjectOfType<SkyboxManager>() == null) new GameObject("SkyboxManager").AddComponent<SkyboxManager>();
-        if (FindObjectOfType<PostProcessingManager>() == null) new GameObject("PostProcessingManager").AddComponent<PostProcessingManager>();
-        if (FindObjectOfType<EnvironmentAnimationManager>() == null) new GameObject("EnvironmentAnimationManager").AddComponent<EnvironmentAnimationManager>();
-        if (FindObjectOfType<PerformanceManager>() == null) new GameObject("PerformanceManager").AddComponent<PerformanceManager>();
+        if (FindFirstObjectByType<LightingManager>() == null) new GameObject("LightingManager").AddComponent<LightingManager>();
+        if (FindFirstObjectByType<VFXManager>() == null) new GameObject("VFXManager").AddComponent<VFXManager>();
+        if (FindFirstObjectByType<SkyboxManager>() == null) new GameObject("SkyboxManager").AddComponent<SkyboxManager>();
+        if (FindFirstObjectByType<PostProcessingManager>() == null) new GameObject("PostProcessingManager").AddComponent<PostProcessingManager>();
+        if (FindFirstObjectByType<EnvironmentAnimationManager>() == null) new GameObject("EnvironmentAnimationManager").AddComponent<EnvironmentAnimationManager>();
+        if (FindFirstObjectByType<PerformanceManager>() == null) new GameObject("PerformanceManager").AddComponent<PerformanceManager>();
     }
 
     private void CreateRuntimeMaterials()
@@ -285,7 +285,7 @@ public class MainSceneSetup : MonoBehaviour
 
     private void CreateUI()
     {
-        Canvas canvas = FindObjectOfType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             var canvasGO = new GameObject("Procedural_Canvas");

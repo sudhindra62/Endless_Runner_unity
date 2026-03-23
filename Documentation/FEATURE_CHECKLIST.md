@@ -44,6 +44,21 @@
 - [ ] **Mission System:** `Infrastructure in place, mission definitions needed`
 - [ ] **Ad System:** `Basic Interstitial implemented, Rewarded Ads needed`
 
+### ADDITIONAL COMPLETED ITEMS (Merged From Root Checklist)
+
+- [x] **Shop System:** `Dynamic purchasing flow for cosmetics and power-ups`
+- [x] **Daily Reward System:** `Retention feature implemented`
+- [x] **Achievement System:** `Unlockable rewards system implemented`
+- [x] **Leaderboard System:** `Competitive ranking feature implemented`
+- [x] **Settings Menu:** `Audio and graphics controls implemented`
+- [x] **Character Customization System:** `Unlock and equip skins`
+- [x] **Premium Home Screen:** `Animated home screen with direct-to-run transition`
+- [x] **A-to-Z Connectivity:** `Feature flows are expected to work end-to-end from trigger to result`
+
+### LEGACY STATUS NOTE
+
+- The removed root checklist marked the **Tutorial UI sequence** as completed. This conflicts with the in-progress status above and should be revalidated in the project before treating it as done.
+
 ---
 
 ### **NEXT PRIORITY TASK:**

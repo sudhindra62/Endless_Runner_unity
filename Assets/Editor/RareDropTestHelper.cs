@@ -11,7 +11,7 @@ public class RareDropTestHelper
     public static void SetupTestScene()
     {
         // --- Create Core GameObjects ---
-        GameObject gameManagerObj = CreateManagerObject("GameManager", typeof(GameManager), typeof(RunSessionData));
+        GameObject gameManagerObj = CreateManagerObject("GameManager", typeof(GameManager));
         
         GameObject managers = new GameObject("--- MANAGERS ---");
         
@@ -75,8 +75,7 @@ public class RareDropTestHelper
         EditorUtility.SetDirty(dropTableRegistry);
 
         // Create and assign RunSessionData
-        RunSessionData runData = ScriptableObject.CreateInstance<RunSessionData>();
-        AssetDatabase.CreateAsset(runData, "Assets/Resources/DefaultRunData.asset");
+        RunSessionData runData = new RunSessionData();
         runData.distance = 1500;
         runData.styleScore = 7500;
         runData.comboPeak = 150;
@@ -84,7 +83,6 @@ public class RareDropTestHelper
         runData.duration = 180;
         runData.score = 100000;
         runData.reviveCount = 0;
-        EditorUtility.SetDirty(runData);
 
         // Use reflection to set private fields on RareDropEngine
         SetPrivateField(rareDropEngine, "dropTableRegistry", dropTableRegistry);

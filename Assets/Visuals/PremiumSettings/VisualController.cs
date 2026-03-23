@@ -13,7 +13,7 @@ public class VisualController : MonoBehaviour
         directionalLight.shadows = LightShadows.Soft;
 
         // Apply PBR material to all renderers
-        Renderer[] renderers = FindObjectsOfType<Renderer>();
+        Renderer[] renderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         foreach (Renderer renderer in renderers)
         {
             renderer.material = pbrMaterial;

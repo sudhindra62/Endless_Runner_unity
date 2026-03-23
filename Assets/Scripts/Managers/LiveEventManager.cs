@@ -18,4 +18,22 @@ public class LiveEventManager : Singleton<LiveEventManager>
     {
         return activeEvents.Count > 0;
     }
+
+    public void StartEvent(LiveEvent liveEvent)
+    {
+        if (liveEvent == null || string.IsNullOrEmpty(liveEvent.eventName)) return;
+        if (activeEvents.Add(liveEvent.eventName))
+        {
+            OnEventStarted?.Invoke(liveEvent);
+        }
+    }
+
+    public void EndEvent(LiveEvent liveEvent)
+    {
+        if (liveEvent == null || string.IsNullOrEmpty(liveEvent.eventName)) return;
+        if (activeEvents.Remove(liveEvent.eventName))
+        {
+            OnEventEnded?.Invoke(liveEvent);
+        }
+    }
 }

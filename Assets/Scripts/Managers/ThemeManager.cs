@@ -100,7 +100,11 @@ using System.Collections.Generic;
         public void UnlockTheme(ThemeSO theme)
         {
             // Placeholder for theme unlock logic
-            if (theme != null) SetTheme(theme);
+            if (theme != null)
+            {
+                SetTheme(theme);
+                OnThemeUnlocked?.Invoke(theme);
+            }
         }
 
         public ThemeProgress GetThemeProgress()

@@ -15,6 +15,7 @@ using UnityEngine;
 
         private int currentStepIndex = 0;
         private bool isTutorialActive = false;
+        public bool IsTutorialActive => isTutorialActive;
 
         private void OnEnable()
         {

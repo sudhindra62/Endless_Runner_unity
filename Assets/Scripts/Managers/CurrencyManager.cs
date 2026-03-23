@@ -23,29 +23,52 @@ using UnityEngine;
 
         public void AddCoins(int amount)
         {
-            if (PlayerDataManager.Instance != null) PlayerDataManager.Instance.AddCurrency(CurrencyType.Coins, amount);
+            if (PlayerDataManager.Instance != null)
+            {
+                PlayerDataManager.Instance.AddCurrency(CurrencyType.Coins, amount);
+                OnCoinsChanged?.Invoke(Coins);
+            }
         }
 
         public bool SpendCoins(int amount)
         {
-            return PlayerDataManager.Instance != null && PlayerDataManager.Instance.SpendCurrency(CurrencyType.Coins, amount);
+            bool spent = PlayerDataManager.Instance != null && PlayerDataManager.Instance.SpendCurrency(CurrencyType.Coins, amount);
+            if (spent)
+            {
+                OnCoinsChanged?.Invoke(Coins);
+            }
+            return spent;
         }
         
         public void AddGems(int amount)
         {
-            if (PlayerDataManager.Instance != null) PlayerDataManager.Instance.AddCurrency(CurrencyType.Gems, amount);
+            if (PlayerDataManager.Instance != null)
+            {
+                PlayerDataManager.Instance.AddCurrency(CurrencyType.Gems, amount);
+                OnGemsChanged?.Invoke(Gems);
+            }
         }
 
         public bool SpendGems(int amount)
         {
-            return PlayerDataManager.Instance != null && PlayerDataManager.Instance.SpendCurrency(CurrencyType.Gems, amount);
+            bool spent = PlayerDataManager.Instance != null && PlayerDataManager.Instance.SpendCurrency(CurrencyType.Gems, amount);
+            if (spent)
+            {
+                OnGemsChanged?.Invoke(Gems);
+            }
+            return spent;
         }
 
         // --- Proxy Methods for Architectural Sync (Folder 3) ---
         public int GetCurrency(CurrencyType type) => PlayerDataManager.Instance != null ? PlayerDataManager.Instance.GetCurrency(type) : 0;
         public void AddCurrency(CurrencyType type, int amount)
         {
-            if (PlayerDataManager.Instance != null) PlayerDataManager.Instance.AddCurrency(type, amount);
+            if (PlayerDataManager.Instance != null)
+            {
+                PlayerDataManager.Instance.AddCurrency(type, amount);
+                if (type == CurrencyType.Coins) OnCoinsChanged?.Invoke(Coins);
+                else if (type == CurrencyType.Gems) OnGemsChanged?.Invoke(Gems);
+            }
         }
         public void UpdateCoins(int amount) => AddCoins(amount);
         public int GetTotalCoins() => Coins;

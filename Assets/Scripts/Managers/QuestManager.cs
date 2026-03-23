@@ -13,11 +13,20 @@ using UnityEngine;
             if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); }
         }
 
-        public void AddQuest(Quest quest) { quests.Add(quest); }
+        public void AddQuest(Quest quest)
+        {
+            quests.Add(quest);
+            OnQuestLogChanged?.Invoke();
+        }
 
         public void CompleteQuest(Quest quest)
         {
-            if (quests.Contains(quest)) { quest.Complete(); quests.Remove(quest); }
+            if (quests.Contains(quest))
+            {
+                quest.Complete();
+                quests.Remove(quest);
+                OnQuestLogChanged?.Invoke();
+            }
         }
 
         public void EnemyKilled()
@@ -49,7 +58,11 @@ using UnityEngine;
 
         public void RerollQuest(Quest quest)
         {
-            if (quests.Contains(quest)) { quests.Remove(quest); }
+            if (quests.Contains(quest))
+            {
+                quests.Remove(quest);
+                OnQuestLogChanged?.Invoke();
+            }
         }
 
         // --- Type Conversion Overloads (Phase 2A: Type Consistency) ---

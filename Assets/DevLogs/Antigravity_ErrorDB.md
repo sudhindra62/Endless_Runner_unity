@@ -21,10 +21,10 @@ BLOCK 06 📜   PRE-TASK        — Fix order + protocol sequence
 BLOCK 07 🔁   AUTO-UPDATE     — DB update enforcement rules
 BLOCK 08 🧠   PRE-SIMULATION  — Compile + runtime mental simulation
 BLOCK 09 🧬   ERROR DETECTOR  — Cause-level variety classification
-BLOCK 10 🔴   ERROR_REGISTRY  — All 89+ classified error entries
-BLOCK 11 🟠   PATTERNS        — 28 recurring root-cause themes
-BLOCK 12 🟡   PREVENTION_RULES— 31 binding prevention laws R01–R31
-BLOCK 13 🟢   FIX_LOG         — 27-phase history of all fixes (AG_FIX_020)
+BLOCK 10 🔴   ERROR_REGISTRY  — All 95+ classified error entries
+BLOCK 11 🟠   PATTERNS        — 34 recurring root-cause themes
+BLOCK 12 🟡   PREVENTION_RULES— 36 binding prevention laws R01–R36
+BLOCK 13 🟢   FIX_LOG         — 34-phase history of all fixes (AG_FIX_034)
 BLOCK 14 🔵   ERROR_CODES     — All CS codes encountered
 BLOCK 15 🔁   LOOP PREVENTION — Anti-recurrence laws
 BLOCK 16 ⚡   WORKFLOW        — Standard Antigravity execution flow
@@ -55,7 +55,7 @@ Layer Failure Rule: If ANY layer fails → EXECUTION BLOCKED → REPROCESS REQUI
 Scan ALL `Cause:` entries. Compare against planned implementation. Reject ANY matching risk → MODIFY approach BEFORE execution.
 
 ## STAGE 5 — PREVENTION RULE ENFORCEMENT
-ALL rules R01–R20 MUST be actively applied, not passively remembered. Rule violation = execution failure.
+ALL rules R01–R36 MUST be actively applied, not passively remembered. Rule violation = execution failure.
 
 ## STAGE 6 — SYSTEM COMPLETENESS ENFORCEMENT
 ✔ UI complete | ✔ Logic complete | ✔ Data complete | ✔ Events complete | ✔ Save complete | ✔ Monetization complete.
@@ -1259,6 +1259,15 @@ Example: `error CS1501: No overload for method 'AddCombo' takes 1 arguments`
 Count: 6 | Seen: 2026-03-22
 
 ---
+[AG_ERR_095] CS1061 / CS0311 · EditorToolingVersionDrift
+Files: InputActionsGenerator.cs, RareDropTestHelper.cs, AchievementTest.cs
+Cause: Editor-only tooling assumed package/editor APIs existed unchanged across versions (`InputActionAsset.GenerateCSharpCode`) and treated runtime POCO data (`RunSessionData`) as `ScriptableObject` assets. This caused compile failures isolated to Editor assemblies while runtime systems remained valid.
+Fix: Replaced direct version-fragile editor API calls with reflection-safe invocation and null guards. Replaced `ScriptableObject.CreateInstance<RunSessionData>()` with normal runtime construction, added missing test-facing bridges (`UnlockAchievement(string)`, `EvaluateDrop()`), and preserved editor workflow compatibility.
+Prevent: Editor tooling MUST verify API availability before invocation and MUST NOT create asset instances for plain serializable/runtime data containers. Treat Editor assemblies as a separate compatibility surface requiring its own dependency validation pass.
+Example: `error CS1061: 'InputActionAsset' does not contain a definition for 'GenerateCSharpCode'`
+Count: 4 | Seen: 2026-03-23
+
+---
 [AG_ERR_084] AEIS_PLV_001 · PlaceholderLogicViolation
 Files: ShopManager.cs, InventoryManager.cs, ChallengeManager.cs
 Cause: Core manager logic using `// TODO` or `return true` (mock/dummy returns) instead of functional integration. Violates AFPSI Feature Preservation protocol.
@@ -1394,6 +1403,7 @@ Count: 1 | Seen: 2026-03-22
 [P31] AuthoritativeDrift — Multiple parallel data models (SaveData vs GameData) leading to sync errors and code complexity.
 [P32] TerminologicalUnificationDrift — Deleting a class but leaving method names (e.g. SaveData()) or variable names that reference the old model, creating mental model friction and potential naming collisions.
 [P33] PropertyAliasBridging — UI layer expects different field names (e.g., Name/Price/Description/TargetValue) than the data model (itemName/cost/goal). Fix: Add public property aliases to the data model.
+[P34] EditorToolingVersionDrift — Editor scripts bind directly to package/version-specific APIs or misuse runtime POCOs as `ScriptableObject` assets, causing Editor-only compile failures despite healthy runtime systems.
 
 ## BLOCK 12 🟡 PREVENTION_RULES
 
@@ -1432,6 +1442,7 @@ Count: 1 | Seen: 2026-03-22
 [R33] SerializableDictionarySupport — Use BinaryFormatter for persistence and custom stable string hashing for checksums to ensure dictionary integrity.
 [R34] TerminologicalUnification — When a model is purged/renamed, all associated method signatures, variable names, and string keys (PlayerPrefs) MUST be updated to the new terminology project-wide.
 [R35] Unified Data Interface — Core data models (SO and Runtime) MUST expose a standardized set of capitalized properties (Name, Description, Price, Amount, TargetValue) to satisfy UI controllers, regardless of internal field naming.
+[R36] Editor Assembly Compatibility — Every `Assets/Editor` tool MUST validate package API presence and target-type constraints before invocation. Never call editor/package helpers by memory alone, and never instantiate non-`ScriptableObject` runtime models through `CreateInstance<T>()`.
 
 ---
 
@@ -1469,7 +1480,8 @@ Count: 1 | Seen: 2026-03-22
 [2026-03-22 Phase 30] Post-Purge API Cleanup: Resolved CS0246 errors by migrating SaveIntegrityGuard and HighScoreManager to GameData model. Performed project-wide Terminological Unification, renaming all SaveData() methods to SaveGameData() across IAP, Integrity, and Economy systems.
 [2026-03-22 Phase 31] Global Architecture Synchronization: Resolved systemic desynchronization categories. Created ScoringManager and MissionManager proxies. Unified SkinManager and CharacterSkinManager under SaveManager pipeline. Migrated PlayerProgression, ScoreManager, ThemeManager, ThemeUnlockManager, DailyRewardManager, DailyLoginManager, CurrencyManager, RewardedBoostManager, CosmeticEffectManager, ChallengeAttemptTracker, and PowerUpUpgradeManager to the authoritative GameData pipeline, eradicating ALL functional PlayerPrefs drift. Achieved 100% architectural alignment and data model authority.
 [2026-03-22 Phase 32] HomeScreenController Structural Repair: Resolved mass structural errors (CS1519, CS8803, CS1022) by wrapping detached/naked code into the required `CheckDailyRewardStatus()` method. Synchronized event subscriptions with `ScoreManager` by correcting the event name from `OnBestScoreChanged` to `OnHighScoreChanged`.
-| 2026-03-22 | AG_FIX_027 | PHASE_34_SAVEMANAGER_NAMESPACE_RESTORE | Added missing System.Collections.Generic to SaveManager.cs. Resolved CS0246 regression. | RESOLVED |
+[2026-03-23 Phase 33] Runtime compatibility restoration pass. Repaired reward/achievement export contracts, mission runtime model mapping, analytics service invocation, power-up aliases, character/skin bridges, cosmetics routing, shard/IAP typing, spawner-theme-pool compatibility, and UI overload contracts. Eliminated recurring CS1061/CS1503/CS7036 desync clusters by fixing root contracts instead of patching callers.
+[2026-03-23 Phase 34] Editor tooling and warning hygiene pass. Added editor-safe achievement/test bridges, reflection-safe Input System code generation, `RunSessionData` editor/test fields, `RareDropEngine.EvaluateDrop()`, and obsolete Unity API replacements in setup/UI utility files. Wired dormant compatibility events (`OnCoinsChanged`, `OnUIStateChanged`, `OnThemeUnlocked`, etc.) to prevent passive warning regressions. Added AG_ERR_095, P34, and R36.
 
 ### 📊 FIX_REGISTRY
 | Date | ID | Title | Description | Status |
@@ -1506,11 +1518,13 @@ Count: 1 | Seen: 2026-03-22
 | 2026-03-23 | AG_FIX_030 | PHASE_37_EVENT_SYSTEM_WIRING | PHASE 1B: Converted all instance events to static across 8 managers (FlowComboManager, PowerUpManager, ScoreManager, RankManager, AudioManager, ThemeManager, LiveEventManager, GameUIManager). Added 12 missing event declarations. Created UIState enum and LiveEvent class. Fixed ~35 CS0120, CS1061, and event signature mismatch errors. | RESOLVED |
 | 2026-03-23 | AG_FIX_031 | PHASE_38_MANAGER_METHOD_STUBS | PHASE 1C: Added 80+ missing methods across 12 core managers: SaveManager (6 methods), PlayerDataManager (5 methods), AudioManager (7 methods), BattlePassManager (5 methods), AchievementManager (8 methods), SkinManager (4 methods), ScoreManager (5 methods), ThemeManager (8 methods), PowerUpManager (8 methods), RankManager (6 methods), CurrencyManager (4 methods), AnalyticsManager (5 methods). Created 3 data classes (PlayerStats, ThemeProgress, GameContext). Fixed ~80 CS1061 errors (missing methods). | RESOLVED |
 | 2026-03-23 | AG_FIX_032 | PHASE_39_FINAL_BLOCK2A_TO_2D | PHASE 2A-2D: Completed missing manager Instance static singletons + event API plugs (ReviveManager.OnReviveSuccess, NearMissManager.OnNearMiss). Added fallback compatibility stubs (CollectionManager.allCollectionItems, ThemeManager GetCoin/EnemyChaser methods), data model aliases (CosmeticEffectData.effectPrefab/effectID), and missing support types (CloudLoggingManager, RemoteConfig, EndlessRunner.Events.CustomData). Updated GameState enum with Reviving. Applied AEIS rule R02/R27/R31 to prevent recursive fix loops. | RESOLVED |
+| 2026-03-23 | AG_FIX_033 | PHASE_40_RUNTIME_COMPATIBILITY_RESTORATION | Restored cross-layer compatibility in runtime systems: achievement/reward exports, mission runtime mapping, analytics dispatch, power-up aliases, character/skin bridges, cosmetics routing, spawner-theme-pool APIs, and UI overload contracts. Resolved recurring CS1061/CS1503/CS7036 clusters by fixing root contracts instead of patching callers. | RESOLVED |
+| 2026-03-23 | AG_FIX_034 | PHASE_41_EDITOR_AND_WARNING_STABILIZATION | Fixed Editor assembly drift by adding reflection-safe Input System generation, runtime-model-safe test helpers, achievement test bridges, and `RareDropEngine.EvaluateDrop()`. Replaced obsolete Unity lookup APIs in setup/UI visual files and wired dormant compatibility events to reduce CS0618/CS0067/CS0414 warning regressions. Added AG_ERR_095, P34, and R36 to the ErrorDB. | RESOLVED |
 
 ---
 
 ## BLOCK 14 🔵 ERROR_CODES_SEEN
-CS0029 CS0070 CS0101 CS0103 CS0105 CS0106 CS0108 CS0111 CS0114 CS0115 CS0117 CS0119 CS0120 CS0122 CS0123 CS0176 CS0200 CS0229 CS0234 CS0246 CS0266 CS0272 CS0426 CS0436 CS0534 CS0579 CS0618 CS1002 CS1003 CS1010 CS1022 CS1026 CS1061 CS1106 CS1501 CS1503 CS1513 CS1514 CS1519 CS1525 CS7036 CS8803
+CS0029 CS0067 CS0070 CS0101 CS0103 CS0105 CS0106 CS0108 CS0111 CS0114 CS0115 CS0117 CS0119 CS0120 CS0121 CS0122 CS0123 CS0176 CS0200 CS0229 CS0234 CS0246 CS0266 CS0272 CS0311 CS0426 CS0436 CS0534 CS0579 CS0618 CS1002 CS1003 CS1010 CS1022 CS1026 CS1061 CS1106 CS1501 CS1503 CS1513 CS1514 CS1519 CS1525 CS1955 CS7036 CS8803 CS0414
 
 ---
 

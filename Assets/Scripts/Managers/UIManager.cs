@@ -98,7 +98,7 @@ public class UIManager : Singleton<UIManager>
             mainPanelImage.sprite = theme.uiPanelSprite;
         }
 
-        foreach (Button button in FindObjectsOfType<Button>())
+        foreach (Button button in FindObjectsByType<Button>(FindObjectsSortMode.None))
         {
             ColorBlock colors = button.colors;
             colors.normalColor = theme.uiAccentColor;

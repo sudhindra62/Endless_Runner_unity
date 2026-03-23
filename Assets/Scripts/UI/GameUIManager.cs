@@ -24,6 +24,7 @@ public class GameUIManager : Singleton<GameUIManager>
         {
             panel.Show();
             OnPanelOpened?.Invoke(panelType);
+            OnUIStateChanged?.Invoke(MapState(panelType));
         }
     }
 
@@ -33,6 +34,20 @@ public class GameUIManager : Singleton<GameUIManager>
         {
             panel.Hide();
             OnPanelClosed?.Invoke(panelType);
+            OnUIStateChanged?.Invoke(UIState.None);
+        }
+    }
+
+    private UIState MapState(UIPanelType panelType)
+    {
+        switch (panelType)
+        {
+            case UIPanelType.MainMenu: return UIState.MainMenu;
+            case UIPanelType.InGame: return UIState.InGame;
+            case UIPanelType.Pause: return UIState.Paused;
+            case UIPanelType.GameOver: return UIState.GameOver;
+            case UIPanelType.Settings: return UIState.Settings;
+            default: return UIState.None;
         }
     }
 }

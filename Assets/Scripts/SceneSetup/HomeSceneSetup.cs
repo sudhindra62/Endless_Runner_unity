@@ -65,7 +65,7 @@ public class HomeSceneSetup : MonoBehaviour
     /// </summary>
     private void EnsureManager<T>() where T : MonoBehaviour
     {
-        if (FindObjectOfType<T>() == null)
+        if (FindFirstObjectByType<T>() == null)
         {
             GameObject managerObject = new GameObject(typeof(T).Name);
             managerObject.AddComponent<T>();
@@ -103,7 +103,7 @@ public class HomeSceneSetup : MonoBehaviour
     /// </summary>
     private void SetupUICanvas()
     {
-        Canvas canvas = FindObjectOfType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             GameObject canvasObj = new GameObject("UICanvas_Auto-Generated");

@@ -109,7 +109,11 @@ using UnityEngine;
 
         public void CollectPowerUp(PowerUpDefinition definition)
         {
-            if (definition != null) ActivatePowerUp(definition);
+            if (definition != null)
+            {
+                ActivatePowerUp(definition);
+                OnPowerUpCollected?.Invoke((int)definition.type);
+            }
         }
 
         public void RefreshPowerUpTimer(string powerUpID, float duration)
@@ -195,8 +199,6 @@ using UnityEngine;
                 powerUpType = source.type;
                 duration = source.GetRemainingDuration();
             }
-
-            public PowerUpType Type => powerUpType;
 
             public override void ApplyEffect() { }
             public override void RemoveEffect() { }

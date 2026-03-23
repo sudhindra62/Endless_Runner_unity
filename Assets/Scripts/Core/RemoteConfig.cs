@@ -6,4 +6,5 @@ public static class RemoteConfig
     public static int GetInt(string key, int defaultValue = 0) => defaultValue;
     public static bool GetBool(string key, bool defaultValue = false) => defaultValue;
     public static string GetString(string key, string defaultValue = "") => defaultValue;
+    public static void Refresh() => OnConfigUpdated?.Invoke();
 }
